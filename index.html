@@ -287,9 +287,8 @@
     </div>
 
     <script>
-        const BIN_ID = '6a64d3f9da38895dfe8e9c9e '; 
-        const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}/latest`;
-        const PUT_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+        // npoint.io를 활용한 초간단 무료 JSON 연동
+        const API_URL = 'https://api.npoint.io/6672f93b02689ee2dc6a';
 
         let posts = [];
         let selectedFile = null;
@@ -331,7 +330,7 @@
                 const response = await fetch(API_URL);
                 if (response.ok) {
                     const data = await response.json();
-                    posts = data.record.posts || [];
+                    posts = data.posts || [];
                     renderPosts();
                 }
             } catch (err) {
@@ -342,8 +341,8 @@
         async function syncAndSavePosts() {
             renderPosts();
             try {
-                await fetch(PUT_URL, {
-                    method: 'PUT',
+                await fetch(API_URL, {
+                    method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
