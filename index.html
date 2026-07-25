@@ -264,7 +264,7 @@
     <div class="container">
         <header>
             <h1>짤·영상 공유소</h1>
-            <p>서버 오류 없는 안정적인 피드</p>
+            <p>깃허브 연동 실시간 피드</p>
         </header>
 
         <div class="upload-card">
@@ -287,8 +287,16 @@
     </div>
 
     <script>
-        // 브라우저의 전역 저장소(localStorage)를 활용하여 외부 서버 오류 차단
-        let posts = JSON.parse(localStorage.getItem('community_posts')) || [];
+        // 🛠️ 깃허브 설정 정보 (유저네임, 토큰은 이미 넣어뒀어!)
+        const GITHUB_USER = 'guinea0910'; 
+        const REPO_NAME = 'guinea-meme-share'; // 👈 이 부분만 네 깃허브 저장소 이름으로 바꿔줘!
+        const GITHUB_TOKEN = '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'; 
+
+        const FILE_PATH = 'posts.json';
+        const API_URL = `https://api.github.com/repos/${GITHUB_USER}/${REPO_NAME}/contents/${FILE_PATH}`;
+
+        let posts = [];
+        let fileSha = ''; 
         let selectedFile = null;
 
         const dropZone = document.getElementById('dropZone');
@@ -323,9 +331,51 @@
             }
         });
 
-        function saveAndRender() {
-            localStorage.setItem('community_posts', JSON.stringify(posts));
-            renderPosts();
+        async function fetchPosts() {
+            try {
+                const response = await fetch(API_URL, {
+                    headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    fileSha = data.sha; 
+                    const decodedContent = decodeURIComponent(escape(atob(data.content)));
+                    const parsed = JSON.parse(decodedContent);
+                    posts = parsed.posts || [];
+                    renderPosts();
+                } else {
+                    document.getElementById('feedList').innerHTML = '<div class="empty-feed">posts.json 파일을 찾지 못했거나 저장소 이름이 틀렸어!</div>';
+                }
+            } catch (err) {
+                console.error("데이터 불러오기 오류:", err);
+            }
+        }
+
+        async function saveToGitHub() {
+            try {
+                const updatedContent = JSON.stringify({ posts: posts }, null, 2);
+                const encodedContent = btoa(unescape(encodeURIComponent(updatedContent)));
+
+                const response = await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${GITHUB_TOKEN}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: "Update posts via web community",
+                        content: encodedContent,
+                        sha: fileSha
+                    })
+                });
+
+                if (response.ok) {
+                    const resData = await response.json();
+                    fileSha = resData.content.sha; 
+                }
+            } catch (err) {
+                console.error("깃허브 저장 실패:", err);
+            }
         }
 
         async function uploadPost() {
@@ -357,7 +407,8 @@
             };
 
             posts.unshift(newPost);
-            saveAndRender();
+            renderPosts();
+            await saveToGitHub();
             
             document.getElementById('textInput').value = '';
             fileInput.value = '';
@@ -366,7 +417,7 @@
             uploadBtn.disabled = false;
         }
 
-        function addComment(postId) {
+        async function addComment(postId) {
             const commentInput = document.getElementById(`comment-input-${postId}`);
             const commentText = commentInput.value.trim();
 
@@ -380,7 +431,8 @@
                     text: commentText
                 });
                 commentInput.value = '';
-                saveAndRender();
+                renderPosts();
+                await saveToGitHub();
             }
         }
 
@@ -436,7 +488,7 @@
             });
         }
 
-        renderPosts();
+        fetchPosts();
     </script>
 </body>
 </html>
