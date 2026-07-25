@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>짤·영상 카페</title>
+    <title>짤·영상 카페 (다크 모드)</title>
     <style>
         :root {
             --cafe-green: #03c75a;
             --cafe-green-hover: #02b350;
-            --bg-color: #f4f5f7;
-            --card-bg: #ffffff;
-            --text-main: #1e1e1e;
-            --text-sub: #767676;
-            --border-color: #e1e2e3;
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --border-color: #334155;
+            --input-bg: #0f172a;
         }
 
         * {
@@ -34,7 +35,6 @@
             margin: 0 auto;
         }
 
-        /* 카페 헤더 */
         header {
             background-color: var(--card-bg);
             padding: 20px;
@@ -55,7 +55,6 @@
             font-size: 0.9rem;
         }
 
-        /* 글쓰기 카드 */
         .write-card {
             background-color: var(--card-bg);
             padding: 20px;
@@ -68,8 +67,10 @@
             width: 100%;
             padding: 10px 12px;
             margin-bottom: 10px;
+            background-color: var(--input-bg);
             border: 1px solid var(--border-color);
             border-radius: 6px;
+            color: var(--text-main);
             font-size: 0.95rem;
         }
 
@@ -87,7 +88,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background-color: #fafbfc;
+            background-color: var(--input-bg);
             border: 1px dashed var(--border-color);
             padding: 10px 15px;
             border-radius: 6px;
@@ -123,7 +124,6 @@
             cursor: not-allowed;
         }
 
-        /* 카페 게시글 목록 (테이블/리스트 형태) */
         .cafe-board {
             background-color: var(--card-bg);
             border-radius: 12px;
@@ -133,7 +133,7 @@
 
         .board-header {
             padding: 12px 20px;
-            background-color: #fafbfc;
+            background-color: rgba(15, 23, 42, 0.5);
             border-bottom: 1px solid var(--border-color);
             font-weight: 600;
             font-size: 0.9rem;
@@ -148,7 +148,7 @@
         }
 
         .post-item:hover {
-            background-color: #f8f9fa;
+            background-color: rgba(255, 255, 255, 0.03);
         }
 
         .post-item:last-child {
@@ -169,7 +169,6 @@
             gap: 12px;
         }
 
-        /* 상세 보기 화면 */
         .view-section {
             background-color: var(--card-bg);
             border-radius: 12px;
@@ -192,6 +191,7 @@
             font-size: 1.2rem;
             font-weight: bold;
             margin-bottom: 10px;
+            color: var(--text-main);
         }
 
         .view-meta {
@@ -208,6 +208,7 @@
             font-size: 0.95rem;
             margin-bottom: 20px;
             white-space: pre-wrap;
+            color: var(--text-main);
         }
 
         .view-image {
@@ -218,9 +219,8 @@
             display: block;
         }
 
-        /* 댓글 영역 */
         .comment-section {
-            background-color: #fafbfc;
+            background-color: var(--input-bg);
             padding: 15px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
@@ -230,6 +230,7 @@
             font-size: 0.9rem;
             font-weight: 600;
             margin-bottom: 10px;
+            color: var(--text-sub);
         }
 
         .comment-list {
@@ -241,10 +242,11 @@
 
         .comment-box {
             font-size: 0.85rem;
-            background: white;
+            background: var(--card-bg);
             padding: 8px 12px;
             border-radius: 6px;
             border: 1px solid var(--border-color);
+            color: var(--text-main);
         }
 
         .comment-box span {
@@ -261,15 +263,22 @@
         .comment-input-box input {
             flex: 1;
             padding: 8px 10px;
+            background-color: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 6px;
+            color: var(--text-main);
             font-size: 0.85rem;
+        }
+
+        .comment-input-box input:focus {
+            outline: none;
+            border-color: var(--cafe-green);
         }
 
         .comment-input-box button {
             padding: 8px 14px;
-            background-color: var(--text-sub);
-            color: white;
+            background-color: var(--border-color);
+            color: var(--text-main);
             border: none;
             border-radius: 6px;
             font-weight: 600;
@@ -278,6 +287,7 @@
 
         .comment-input-box button:hover {
             background-color: var(--cafe-green);
+            color: white;
         }
 
         .empty-notice {
@@ -292,10 +302,9 @@
     <div class="container">
         <header>
             <h1>☘️ 짤·영상 카페</h1>
-            <p>우리들만의 즐거운 유머 공간</p>
+            <p>우리들만의 즐거운 유머 공간 (Dark Mode)</p>
         </header>
 
-        <!-- 글쓰기 카드 -->
         <div class="write-card" id="writeCard">
             <input type="text" id="authorInput" placeholder="닉네임">
             <textarea id="textInput" placeholder="게시글 내용을 입력해 주세요..."></textarea>
@@ -309,7 +318,6 @@
             <button onclick="uploadPost()" id="uploadBtn">등록</button>
         </div>
 
-        <!-- 게시글 목록 화면 -->
         <div id="boardView" class="cafe-board">
             <div class="board-header">전체글목록</div>
             <div id="postListContainer">
@@ -317,7 +325,6 @@
             </div>
         </div>
 
-        <!-- 게시글 상세 보기 화면 -->
         <div id="detailView" class="view-section">
             <button class="back-btn" onclick="goToList()">&lt; 목록으로</button>
             <div class="view-title" id="detailTitle"></div>
@@ -340,10 +347,10 @@
     </div>
 
     <script>
-        // 🛠️ 깃허브 설정 정보
+        // 🛠️ 설정 정보
         const GITHUB_USER = 'guinea0910'; 
-        const REPO_NAME = 'guinea-meme-share'; // 👈 이 부분을 네 깃허브 저장소 이름으로 바꿔줘!
-        const GITHUB_TOKEN = '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'; 
+        const REPO_NAME = 'guinea-meme-share'; 
+        const GITHUB_TOKEN = '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'; 
 
         const FILE_PATH = 'posts.json';
         const API_URL = `https://api.github.com/repos/${GITHUB_USER}/${REPO_NAME}/contents/${FILE_PATH}`;
@@ -378,7 +385,7 @@
                     posts = parsed.posts || [];
                     renderBoard();
                 } else {
-                    document.getElementById('postListContainer').innerHTML = '<div class="empty-notice">posts.json 파일을 찾지 못했거나 저장소 이름이 틀렸어!</div>';
+                    document.getElementById('postListContainer').innerHTML = '<div class="empty-notice">posts.json 파일을 불러오지 못했어. 토큰이나 저장소를 확인해봐!</div>';
                 }
             } catch (err) {
                 console.error("데이터 불러오기 오류:", err);
@@ -452,7 +459,7 @@
             fileInput.value = '';
             selectedFile = null;
             fileName.textContent = '📷 이미지 첨부하기';
-            fileName.style.color = '#767676';
+            fileName.style.color = '#94a3b8';
             uploadBtn.disabled = false;
         }
 
@@ -512,7 +519,7 @@
         function renderComments(post) {
             const commentList = document.getElementById('detailCommentList');
             if (!post.comments || post.comments.length === 0) {
-                commentList.innerHTML = '<div style="font-size:0.85rem; color:#767676; text-align:center; padding:10px;">작성된 댓글이 없습니다.</div>';
+                commentList.innerHTML = '<div style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:10px;">작성된 댓글이 없습니다.</div>';
                 return;
             }
 
