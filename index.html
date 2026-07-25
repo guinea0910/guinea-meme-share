@@ -302,7 +302,7 @@
     <div class="container">
         <header>
             <h1>☘️ 짤·영상 카페</h1>
-            <p>우리들만의 즐거운 유머 공간 (Dark Mode)</p>
+            <p>우리들만의 즐거운 유머 공간</p>
         </header>
 
         <div class="write-card" id="writeCard">
@@ -347,13 +347,13 @@
     </div>
 
     <script>
-        // 🛠️ 설정 정보
         const GITHUB_USER = 'guinea0910'; 
         const REPO_NAME = 'guinea-meme-share'; 
         const GITHUB_TOKEN = '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'; 
 
         const FILE_PATH = 'posts.json';
         const API_URL = `https://api.github.com/repos/${GITHUB_USER}/${REPO_NAME}/contents/${FILE_PATH}`;
+        const RAW_URL = `https://raw.githubusercontent.com/${GITHUB_USER}/${REPO_NAME}/main/${FILE_PATH}?t=${Date.now()}`;
 
         let posts = [];
         let fileSha = ''; 
@@ -374,21 +374,27 @@
 
         async function fetchPosts() {
             try {
-                const response = await fetch(API_URL, {
+                // 1. 먼저 API로 SHA 값을 가져옴 (수정할 때 필요)
+                const apiRes = await fetch(API_URL, {
                     headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
                 });
+                if (apiRes.ok) {
+                    const apiData = await apiRes.json();
+                    fileSha = apiData.sha;
+                }
+
+                // 2. 실제 데이터는 Raw URL로 깔끔하게 불러옴
+                const response = await fetch(RAW_URL);
                 if (response.ok) {
                     const data = await response.json();
-                    fileSha = data.sha; 
-                    const decodedContent = decodeURIComponent(escape(atob(data.content)));
-                    const parsed = JSON.parse(decodedContent);
-                    posts = parsed.posts || [];
+                    posts = data.posts || [];
                     renderBoard();
                 } else {
-                    document.getElementById('postListContainer').innerHTML = '<div class="empty-notice">posts.json 파일을 불러오지 못했어. 토큰이나 저장소를 확인해봐!</div>';
+                    document.getElementById('postListContainer').innerHTML = '<div class="empty-notice">posts.json 파일을 읽어오지 못했어. main 브랜치에 파일이 있는지 확인해봐!</div>';
                 }
             } catch (err) {
                 console.error("데이터 불러오기 오류:", err);
+                document.getElementById('postListContainer').innerHTML = '<div class="empty-notice">데이터를 불러오는 중 오류가 발생했어.</div>';
             }
         }
 
