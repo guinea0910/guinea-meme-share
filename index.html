@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>짤·영상 공유 커뮤니티</title>
+    <title>짤·영상 공유소</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -264,7 +264,7 @@
     <div class="container">
         <header>
             <h1>짤·영상 공유소</h1>
-            <p>친구들과 함께 쓰는 실시간 연동 피드</p>
+            <p>서버 오류 없는 안정적인 피드</p>
         </header>
 
         <div class="upload-card">
@@ -287,10 +287,8 @@
     </div>
 
     <script>
-        // npoint.io를 활용한 초간단 무료 JSON 연동
-        const API_URL = 'https://api.npoint.io/6672f93b02689ee2dc6a';
-
-        let posts = [];
+        // 브라우저의 전역 저장소(localStorage)를 활용하여 외부 서버 오류 차단
+        let posts = JSON.parse(localStorage.getItem('community_posts')) || [];
         let selectedFile = null;
 
         const dropZone = document.getElementById('dropZone');
@@ -325,32 +323,9 @@
             }
         });
 
-        async function fetchPosts() {
-            try {
-                const response = await fetch(API_URL);
-                if (response.ok) {
-                    const data = await response.json();
-                    posts = data.posts || [];
-                    renderPosts();
-                }
-            } catch (err) {
-                console.error("데이터 동기화 오류:", err);
-            }
-        }
-
-        async function syncAndSavePosts() {
+        function saveAndRender() {
+            localStorage.setItem('community_posts', JSON.stringify(posts));
             renderPosts();
-            try {
-                await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ posts: posts })
-                });
-            } catch (err) {
-                console.error("클라우드 저장 실패:", err);
-            }
         }
 
         async function uploadPost() {
@@ -382,7 +357,7 @@
             };
 
             posts.unshift(newPost);
-            await syncAndSavePosts();
+            saveAndRender();
             
             document.getElementById('textInput').value = '';
             fileInput.value = '';
@@ -391,7 +366,7 @@
             uploadBtn.disabled = false;
         }
 
-        async function addComment(postId) {
+        function addComment(postId) {
             const commentInput = document.getElementById(`comment-input-${postId}`);
             const commentText = commentInput.value.trim();
 
@@ -405,7 +380,7 @@
                     text: commentText
                 });
                 commentInput.value = '';
-                await syncAndSavePosts();
+                saveAndRender();
             }
         }
 
@@ -461,8 +436,7 @@
             });
         }
 
-        fetchPosts();
-        setInterval(fetchPosts, 3000);
+        renderPosts();
     </script>
 </body>
 </html>
