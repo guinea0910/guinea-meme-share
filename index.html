@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>짤·영상 공유소</title>
+    <title>짤·영상 카페</title>
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --text-color: #f8fafc;
-            --text-secondary: #94a3b8;
-            --accent-color: #6366f1;
-            --accent-hover: #4f46e5;
-            --border-color: #334155;
+            --cafe-green: #03c75a;
+            --cafe-green-hover: #02b350;
+            --bg-color: #f4f5f7;
+            --card-bg: #ffffff;
+            --text-main: #1e1e1e;
+            --text-sub: #767676;
+            --border-color: #e1e2e3;
         }
 
         * {
@@ -24,176 +24,212 @@
         body {
             font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
             background-color: var(--bg-color);
-            color: var(--text-color);
+            color: var(--text-main);
             line-height: 1.5;
             padding: 20px;
         }
 
         .container {
-            max-width: 600px;
+            max-width: 650px;
             margin: 0 auto;
         }
 
+        /* 카페 헤더 */
         header {
-            text-align: center;
-            margin-bottom: 25px;
-        }
-
-        header h1 {
-            font-size: 1.8rem;
-            margin-bottom: 8px;
-        }
-
-        header p {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-        }
-
-        .upload-card {
             background-color: var(--card-bg);
             padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            margin-bottom: 24px;
             border: 1px solid var(--border-color);
-        }
-
-        .upload-card input[type="text"], .upload-card textarea {
-            width: 100%;
-            padding: 10px 14px;
-            margin-bottom: 12px;
-            background-color: var(--bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: var(--text-color);
-            font-size: 0.95rem;
-        }
-
-        .upload-card textarea {
-            resize: vertical;
-            height: 70px;
-        }
-
-        .upload-card input:focus, .upload-card textarea:focus {
-            outline: none;
-            border-color: var(--accent-color);
-        }
-
-        .drop-zone {
-            border: 2px dashed var(--border-color);
-            border-radius: 8px;
-            padding: 25px;
+            margin-bottom: 20px;
             text-align: center;
-            background-color: var(--bg-color);
-            cursor: pointer;
-            margin-bottom: 12px;
-            transition: border-color 0.2s, background-color 0.2s;
         }
 
-        .drop-zone.dragover {
-            border-color: var(--accent-color);
-            background-color: rgba(99, 102, 241, 0.05);
+        header h1 {
+            font-size: 1.5rem;
+            color: var(--cafe-green);
+            margin-bottom: 5px;
         }
 
-        .drop-zone p {
-            color: var(--text-secondary);
+        header p {
+            color: var(--text-sub);
             font-size: 0.9rem;
         }
 
-        .drop-zone span {
-            color: var(--accent-color);
-            font-weight: 600;
+        /* 글쓰기 카드 */
+        .write-card {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        .write-card input, .write-card textarea {
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+
+        .write-card textarea {
+            resize: vertical;
+            height: 60px;
+        }
+
+        .write-card input:focus, .write-card textarea:focus {
+            outline: none;
+            border-color: var(--cafe-green);
+        }
+
+        .file-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #fafbfc;
+            border: 1px dashed var(--border-color);
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            cursor: pointer;
         }
 
         #fileInput {
             display: none;
         }
 
-        .preview-text {
-            font-size: 0.85rem;
-            color: var(--accent-color);
-            margin-bottom: 12px;
-            text-align: center;
-        }
-
-        .upload-card button {
+        .write-card button {
             width: 100%;
             padding: 12px;
-            background-color: var(--accent-color);
+            background-color: var(--cafe-green);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             font-weight: 600;
+            font-size: 1rem;
             cursor: pointer;
             transition: background-color 0.2s;
         }
 
-        .upload-card button:hover {
-            background-color: var(--accent-hover);
+        .write-card button:hover {
+            background-color: var(--cafe-green-hover);
         }
 
-        .upload-card button:disabled {
+        .write-card button:disabled {
             background-color: var(--border-color);
             cursor: not-allowed;
         }
 
-        .feed-list {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .post-card {
+        /* 카페 게시글 목록 (테이블/리스트 형태) */
+        .cafe-board {
             background-color: var(--card-bg);
             border-radius: 12px;
             border: 1px solid var(--border-color);
             overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
-        .post-header {
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .board-header {
+            padding: 12px 20px;
+            background-color: #fafbfc;
             border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-sub);
         }
 
-        .post-author {
+        .post-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background-color 0.1s;
+        }
+
+        .post-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .post-item:last-child {
+            border-bottom: none;
+        }
+
+        .post-title {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 6px;
+            color: var(--text-main);
+        }
+
+        .post-info {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            display: flex;
+            gap: 12px;
+        }
+
+        /* 상세 보기 화면 */
+        .view-section {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            display: none;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--cafe-green);
             font-weight: 600;
             font-size: 0.95rem;
+            cursor: pointer;
+            margin-bottom: 15px;
         }
 
-        .post-content {
-            padding: 15px;
+        .view-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
         }
 
-        .post-content p {
-            margin-bottom: 12px;
+        .view-meta {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .view-content {
+            font-size: 0.95rem;
+            margin-bottom: 20px;
             white-space: pre-wrap;
         }
 
-        .media-container {
-            width: 100%;
-            max-height: 400px;
-            background-color: black;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .media-container img {
+        .view-image {
             max-width: 100%;
             max-height: 400px;
-            object-fit: contain;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: block;
         }
 
-        .comments-section {
+        /* 댓글 영역 */
+        .comment-section {
+            background-color: #fafbfc;
             padding: 15px;
-            background-color: rgba(15, 23, 42, 0.4);
-            border-top: 1px solid var(--border-color);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .comment-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 10px;
         }
 
         .comment-list {
@@ -203,58 +239,50 @@
             gap: 8px;
         }
 
-        .comment-item {
-            font-size: 0.9rem;
-            background-color: var(--bg-color);
+        .comment-box {
+            font-size: 0.85rem;
+            background: white;
             padding: 8px 12px;
             border-radius: 6px;
             border: 1px solid var(--border-color);
         }
 
-        .comment-item span {
-            font-weight: 600;
+        .comment-box span {
+            font-weight: bold;
+            color: var(--cafe-green);
             margin-right: 6px;
-            color: var(--accent-color);
         }
 
-        .comment-form {
+        .comment-input-box {
             display: flex;
             gap: 8px;
         }
 
-        .comment-form input {
+        .comment-input-box input {
             flex: 1;
-            padding: 8px 12px;
-            background-color: var(--bg-color);
+            padding: 8px 10px;
             border: 1px solid var(--border-color);
             border-radius: 6px;
-            color: var(--text-color);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
-        .comment-form input:focus {
-            outline: none;
-            border-color: var(--accent-color);
-        }
-
-        .comment-form button {
-            padding: 8px 16px;
-            background-color: var(--border-color);
-            color: var(--text-color);
+        .comment-input-box button {
+            padding: 8px 14px;
+            background-color: var(--text-sub);
+            color: white;
             border: none;
             border-radius: 6px;
             font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.2s;
         }
 
-        .comment-form button:hover {
-            background-color: var(--accent-color);
+        .comment-input-box button:hover {
+            background-color: var(--cafe-green);
         }
 
-        .empty-feed {
+        .empty-notice {
             text-align: center;
-            color: var(--text-secondary);
+            color: var(--text-sub);
             padding: 40px 0;
         }
     </style>
@@ -263,33 +291,58 @@
 
     <div class="container">
         <header>
-            <h1>짤·영상 공유소</h1>
-            <p>깃허브 연동 실시간 피드</p>
+            <h1>☘️ 짤·영상 카페</h1>
+            <p>우리들만의 즐거운 유머 공간</p>
         </header>
 
-        <div class="upload-card">
+        <!-- 글쓰기 카드 -->
+        <div class="write-card" id="writeCard">
             <input type="text" id="authorInput" placeholder="닉네임">
-            <textarea id="textInput" placeholder="어떤 짤인지 적어봐"></textarea>
+            <textarea id="textInput" placeholder="게시글 내용을 입력해 주세요..."></textarea>
             
-            <div class="drop-zone" id="dropZone">
-                <p>사진을 드래그해서 넣거나 📥</p>
-                <p><span>클릭해서 파일 선택하기</span></p>
+            <div class="file-box" onclick="document.getElementById('fileInput').click()">
+                <span id="fileName">📷 이미지 첨부하기</span>
+                <span>파일선택</span>
             </div>
             <input type="file" id="fileInput" accept="image/*">
-            <div class="preview-text" id="previewText">선택된 파일 없음</div>
 
-            <button onclick="uploadPost()" id="uploadBtn">공유하기</button>
+            <button onclick="uploadPost()" id="uploadBtn">등록</button>
         </div>
 
-        <div class="feed-list" id="feedList">
-            <div class="empty-feed">게시물을 불러오는 중...</div>
+        <!-- 게시글 목록 화면 -->
+        <div id="boardView" class="cafe-board">
+            <div class="board-header">전체글목록</div>
+            <div id="postListContainer">
+                <div class="empty-notice">게시물을 불러오는 중...</div>
+            </div>
+        </div>
+
+        <!-- 게시글 상세 보기 화면 -->
+        <div id="detailView" class="view-section">
+            <button class="back-btn" onclick="goToList()">&lt; 목록으로</button>
+            <div class="view-title" id="detailTitle"></div>
+            <div class="view-meta">
+                <span id="detailAuthor"></span>
+                <span id="detailDate"></span>
+            </div>
+            <div id="detailMediaContainer"></div>
+            <div class="view-content" id="detailContent"></div>
+
+            <div class="comment-section">
+                <div class="comment-title">댓글</div>
+                <div class="comment-list" id="detailCommentList"></div>
+                <div class="comment-input-box">
+                    <input type="text" id="commentInput" placeholder="댓글을 남겨보세요..." onkeypress="if(event.key === 'Enter') addComment()">
+                    <button onclick="addComment()">등록</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        // 🛠️ 깃허브 설정 정보 (유저네임, 토큰은 이미 넣어뒀어!)
-        const GITHUB_USER = 'guinea0910'; 
-        const REPO_NAME = 'guinea-meme-share'; // 👈 이 부분만 네 깃허브 저장소 이름으로 바꿔줘!
+        // 🛠️ 깃허브 설정 정보
+        const GITHUB_USER = 'gimdoyun'; 
+        const REPO_NAME = '여기에_저장소이름_입력'; // 👈 이 부분을 네 깃허브 저장소 이름으로 바꿔줘!
         const GITHUB_TOKEN = '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'; 
 
         const FILE_PATH = 'posts.json';
@@ -298,36 +351,17 @@
         let posts = [];
         let fileSha = ''; 
         let selectedFile = null;
+        let currentPostId = null;
 
-        const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
-        const previewText = document.getElementById('previewText');
+        const fileName = document.getElementById('fileName');
         const uploadBtn = document.getElementById('uploadBtn');
-
-        dropZone.addEventListener('click', () => fileInput.click());
 
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 selectedFile = e.target.files[0];
-                previewText.textContent = `선택된 파일: ${selectedFile.name}`;
-            }
-        });
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files.length > 0) {
-                selectedFile = e.dataTransfer.files[0];
-                previewText.textContent = `선택된 파일: ${selectedFile.name}`;
+                fileName.textContent = `선택됨: ${selectedFile.name}`;
+                fileName.style.color = '#03c75a';
             }
         });
 
@@ -342,9 +376,9 @@
                     const decodedContent = decodeURIComponent(escape(atob(data.content)));
                     const parsed = JSON.parse(decodedContent);
                     posts = parsed.posts || [];
-                    renderPosts();
+                    renderBoard();
                 } else {
-                    document.getElementById('feedList').innerHTML = '<div class="empty-feed">posts.json 파일을 찾지 못했거나 저장소 이름이 틀렸어!</div>';
+                    document.getElementById('postListContainer').innerHTML = '<div class="empty-notice">posts.json 파일을 찾지 못했거나 저장소 이름이 틀렸어!</div>';
                 }
             } catch (err) {
                 console.error("데이터 불러오기 오류:", err);
@@ -363,7 +397,7 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        message: "Update posts via web community",
+                        message: "Update cafe posts",
                         content: encodedContent,
                         sha: fileSha
                     })
@@ -383,7 +417,7 @@
             const text = document.getElementById('textInput').value.trim();
 
             if (!author || (!text && !selectedFile)) {
-                alert('닉네임과 내용(또는 파일)을 입력해줘.');
+                alert('닉네임과 내용을 입력해줘.');
                 return;
             }
 
@@ -398,94 +432,114 @@
                 });
             }
 
+            const title = text.length > 25 ? text.substring(0, 25) + '...' : (text || '이미지 게시물');
+
             const newPost = {
                 id: Date.now(),
                 author,
+                title,
                 text,
                 mediaUrl,
+                date: new Date().toLocaleDateString(),
                 comments: []
             };
 
             posts.unshift(newPost);
-            renderPosts();
+            renderBoard();
             await saveToGitHub();
             
             document.getElementById('textInput').value = '';
             fileInput.value = '';
             selectedFile = null;
-            previewText.textContent = '선택된 파일 없음';
+            fileName.textContent = '📷 이미지 첨부하기';
+            fileName.style.color = '#767676';
             uploadBtn.disabled = false;
         }
 
-        async function addComment(postId) {
-            const commentInput = document.getElementById(`comment-input-${postId}`);
-            const commentText = commentInput.value.trim();
-
-            if (!commentText) return;
-
-            const post = posts.find(p => p.id === postId);
-            if (post) {
-                if (!post.comments) post.comments = [];
-                post.comments.push({
-                    author: "친구",
-                    text: commentText
-                });
-                commentInput.value = '';
-                renderPosts();
-                await saveToGitHub();
-            }
-        }
-
-        function renderPosts() {
-            const feedList = document.getElementById('feedList');
+        function renderBoard() {
+            const container = document.getElementById('postListContainer');
             
             if (posts.length === 0) {
-                feedList.innerHTML = '<div class="empty-feed">아직 공유된 게시물이 없어. 첫 번째 게시물을 올려봐!</div>';
+                container.innerHTML = '<div class="empty-notice">등록된 게시물이 없습니다. 첫 글을 작성해 보세요!</div>';
                 return;
             }
 
-            feedList.innerHTML = '';
-
+            container.innerHTML = '';
             posts.forEach(post => {
-                const postCard = document.createElement('div');
-                postCard.className = 'post-card';
+                const item = document.createElement('div');
+                item.className = 'post-item';
+                item.onclick = () => showDetail(post.id);
 
-                let mediaHtml = '';
-                if (post.mediaUrl) {
-                    mediaHtml = `
-                        <div class="media-container">
-                            <img src="${post.mediaUrl}" alt="이미지">
-                        </div>
-                    `;
-                }
-
-                let commentsHtml = (post.comments || []).map(c => `
-                    <div class="comment-item">
-                        <span>${c.author}</span>${c.text}
-                    </div>
-                `).join('');
-
-                postCard.innerHTML = `
-                    <div class="post-header">
-                        <span class="post-author">${post.author}</span>
-                    </div>
-                    <div class="post-content">
-                        <p>${post.text}</p>
-                        ${mediaHtml}
-                    </div>
-                    <div class="comments-section">
-                        <div class="comment-list" id="comment-list-${post.id}">
-                            ${commentsHtml}
-                        </div>
-                        <div class="comment-form">
-                            <input type="text" id="comment-input-${post.id}" placeholder="댓글을 남겨봐..." onkeypress="if(event.key === 'Enter') addComment(${post.id})">
-                            <button onclick="addComment(${post.id})">등록</button>
-                        </div>
+                item.innerHTML = `
+                    <div class="post-title">${post.title}</div>
+                    <div class="post-info">
+                        <span>${post.author}</span>
+                        <span>${post.date}</span>
+                        <span>댓글 ${post.comments ? post.comments.length : 0}</span>
                     </div>
                 `;
-
-                feedList.appendChild(postCard);
+                container.appendChild(item);
             });
+        }
+
+        function showDetail(postId) {
+            currentPostId = postId;
+            const post = posts.find(p => p.id === postId);
+            if (!post) return;
+
+            document.getElementById('writeCard').style.display = 'none';
+            document.getElementById('boardView').style.display = 'none';
+            document.getElementById('detailView').style.display = 'block';
+
+            document.getElementById('detailTitle').textContent = post.title;
+            document.getElementById('detailAuthor').textContent = `작성자: ${post.author}`;
+            document.getElementById('detailDate').textContent = post.date;
+            document.getElementById('detailContent').textContent = post.text;
+
+            const mediaContainer = document.getElementById('detailMediaContainer');
+            mediaContainer.innerHTML = post.mediaUrl ? `<img src="${post.mediaUrl}" class="view-image">` : '';
+
+            renderComments(post);
+        }
+
+        function goToList() {
+            document.getElementById('writeCard').style.display = 'block';
+            document.getElementById('boardView').style.display = 'block';
+            document.getElementById('detailView').style.display = 'none';
+            currentPostId = null;
+        }
+
+        function renderComments(post) {
+            const commentList = document.getElementById('detailCommentList');
+            if (!post.comments || post.comments.length === 0) {
+                commentList.innerHTML = '<div style="font-size:0.85rem; color:#767676; text-align:center; padding:10px;">작성된 댓글이 없습니다.</div>';
+                return;
+            }
+
+            commentList.innerHTML = post.comments.map(c => `
+                <div class="comment-box">
+                    <span>${c.author}</span>${c.text}
+                </div>
+            `).join('');
+        }
+
+        async function addComment() {
+            const commentInput = document.getElementById('commentInput');
+            const commentText = commentInput.value.trim();
+            if (!commentText) return;
+
+            const post = posts.find(p => p.id === currentPostId);
+            if (post) {
+                if (!post.comments) post.comments = [];
+                post.comments.push({
+                    author: "카페 회원",
+                    text: commentText
+                });
+                commentInput.value = '';
+                renderComments(post);
+                renderBoard();
+                await saveToGitHub();
+            }
         }
 
         fetchPosts();
