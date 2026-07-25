@@ -49,7 +49,6 @@
             font-size: 0.95rem;
         }
 
-        /* 업로드 카드 및 드래그 앤 드롭 영역 */
         .upload-card {
             background-color: var(--card-bg);
             padding: 20px;
@@ -80,7 +79,6 @@
             border-color: var(--accent-color);
         }
 
-        /* 드롭존 디자인 */
         .drop-zone {
             border: 2px dashed var(--border-color);
             border-radius: 8px;
@@ -139,7 +137,6 @@
             cursor: not-allowed;
         }
 
-        /* 피드 카드 스타일 */
         .feed-list {
             display: flex;
             flex-direction: column;
@@ -187,13 +184,12 @@
             overflow: hidden;
         }
 
-        .media-container img, .media-container video {
+        .media-container img {
             max-width: 100%;
             max-height: 400px;
             object-fit: contain;
         }
 
-        /* 댓글 섹션 */
         .comments-section {
             padding: 15px;
             background-color: rgba(15, 23, 42, 0.4);
@@ -271,30 +267,26 @@
             <p>친구들과 함께 쓰는 실시간 연동 피드</p>
         </header>
 
-        <!-- 업로드 영역 -->
         <div class="upload-card">
             <input type="text" id="authorInput" placeholder="닉네임">
-            <textarea id="textInput" placeholder="어떤 짤이나 영상인지 적어봐"></textarea>
+            <textarea id="textInput" placeholder="어떤 짤인지 적어봐"></textarea>
             
-            <!-- 드래그 앤 드롭 박스 -->
             <div class="drop-zone" id="dropZone">
-                <p>사진은 드래그해서 넣고, 영상은 올려도 자동 변환돼! 📥</p>
+                <p>사진을 드래그해서 넣거나 📥</p>
                 <p><span>클릭해서 파일 선택하기</span></p>
             </div>
-            <input type="file" id="fileInput" accept="image/*,video/*">
+            <input type="file" id="fileInput" accept="image/*">
             <div class="preview-text" id="previewText">선택된 파일 없음</div>
 
             <button onclick="uploadPost()" id="uploadBtn">공유하기</button>
         </div>
 
-        <!-- 피드 목록 -->
         <div class="feed-list" id="feedList">
             <div class="empty-feed">게시물을 불러오는 중...</div>
         </div>
     </div>
 
     <script>
-        // 무료 클라우드 저장소 연동 설정 (JSONBin 무료 퍼블릭 빈 활용)
         const BIN_ID = '673a5a5fa1c521021bc6f23b'; 
         const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}/latest`;
         const PUT_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
@@ -334,7 +326,6 @@
             }
         });
 
-        // 클라우드에서 최신 게시물 불러오기
         async function fetchPosts() {
             try {
                 const response = await fetch(API_URL);
@@ -348,7 +339,6 @@
             }
         }
 
-        // 클라우드에 게시물 저장하기
         async function syncAndSavePosts() {
             renderPosts();
             try {
@@ -375,46 +365,13 @@
 
             uploadBtn.disabled = true;
             let mediaUrl = '';
-            let mediaType = 'image';
 
             if (selectedFile) {
-                if (selectedFile.type.startsWith('video')) {
-                    previewText.textContent = '동영상 업로드 중 (Catbox 변환 중)...';
-                    try {
-                        const formData = new FormData();
-                        formData.append('reqtype', 'fileupload');
-                        formData.append('fileToUpload', selectedFile);
-
-                        const response = await fetch('https://catbox.moe/user/api.php', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        
-                        if (response.ok) {
-                            mediaUrl = await response.text();
-                            mediaType = 'video';
-                        } else {
-                            alert('동영상 업로드 실패! 다시 시도해봐.');
-                            uploadBtn.disabled = false;
-                            previewText.textContent = '선택된 파일 없음';
-                            return;
-                        }
-                    } catch (err) {
-                        console.error(err);
-                        alert('네트워크 오류가 발생했어.');
-                        uploadBtn.disabled = false;
-                        previewText.textContent = '선택된 파일 없음';
-                        return;
-                    }
-                } else {
-                    // 이미지는 Base64로 즉시 변환
-                    mediaType = 'image';
-                    mediaUrl = await new Promise((resolve) => {
-                        const reader = new FileReader();
-                        reader.onload = (e) => resolve(e.target.result);
-                        reader.readAsDataURL(selectedFile);
-                    });
-                }
+                mediaUrl = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(selectedFile);
+                });
             }
 
             const newPost = {
@@ -422,14 +379,12 @@
                 author,
                 text,
                 mediaUrl,
-                mediaType,
                 comments: []
             };
 
             posts.unshift(newPost);
             await syncAndSavePosts();
             
-            // 입력창 초기화
             document.getElementById('textInput').value = '';
             fileInput.value = '';
             selectedFile = null;
@@ -471,19 +426,11 @@
 
                 let mediaHtml = '';
                 if (post.mediaUrl) {
-                    if (post.mediaType === 'video') {
-                        mediaHtml = `
-                            <div class="media-container">
-                                <video src="${post.mediaUrl}" controls></video>
-                            </div>
-                        `;
-                    } else {
-                        mediaHtml = `
-                            <div class="media-container">
-                                <img src="${post.mediaUrl}" alt="이미지">
-                            </div>
-                        `;
-                    }
+                    mediaHtml = `
+                        <div class="media-container">
+                            <img src="${post.mediaUrl}" alt="이미지">
+                        </div>
+                    `;
                 }
 
                 let commentsHtml = (post.comments || []).map(c => `
@@ -515,7 +462,6 @@
             });
         }
 
-        // 실행 시 데이터 불러오기 및 3초마다 자동 새로고침(동기화)
         fetchPosts();
         setInterval(fetchPosts, 3000);
     </script>
