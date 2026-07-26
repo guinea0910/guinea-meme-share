@@ -183,7 +183,9 @@
             border: 1px solid var(--border-color);
         }
         .comment-header { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 2px; }
-        .comment-author { font-weight: bold; color: var(--text-sub); }
+        
+        /* 댓글 작성자 강조 */
+        .comment-author { font-weight: bold; color: var(--cafe-green); font-size: 13px; }
         .comment-time { font-size: 11px; color: var(--text-sub); }
         
         .top-bar {
@@ -255,10 +257,10 @@
 
         <div class="box">
             <h3>글 작성하기</h3>
-            <textarea id="postContent" rows="3" placeholder="내용을 입력해 주세요... (유튜브 영상은 링크로 복사해서 올리기)"></textarea>
+            <textarea id="postContent" rows="3" placeholder="내용을 입력해 주세요..."></textarea>
             
             <div id="dropZone" class="drop-zone">
-                사진 업로드
+                사진 업로드 (클릭 또는 드래그 앤 드롭)
             </div>
             <input type="file" id="fileInput" accept="image/*" class="hidden">
             
@@ -276,7 +278,7 @@
     <h3>전체 목록</h3>
     <div id="postsContainer">게시글 불러오는 중...</div>
 
-    <!-- Firebase SDK (안정적인 v10 버전 사용) -->
+    <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -576,10 +578,11 @@
         window.handleAddComment = async function(postId) {
             const input = document.getElementById(`commentInput_${postId}`);
             const commentText = input.value.trim();
-            if(!commentText) return;
+            if(!commentText || !currentUser) return; // 사용자 정보가 없으면 등록 안됨
 
             try {
                 const postRef = doc(db, "posts", postId);
+                // 배열에 작성자(author) 정보 명시적으로 저장
                 await updateDoc(postRef, {
                     comments: arrayUnion({
                         author: currentUser,
@@ -649,10 +652,11 @@
                     if(Array.isArray(comments)) {
                         comments.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
                         comments.forEach(c => {
+                            // 댓글 작성자 이름이 확실히 보이도록 이스케이프 처리 및 렌더링
                             commentsHtml += `
                                 <div class="comment-item">
                                     <div class="comment-header">
-                                        <span class="comment-author">${escapeHtml(c.author)}</span>
+                                        <span class="comment-author">${escapeHtml(c.author || '알 수 없음')}</span>
                                         <span class="comment-time">${formatDate(c.createdAt)}</span>
                                     </div>
                                     <div>${escapeHtml(c.content)}</div>
