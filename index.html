@@ -67,6 +67,48 @@
             border-color: var(--cafe-green);
         }
         
+        /* 드래그 앤 드롭 영역 스타일 */
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            color: var(--text-sub);
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .drop-zone.dragover {
+            background-color: rgba(3, 199, 90, 0.1);
+            border-color: var(--cafe-green);
+            color: var(--cafe-green);
+        }
+        
+        .preview-container {
+            position: relative;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        .preview-img {
+            max-width: 100%;
+            max-height: 150px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+        .remove-img-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
         .post-card {
             background-color: var(--card-bg);
             padding: 15px;
@@ -77,6 +119,7 @@
         .post-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
         .post-author { font-weight: bold; color: var(--cafe-green); }
         .post-content { color: var(--text-main); white-space: pre-wrap; margin-bottom: 10px; }
+        .post-img { max-width: 100%; border-radius: 6px; margin-top: 10px; }
         
         .comment-section {
             border-top: 1px solid var(--border-color);
@@ -106,14 +149,12 @@
             <button id="signupTabBtn" class="tab-btn" onclick="switchTab('signup')">회원가입</button>
         </div>
 
-        <!-- 로그인 폼 -->
         <div id="loginForm">
             <input type="text" id="loginId" placeholder="아이디 (닉네임)">
             <input type="password" id="loginPw" placeholder="비밀번호">
             <button onclick="handleLogin()">로그인</button>
         </div>
 
-        <!-- 회원가입 폼 -->
         <div id="signupForm" class="hidden">
             <input type="text" id="signupId" placeholder="사용할 아이디 (닉네임)">
             <input type="password" id="signupPw" placeholder="비밀번호">
@@ -121,7 +162,7 @@
         </div>
     </div>
 
-    <!-- 메인 게시판 영역 (로그인 시에만 표시) -->
+    <!-- 메인 게시판 영역 -->
     <div id="mainBox" class="hidden">
         <div class="box" style="display: flex; justify-content: space-between; align-items: center;">
             <div>환영합니다, <span id="currentUserSpan" style="color: var(--cafe-green); font-weight: bold;"></span>님!</div>
@@ -131,6 +172,21 @@
         <div class="box">
             <h3>글 작성하기</h3>
             <textarea id="postContent" rows="3" placeholder="내용을 입력해 주세요..."></textarea>
+            
+            <!-- 드래그 앤 드롭 사진 업로드 영역 -->
+            <div id="dropZone" class="drop-zone">
+                🖼️ 사진을 여기에 드래그하거나 클릭해서 업로드 (자동 1/2 화질 압축)
+            </div>
+            <input type="file" id="fileInput" accept="image/*" class="hidden">
+            
+            <!-- 미리보기 영역 -->
+            <div id="previewArea" class="hidden" style="margin-bottom: 10px;">
+                <div class="preview-container">
+                    <img id="previewImg" class="preview-img" src="" alt="미리보기">
+                    <button class="remove-img-btn" onclick="removeImage()">✕</button>
+                </div>
+            </div>
+
             <button onclick="handleCreatePost()">등록</button>
         </div>
     </div>
@@ -157,6 +213,7 @@
         const db = getFirestore(app);
 
         let currentUser = localStorage.getItem('cafe_user') || null;
+        let compressedImageData = null; // 압축된 이미지 데이터 보관용
 
         window.switchTab = function(type) {
             const loginForm = document.getElementById('loginForm');
@@ -177,59 +234,41 @@
             }
         };
 
-        // 회원가입
         window.handleSignup = async function() {
             const id = document.getElementById('signupId').value.trim();
             const pw = document.getElementById('signupPw').value.trim();
-
-            if(!id || !pw) {
-                alert('아이디와 비밀번호를 모두 입력해 주세요!');
-                return;
-            }
+            if(!id || !pw) { alert('아이디와 비밀번호를 모두 입력해 주세요!'); return; }
 
             try {
                 const userRef = doc(db, "users", id);
                 const userSnap = await getDoc(userRef);
-
-                if(userSnap.exists()) {
-                    alert('이미 존재하는 아이디입니다!');
-                    return;
-                }
+                if(userSnap.exists()) { alert('이미 존재하는 아이디입니다!'); return; }
 
                 await setDoc(userRef, { password: pw });
                 alert('회원가입 완료! 로그인해 주세요.');
                 switchTab('login');
                 document.getElementById('loginId').value = id;
             } catch (error) {
-                console.error(error);
                 alert('회원가입 실패: ' + error.message);
             }
         };
 
-        // 로그인
         window.handleLogin = async function() {
             const id = document.getElementById('loginId').value.trim();
             const pw = document.getElementById('loginPw').value.trim();
-
-            if(!id || !pw) {
-                alert('아이디와 비밀번호를 입력해 주세요!');
-                return;
-            }
+            if(!id || !pw) { alert('아이디와 비밀번호를 입력해 주세요!'); return; }
 
             try {
                 const userRef = doc(db, "users", id);
                 const userSnap = await getDoc(userRef);
-
                 if(!userSnap.exists() || userSnap.data().password !== pw) {
                     alert('아이디 또는 비밀번호가 일치하지 않습니다.');
                     return;
                 }
-
                 currentUser = id;
                 localStorage.setItem('cafe_user', id);
                 checkAuthState();
             } catch (error) {
-                console.error(error);
                 alert('로그인 실패: ' + error.message);
             }
         };
@@ -256,11 +295,78 @@
             loadPosts();
         }
 
+        // --- 드래그 앤 드롭 및 이미지 압축 로직 ---
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                processImageFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                processImageFile(e.target.files[0]);
+            }
+        });
+
+        function processImageFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('이미지 파일만 업로드할 수 있습니다!');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    // 캔버스를 이용해 가로세로 크기를 1/2로 줄이기
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.floor(img.width / 2);
+                    canvas.height = Math.floor(img.height / 2);
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    // 압축된 Base64 데이터 생성 (JPEG 80% 화질)
+                    compressedImageData = canvas.toDataURL('image/jpeg', 0.8);
+
+                    // 미리보기 표시
+                    document.getElementById('previewImg').src = compressedImageData;
+                    document.getElementById('previewArea').classList.remove('hidden');
+                    dropZone.classList.add('hidden');
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        window.removeImage = function() {
+            compressedImageData = null;
+            fileInput.value = '';
+            document.getElementById('previewArea').classList.add('hidden');
+            dropZone.classList.remove('hidden');
+        };
+
         // 게시글 작성
         window.handleCreatePost = async function() {
             const content = document.getElementById('postContent').value.trim();
-            if(!content) {
-                alert('내용을 입력해 주세요!');
+            if(!content && !compressedImageData) {
+                alert('내용이나 사진을 입력해 주세요!');
                 return;
             }
 
@@ -268,10 +374,14 @@
                 await addDoc(collection(db, "posts"), {
                     author: currentUser,
                     content: content,
+                    image: compressedImageData || null,
                     createdAt: Date.now(),
                     comments: []
                 });
+                
+                // 초기화
                 document.getElementById('postContent').value = '';
+                removeImage();
                 loadPosts();
             } catch (error) {
                 console.error(error);
@@ -281,17 +391,13 @@
 
         // 게시글 삭제
         window.handleDeletePost = async function(postId, author) {
-            if(currentUser !== author) {
-                alert('자신이 쓴 글만 삭제할 수 있습니다!');
-                return;
-            }
+            if(currentUser !== author) { alert('자신이 쓴 글만 삭제할 수 있습니다!'); return; }
             if(!confirm('정말 이 게시글을 삭제하시겠습니까?')) return;
 
             try {
                 await deleteDoc(doc(db, "posts", postId));
                 loadPosts();
             } catch (error) {
-                console.error(error);
                 alert('삭제 실패: ' + error.message);
             }
         };
@@ -314,7 +420,6 @@
                 input.value = '';
                 loadPosts();
             } catch (error) {
-                console.error(error);
                 alert('댓글 등록 실패: ' + error.message);
             }
         };
@@ -346,6 +451,11 @@
                         deleteBtnHtml = `<button class="danger-btn" onclick="handleDeletePost('${post.id}', '${post.author}')" style="padding: 3px 8px; font-size: 11px;">삭제</button>`;
                     }
 
+                    let imgHtml = '';
+                    if(post.image) {
+                        imgHtml = `<img src="${post.image}" class="post-img" alt="업로드 이미지">`;
+                    }
+
                     let commentsHtml = '';
                     if(post.comments && Array.isArray(post.comments)) {
                         post.comments.forEach(c => {
@@ -364,6 +474,7 @@
                             ${deleteBtnHtml}
                         </div>
                         <div class="post-content">${escapeHtml(post.content)}</div>
+                        ${imgHtml}
                         <div class="comment-section">
                             <div style="font-weight: bold; margin-bottom: 5px;">댓글</div>
                             ${commentsHtml}
@@ -376,7 +487,6 @@
                     postsContainer.appendChild(card);
                 });
             } catch (error) {
-                console.error(error);
                 postsContainer.innerHTML = `<div class="error-box"><b>[불러오기 에러 발생]</b><br>${error.message}</div>`;
             }
         }
