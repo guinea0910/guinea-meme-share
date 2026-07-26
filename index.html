@@ -183,8 +183,6 @@
             border: 1px solid var(--border-color);
         }
         .comment-header { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 2px; }
-        
-        /* 댓글 작성자 강조 */
         .comment-author { font-weight: bold; color: var(--cafe-green); font-size: 13px; }
         .comment-time { font-size: 11px; color: var(--text-sub); }
         
@@ -525,6 +523,7 @@
                     content: content,
                     image: compressedImageData || null,
                     createdAt: Date.now(),
+                    viewedUsers: [], // 읽은 유저 목록 (조회수 중복 방지용)
                     likes: [],
                     comments: []
                 });
@@ -578,11 +577,10 @@
         window.handleAddComment = async function(postId) {
             const input = document.getElementById(`commentInput_${postId}`);
             const commentText = input.value.trim();
-            if(!commentText || !currentUser) return; // 사용자 정보가 없으면 등록 안됨
+            if(!commentText || !currentUser) return;
 
             try {
                 const postRef = doc(db, "posts", postId);
-                // 배열에 작성자(author) 정보 명시적으로 저장
                 await updateDoc(postRef, {
                     comments: arrayUnion({
                         author: currentUser,
@@ -627,6 +625,25 @@
                 });
                 posts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
+                // 파이어베이스 데이터 기반 조회수 중복 체크
+                if (currentUser) {
+                    for (const post of posts) {
+                        const viewedUsers = post.viewedUsers || [];
+                        if (!viewedUsers.includes(currentUser)) {
+                            try {
+                                const postRef = doc(db, "posts", post.id);
+                                await updateDoc(postRef, {
+                                    viewedUsers: arrayUnion(currentUser)
+                                });
+                                // 실시간 반영을 위해 배열에 추가
+                                post.viewedUsers = [...viewedUsers, currentUser];
+                            } catch (e) {
+                                console.error("조회수 업데이트 에러:", e);
+                            }
+                        }
+                    }
+                }
+
                 posts.forEach((post) => {
                     const card = document.createElement('div');
                     card.className = 'post-card';
@@ -641,6 +658,7 @@
                         imgHtml = `<img src="${post.image}" class="post-img" alt="업로드 이미지">`;
                     }
 
+                    const viewsCount = (post.viewedUsers || []).length;
                     const likes = post.likes || [];
                     const likeCount = likes.length;
                     const isLiked = currentUser && likes.includes(currentUser);
@@ -652,7 +670,6 @@
                     if(Array.isArray(comments)) {
                         comments.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
                         comments.forEach(c => {
-                            // 댓글 작성자 이름이 확실히 보이도록 이스케이프 처리 및 렌더링
                             commentsHtml += `
                                 <div class="comment-item">
                                     <div class="comment-header">
@@ -675,6 +692,7 @@
                         ${imgHtml}
                         
                         <div class="post-stats" style="margin-top: 10px;">
+                            <span>👀 조회 ${viewsCount}회</span>
                             <span>❤️ 좋아요 ${likeCount}개</span>
                             <span>💬 댓글 ${commentCount}개</span>
                         </div>
