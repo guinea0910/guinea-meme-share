@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>짤·영상 카페</title>
+    <title>기니 짤방 웹버전</title>
     <style>
         :root {
             --cafe-green: #03c75a;
@@ -140,7 +140,7 @@
 </head>
 <body>
 
-    <h2>🍀 짤·영상 카페</h2>
+    <h2>🍀 기니 짤방 웹버전</h2>
 
     <!-- 인증 영역 (로그인/회원가입) -->
     <div id="authBox" class="box">
@@ -175,7 +175,7 @@
             
             <!-- 드래그 앤 드롭 사진 업로드 영역 -->
             <div id="dropZone" class="drop-zone">
-                🖼️ 사진을 여기에 드래그하거나 클릭해서 업로드 (자동 1/2 화질 압축)
+                사진 업로드
             </div>
             <input type="file" id="fileInput" accept="image/*" class="hidden">
             
@@ -192,7 +192,7 @@
     </div>
 
     <h3>전체 목록</h3>
-    <div id="postsContainer">게시글을 불러오는 중...</div>
+    <div id="postsContainer">게시글 불러오는 중...</div>
 
     <!-- Firebase 로직 -->
     <script type="module">
@@ -366,7 +366,7 @@
         window.handleCreatePost = async function() {
             const content = document.getElementById('postContent').value.trim();
             if(!content && !compressedImageData) {
-                alert('내용이나 사진을 입력해 주세요!');
+                alert('내용이나 사진을 입력해 주세요');
                 return;
             }
 
