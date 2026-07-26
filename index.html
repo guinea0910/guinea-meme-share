@@ -30,7 +30,7 @@
             border: 1px solid var(--border-color);
             margin-bottom: 30px;
         }
-        input, textarea {
+        input[type="text"], textarea {
             width: 100%;
             padding: 10px;
             margin-bottom: 10px;
@@ -40,6 +40,22 @@
             border-radius: 6px;
             box-sizing: border-box;
         }
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 6px;
+            padding: 20px;
+            text-align: center;
+            color: var(--text-sub);
+            margin-bottom: 10px;
+            cursor: pointer;
+            background-color: rgba(15, 23, 42, 0.5);
+        }
+        .drop-zone.dragover {
+            border-color: var(--cafe-green);
+            color: var(--cafe-green);
+        }
+        input[type="file"] { display: none; }
+        
         button {
             width: 100%;
             padding: 12px;
@@ -59,7 +75,8 @@
             margin-bottom: 15px;
         }
         .post-author { font-weight: bold; color: var(--cafe-green); margin-bottom: 5px; }
-        .post-content { color: var(--text-main); white-space: pre-wrap; }
+        .post-content { color: var(--text-main); white-space: pre-wrap; margin-bottom: 10px; }
+        .post-img { max-width: 100%; border-radius: 6px; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -69,16 +86,22 @@
     <div class="form-box">
         <input type="text" id="nickname" placeholder="닉네임">
         <textarea id="content" rows="3" placeholder="게시글 내용을 입력해 주세요..."></textarea>
+        
+        <div id="dropZone" class="drop-zone">
+            이미지를 여기에 드래그하거나 클릭해서 업로드하세요
+            <input type="file" id="imageFile" accept="image/*">
+        </div>
+        <div id="fileName" style="font-size: 12px; color: var(--text-sub); margin-bottom: 10px;"></div>
+
         <button id="submitBtn">등록</button>
     </div>
 
     <h3>전체 목록</h3>
     <div id="postsContainer">게시글을 불러오는 중...</div>
 
-    <!-- Firebase 및 Firestore 로직 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCfcOH-oargpwPPSxJwIycKnx7o9OGWxwo",
@@ -97,6 +120,46 @@
         const nicknameInput = document.getElementById('nickname');
         const contentInput = document.getElementById('content');
         const postsContainer = document.getElementById('postsContainer');
+        const dropZone = document.getElementById('dropZone');
+        const imageFileInput = document.getElementById('imageFile');
+        const fileNameDisplay = document.getElementById('fileName');
+
+        let base64Image = '';
+
+        // 드래그 앤 드롭 및 파일 선택 처리 (Base64 변환)
+        dropZone.addEventListener('click', () => imageFileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                processFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        imageFileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                processFile(e.target.files[0]);
+            }
+        });
+
+        function processFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                base64Image = e.target.result; // 이미지를 텍스트(Base64)로 변환
+                fileNameDisplay.textContent = `선택된 파일: ${file.name}`;
+            };
+            reader.readAsDataURL(file);
+        }
 
         // 게시글 불러오기
         async function loadPosts() {
@@ -115,9 +178,16 @@
                     const post = doc.data();
                     const card = document.createElement('div');
                     card.className = 'post-card';
+                    
+                    let imageHtml = '';
+                    if (post.imageUrl) {
+                        imageHtml = `<img src="${post.imageUrl}" class="post-img" alt="업로드 이미지">`;
+                    }
+
                     card.innerHTML = `
                         <div class="post-author">${escapeHtml(post.nickname || '익명')}</div>
                         <div class="post-content">${escapeHtml(post.content || '')}</div>
+                        ${imageHtml}
                     `;
                     postsContainer.appendChild(card);
                 });
@@ -127,7 +197,7 @@
             }
         }
 
-        // 게시글 작성하기
+        // 게시글 작성하기 (Firestore에 텍스트+이미지 데이터 한 번에 저장)
         submitBtn.addEventListener('click', async () => {
             const nickname = nicknameInput.value.trim();
             const content = contentInput.value.trim();
@@ -137,30 +207,40 @@
                 return;
             }
 
+            submitBtn.disabled = true;
+            submitBtn.textContent = '등록 중...';
+
             try {
                 await addDoc(collection(db, "posts"), {
                     nickname: nickname,
                     content: content,
+                    imageUrl: base64Image, // 변환된 이미지 문자열 저장
                     createdAt: Date.now()
                 });
 
+                // 초기화
                 nicknameInput.value = '';
                 contentInput.value = '';
-                loadPosts(); // 작성 후 목록 새로고침
+                base64Image = '';
+                fileNameDisplay.textContent = '';
+                imageFileInput.value = '';
+
+                loadPosts();
             } catch (error) {
                 console.error(error);
                 alert('게시글 등록에 실패했습니다.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '등록';
             }
         });
 
-        // HTML 특수문자 이스케이프 (보안용)
         function escapeHtml(str) {
             return str.replace(/[&<>'"]/g, 
                 tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
             );
         }
 
-        // 페이지 접속 시 목록 불러오기
         loadPosts();
     </script>
 </body>
