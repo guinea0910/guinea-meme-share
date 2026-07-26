@@ -349,7 +349,7 @@
     <script>
         const GITHUB_USER = 'guinea0910'; 
         const REPO_NAME = 'guinea-meme-share'; 
-        const GITHUB_TOKEN = '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'; 
+        const GITHUB_TOKEN = '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'; 
 
         const FILE_PATH = 'posts.json';
         const API_URL = `https://api.github.com/repos/${GITHUB_USER}/${REPO_NAME}/contents/${FILE_PATH}`;
@@ -374,7 +374,6 @@
 
         async function fetchPosts() {
             try {
-                // 1. 먼저 API로 SHA 값을 가져옴 (수정할 때 필요)
                 const apiRes = await fetch(API_URL, {
                     headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
                 });
@@ -383,7 +382,6 @@
                     fileSha = apiData.sha;
                 }
 
-                // 2. 실제 데이터는 Raw URL로 깔끔하게 불러옴
                 const response = await fetch(RAW_URL);
                 if (response.ok) {
                     const data = await response.json();
