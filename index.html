@@ -92,6 +92,7 @@
         }
         .comment-author { font-weight: bold; color: var(--text-sub); font-size: 13px; }
         .hidden { display: none !important; }
+        .error-box { background-color: #451a03; border: 1px solid #b45309; color: #fde68a; padding: 10px; border-radius: 6px; margin-bottom: 10px; word-break: break-all; }
     </style>
 </head>
 <body>
@@ -201,7 +202,7 @@
                 document.getElementById('loginId').value = id;
             } catch (error) {
                 console.error(error);
-                alert('회원가입 실패');
+                alert('회원가입 실패: ' + error.message);
             }
         };
 
@@ -229,7 +230,7 @@
                 checkAuthState();
             } catch (error) {
                 console.error(error);
-                alert('로그인 실패');
+                alert('로그인 실패: ' + error.message);
             }
         };
 
@@ -274,7 +275,7 @@
                 loadPosts();
             } catch (error) {
                 console.error(error);
-                alert('게시글 등록 실패');
+                alert('게시글 등록 실패: ' + error.message);
             }
         };
 
@@ -291,7 +292,7 @@
                 loadPosts();
             } catch (error) {
                 console.error(error);
-                alert('삭제 실패');
+                alert('삭제 실패: ' + error.message);
             }
         };
 
@@ -314,7 +315,7 @@
                 loadPosts();
             } catch (error) {
                 console.error(error);
-                alert('댓글 등록 실패');
+                alert('댓글 등록 실패: ' + error.message);
             }
         };
 
@@ -330,7 +331,6 @@
                 }
 
                 postsContainer.innerHTML = '';
-                // 작성일 최신순 정렬
                 const posts = [];
                 querySnapshot.forEach((docSnap) => {
                     posts.push({ id: docSnap.id, ...docSnap.data() });
@@ -377,7 +377,7 @@
                 });
             } catch (error) {
                 console.error(error);
-                postsContainer.innerHTML = '게시글을 불러오는 데 실패했습니다.';
+                postsContainer.innerHTML = `<div class="error-box"><b>[불러오기 에러 발생]</b><br>${error.message}</div>`;
             }
         }
 
@@ -387,7 +387,6 @@
             );
         }
 
-        // 처음 접속 시 로그인 상태 체크
         checkAuthState();
     </script>
 </body>
