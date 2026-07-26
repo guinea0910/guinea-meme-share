@@ -14,7 +14,19 @@
             --text-sub: #94a3b8;
             --border-color: #334155;
             --danger-color: #ef4444;
+            --input-bg: #0f172a;
         }
+
+        /* 라이트 모드 테마 변수 */
+        body.light-mode {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+            --border-color: #cbd5e1;
+            --input-bg: #f8fafc;
+        }
+
         body {
             font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
             background-color: var(--bg-color);
@@ -22,6 +34,7 @@
             max-width: 600px;
             margin: 40px auto;
             padding: 20px;
+            transition: background-color 0.2s, color 0.2s;
         }
         h2, h3 { color: var(--cafe-green); }
         .box {
@@ -30,12 +43,13 @@
             border-radius: 12px;
             border: 1px solid var(--border-color);
             margin-bottom: 20px;
+            transition: background-color 0.2s, border-color 0.2s;
         }
-        input, textarea {
+        input, textarea, select {
             width: 100%;
             padding: 10px;
             margin-bottom: 10px;
-            background-color: var(--bg-color);
+            background-color: var(--input-bg);
             border: 1px solid var(--border-color);
             color: var(--text-main);
             border-radius: 6px;
@@ -114,6 +128,7 @@
             border-radius: 8px;
             border: 1px solid var(--border-color);
             margin-bottom: 15px;
+            transition: background-color 0.2s, border-color 0.2s;
         }
         .post-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
         .post-author { font-weight: bold; color: var(--cafe-green); }
@@ -121,6 +136,39 @@
         .post-content { color: var(--text-main); white-space: pre-wrap; margin-bottom: 10px; }
         .post-img { max-width: 100%; border-radius: 6px; margin-top: 10px; }
         
+        .post-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: var(--text-sub);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
+        .action-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .like-btn {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .like-btn.liked {
+            background-color: rgba(3, 199, 90, 0.15);
+            border-color: var(--cafe-green);
+            color: var(--cafe-green);
+        }
+
         .comment-section {
             border-top: 1px solid var(--border-color);
             padding-top: 10px;
@@ -128,21 +176,55 @@
             font-size: 14px;
         }
         .comment-item {
-            background-color: rgba(15, 23, 42, 0.4);
+            background-color: var(--input-bg);
             padding: 8px;
             border-radius: 4px;
             margin-bottom: 5px;
+            border: 1px solid var(--border-color);
         }
         .comment-header { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 2px; }
         .comment-author { font-weight: bold; color: var(--text-sub); }
         .comment-time { font-size: 11px; color: var(--text-sub); }
+        
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
         .hidden { display: none !important; }
         .error-box { background-color: #451a03; border: 1px solid #b45309; color: #fde68a; padding: 10px; border-radius: 6px; margin-bottom: 10px; word-break: break-all; }
     </style>
 </head>
 <body>
 
-    <h2>🍀 기니 짤방 웹버전</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2 style="margin: 0;">🍀 기니 짤방 웹버전</h2>
+        <button id="settingsToggleBtn" class="hidden" onclick="toggleSettings()" style="background-color: transparent; border: 1px solid var(--border-color); color: var(--text-main); padding: 5px 10px; font-size: 13px;">⚙️ 설정</button>
+    </div>
+
+    <!-- 설정 영역 (숨김/표시) -->
+    <div id="settingsBox" class="box hidden">
+        <h3>계정 및 테마 설정</h3>
+        <div style="margin-bottom: 10px;">
+            <label style="font-size: 13px; color: var(--text-sub);">아이디 (변경 불가)</label>
+            <input type="text" id="settingsId" disabled style="opacity: 0.7; cursor: not-allowed;">
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label style="font-size: 13px; color: var(--text-sub);">새 비밀번호</label>
+            <input type="password" id="settingsPw" placeholder="변경할 비밀번호 입력">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="font-size: 13px; color: var(--text-sub);">화면 테마</label>
+            <select id="settingsTheme" onchange="previewTheme()">
+                <option value="dark">다크 모드</option>
+                <option value="light">라이트 모드</option>
+            </select>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="handleSaveSettings()" style="flex: 1;">설정 저장</button>
+            <button onclick="toggleSettings()" class="danger-btn" style="flex: 1;">닫기</button>
+        </div>
+    </div>
 
     <!-- 인증 영역 (로그인/회원가입) -->
     <div id="authBox" class="box">
@@ -166,7 +248,7 @@
 
     <!-- 메인 게시판 영역 -->
     <div id="mainBox" class="hidden">
-        <div class="box" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="box top-bar">
             <div>환영합니다, <span id="currentUserSpan" style="color: var(--cafe-green); font-weight: bold;"></span>님!</div>
             <button class="danger-btn" onclick="handleLogout()" style="padding: 5px 10px; font-size: 12px;">로그아웃</button>
         </div>
@@ -244,7 +326,7 @@
                 const userSnap = await getDoc(userRef);
                 if(userSnap.exists()) { alert('이미 존재하는 아이디입니다!'); return; }
 
-                await setDoc(userRef, { password: pw });
+                await setDoc(userRef, { password: pw, theme: 'dark' });
                 alert('회원가입 완료! 로그인해 주세요.');
                 switchTab('login');
                 document.getElementById('loginId').value = id;
@@ -267,6 +349,11 @@
                 }
                 currentUser = id;
                 localStorage.setItem('cafe_user', id);
+                
+                // 계정 설정 테마 반영
+                const userData = userSnap.data();
+                applyTheme(userData.theme || 'dark');
+
                 checkAuthState();
             } catch (error) {
                 alert('로그인 실패: ' + error.message);
@@ -276,25 +363,94 @@
         window.handleLogout = function() {
             currentUser = null;
             localStorage.removeItem('cafe_user');
+            applyTheme('dark'); // 로그아웃 시 기본 다크모드로 초기화
+            document.getElementById('settingsBox').classList.add('hidden');
             checkAuthState();
         };
 
-        function checkAuthState() {
+        async function checkAuthState() {
             const authBox = document.getElementById('authBox');
             const mainBox = document.getElementById('mainBox');
+            const settingsToggleBtn = document.getElementById('settingsToggleBtn');
             const currentUserSpan = document.getElementById('currentUserSpan');
 
             if(currentUser) {
                 authBox.classList.add('hidden');
                 mainBox.classList.remove('hidden');
+                settingsToggleBtn.classList.remove('hidden');
                 currentUserSpan.textContent = currentUser;
+
+                // 유저 정보(테마 등) 동기화 불러오기
+                try {
+                    const userRef = doc(db, "users", currentUser);
+                    const userSnap = await getDoc(userRef);
+                    if(userSnap.exists()) {
+                        const data = userSnap.data();
+                        applyTheme(data.theme || 'dark');
+                    }
+                } catch(e) {}
             } else {
                 authBox.classList.remove('hidden');
                 mainBox.classList.add('hidden');
+                settingsToggleBtn.classList.add('hidden');
+                document.getElementById('settingsBox').classList.add('hidden');
             }
             loadPosts();
         }
 
+        // --- 설정 창 관련 함수 ---
+        window.toggleSettings = async function() {
+            const settingsBox = document.getElementById('settingsBox');
+            if(settingsBox.classList.contains('hidden')) {
+                // 열 때 현재 정보 세팅
+                document.getElementById('settingsId').value = currentUser;
+                document.getElementById('settingsPw').value = '';
+                try {
+                    const userRef = doc(db, "users", currentUser);
+                    const userSnap = await getDoc(userRef);
+                    if(userSnap.exists()) {
+                        document.getElementById('settingsTheme').value = userSnap.data().theme || 'dark';
+                    }
+                } catch(e) {}
+                settingsBox.classList.remove('hidden');
+            } else {
+                settingsBox.classList.add('hidden');
+                checkAuthState(); // 닫을 때 테마 원래대로 복구 가능하도록
+            }
+        };
+
+        window.previewTheme = function() {
+            const theme = document.getElementById('settingsTheme').value;
+            applyTheme(theme);
+        };
+
+        function applyTheme(theme) {
+            if(theme === 'light') {
+                document.body.classList.add('light-mode');
+            } else {
+                document.body.classList.remove('light-mode');
+            }
+        }
+
+        window.handleSaveSettings = async function() {
+            const newPw = document.getElementById('settingsPw').value.trim();
+            const newTheme = document.getElementById('settingsTheme').value;
+
+            try {
+                const userRef = doc(db, "users", currentUser);
+                const updateData = { theme: newTheme };
+                if(newPw) {
+                    updateData.password = newPw;
+                }
+                await updateDoc(userRef, updateData);
+                alert('설정이 성공적으로 저장되었습니다!');
+                toggleSettings();
+            } catch (error) {
+                alert('설정 저장 실패: ' + error.message);
+            }
+        };
+
+        // --- 드래그 앤 드롭 및 이미지 압축 로직 ---
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
 
@@ -367,6 +523,7 @@
                     content: content,
                     image: compressedImageData || null,
                     createdAt: Date.now(),
+                    likes: [],
                     comments: []
                 });
                 
@@ -391,6 +548,31 @@
             }
         };
 
+        // 좋아요 토글 기능
+        window.handleToggleLike = async function(postId) {
+            if(!currentUser) return;
+            try {
+                const postRef = doc(db, "posts", postId);
+                const postSnap = await getDoc(postRef);
+                if(!postSnap.exists()) return;
+
+                const data = postSnap.data();
+                let likes = data.likes || [];
+
+                if(likes.includes(currentUser)) {
+                    likes = likes.filter(user => user !== currentUser); // 좋아요 취소
+                } else {
+                    likes.push(currentUser); // 좋아요 추가
+                }
+
+                await updateDoc(postRef, { likes: likes });
+                loadPosts();
+            } catch (error) {
+                alert('좋아요 처리 실패: ' + error.message);
+            }
+        };
+
+        // 댓글 작성
         window.handleAddComment = async function(postId) {
             const input = document.getElementById(`commentInput_${postId}`);
             const commentText = input.value.trim();
@@ -456,11 +638,19 @@
                         imgHtml = `<img src="${post.image}" class="post-img" alt="업로드 이미지">`;
                     }
 
+                    // 좋아요 개수 및 여부 확인
+                    const likes = post.likes || [];
+                    const likeCount = likes.length;
+                    const isLiked = currentUser && likes.includes(currentUser);
+
+                    // 댓글 개수 확인
+                    const comments = post.comments || [];
+                    const commentCount = comments.length;
+
                     let commentsHtml = '';
-                    if(post.comments && Array.isArray(post.comments)) {
-                        // 댓글도 오래된 순 또는 최신순 정렬 (여기서는 오래된 순)
-                        post.comments.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-                        post.comments.forEach(c => {
+                    if(Array.isArray(comments)) {
+                        comments.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+                        comments.forEach(c => {
                             commentsHtml += `
                                 <div class="comment-item">
                                     <div class="comment-header">
@@ -481,6 +671,19 @@
                         <div class="post-time">${formatDate(post.createdAt)}</div>
                         <div class="post-content">${escapeHtml(post.content)}</div>
                         ${imgHtml}
+                        
+                        <!-- 좋아요 및 댓글 카운트 표시 -->
+                        <div class="post-stats" style="margin-top: 10px;">
+                            <span>❤️ 좋아요 ${likeCount개</span>
+                            <span>💬 댓글 ${commentCount}개</span>
+                        </div>
+
+                        <div class="action-row">
+                            <button class="like-btn ${isLiked ? 'liked' : ''}" onclick="handleToggleLike('${post.id}')">
+                                ${isLiked ? '❤️ 좋아요 취소' : '🤍 좋아요'}
+                            </button>
+                        </div>
+
                         <div class="comment-section">
                             <div style="font-weight: bold; margin-bottom: 5px;">댓글</div>
                             ${commentsHtml}
