@@ -67,7 +67,6 @@
             border-color: var(--cafe-green);
         }
         
-        /* 드래그 앤 드롭 영역 스타일 */
         .drop-zone {
             border: 2px dashed var(--border-color);
             border-radius: 8px;
@@ -118,6 +117,7 @@
         }
         .post-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
         .post-author { font-weight: bold; color: var(--cafe-green); }
+        .post-time { font-size: 12px; color: var(--text-sub); margin-bottom: 8px; }
         .post-content { color: var(--text-main); white-space: pre-wrap; margin-bottom: 10px; }
         .post-img { max-width: 100%; border-radius: 6px; margin-top: 10px; }
         
@@ -133,7 +133,9 @@
             border-radius: 4px;
             margin-bottom: 5px;
         }
-        .comment-author { font-weight: bold; color: var(--text-sub); font-size: 13px; }
+        .comment-header { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 2px; }
+        .comment-author { font-weight: bold; color: var(--text-sub); }
+        .comment-time { font-size: 11px; color: var(--text-sub); }
         .hidden { display: none !important; }
         .error-box { background-color: #451a03; border: 1px solid #b45309; color: #fde68a; padding: 10px; border-radius: 6px; margin-bottom: 10px; word-break: break-all; }
     </style>
@@ -173,13 +175,11 @@
             <h3>글 작성하기</h3>
             <textarea id="postContent" rows="3" placeholder="내용을 입력해 주세요..."></textarea>
             
-            <!-- 드래그 앤 드롭 사진 업로드 영역 -->
             <div id="dropZone" class="drop-zone">
                 사진 업로드
             </div>
             <input type="file" id="fileInput" accept="image/*" class="hidden">
             
-            <!-- 미리보기 영역 -->
             <div id="previewArea" class="hidden" style="margin-bottom: 10px;">
                 <div class="preview-container">
                     <img id="previewImg" class="preview-img" src="" alt="미리보기">
@@ -213,7 +213,7 @@
         const db = getFirestore(app);
 
         let currentUser = localStorage.getItem('cafe_user') || null;
-        let compressedImageData = null; // 압축된 이미지 데이터 보관용
+        let compressedImageData = null;
 
         window.switchTab = function(type) {
             const loginForm = document.getElementById('loginForm');
@@ -295,21 +295,17 @@
             loadPosts();
         }
 
-        // --- 드래그 앤 드롭 및 이미지 압축 로직 ---
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
 
         dropZone.addEventListener('click', () => fileInput.click());
-
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropZone.classList.add('dragover');
         });
-
         dropZone.addEventListener('dragleave', () => {
             dropZone.classList.remove('dragover');
         });
-
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
@@ -317,7 +313,6 @@
                 processImageFile(e.dataTransfer.files[0]);
             }
         });
-
         fileInput.addEventListener('change', (e) => {
             if (e.target.files && e.target.files[0]) {
                 processImageFile(e.target.files[0]);
@@ -334,7 +329,6 @@
             reader.onload = function(event) {
                 const img = new Image();
                 img.onload = function() {
-                    // 캔버스를 이용해 가로세로 크기를 1/2로 줄이기
                     const canvas = document.createElement('canvas');
                     canvas.width = Math.floor(img.width / 2);
                     canvas.height = Math.floor(img.height / 2);
@@ -342,10 +336,8 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                    // 압축된 Base64 데이터 생성 (JPEG 80% 화질)
                     compressedImageData = canvas.toDataURL('image/jpeg', 0.8);
 
-                    // 미리보기 표시
                     document.getElementById('previewImg').src = compressedImageData;
                     document.getElementById('previewArea').classList.remove('hidden');
                     dropZone.classList.add('hidden');
@@ -362,7 +354,6 @@
             dropZone.classList.remove('hidden');
         };
 
-        // 게시글 작성
         window.handleCreatePost = async function() {
             const content = document.getElementById('postContent').value.trim();
             if(!content && !compressedImageData) {
@@ -379,7 +370,6 @@
                     comments: []
                 });
                 
-                // 초기화
                 document.getElementById('postContent').value = '';
                 removeImage();
                 loadPosts();
@@ -389,7 +379,6 @@
             }
         };
 
-        // 게시글 삭제
         window.handleDeletePost = async function(postId, author) {
             if(currentUser !== author) { alert('자신이 쓴 글만 삭제할 수 있습니다!'); return; }
             if(!confirm('정말 이 게시글을 삭제하시겠습니까?')) return;
@@ -402,7 +391,6 @@
             }
         };
 
-        // 댓글 작성
         window.handleAddComment = async function(postId) {
             const input = document.getElementById(`commentInput_${postId}`);
             const commentText = input.value.trim();
@@ -424,7 +412,19 @@
             }
         };
 
-        // 게시글 목록 불러오기
+        // 날짜포맷 함수 (YYYY-MM-DD HH:MM:SS)
+        function formatDate(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            const hh = String(date.getHours()).padStart(2, '0');
+            const min = String(date.getMinutes()).padStart(2, '0');
+            const ss = String(date.getSeconds()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+        }
+
         async function loadPosts() {
             const postsContainer = document.getElementById('postsContainer');
             postsContainer.innerHTML = '불러오는 중...';
@@ -458,10 +458,15 @@
 
                     let commentsHtml = '';
                     if(post.comments && Array.isArray(post.comments)) {
+                        // 댓글도 오래된 순 또는 최신순 정렬 (여기서는 오래된 순)
+                        post.comments.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
                         post.comments.forEach(c => {
                             commentsHtml += `
                                 <div class="comment-item">
-                                    <div class="comment-author">${escapeHtml(c.author)}</div>
+                                    <div class="comment-header">
+                                        <span class="comment-author">${escapeHtml(c.author)}</span>
+                                        <span class="comment-time">${formatDate(c.createdAt)}</span>
+                                    </div>
                                     <div>${escapeHtml(c.content)}</div>
                                 </div>
                             `;
@@ -473,6 +478,7 @@
                             <span class="post-author">${escapeHtml(post.author)}</span>
                             ${deleteBtnHtml}
                         </div>
+                        <div class="post-time">${formatDate(post.createdAt)}</div>
                         <div class="post-content">${escapeHtml(post.content)}</div>
                         ${imgHtml}
                         <div class="comment-section">
