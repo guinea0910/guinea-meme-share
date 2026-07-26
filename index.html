@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>짤·영상 카페 (다크 모드)</title>
+    <title>짤·영상 카페</title>
     <style>
         :root {
             --cafe-green: #03c75a;
@@ -13,6 +13,7 @@
             --text-main: #f8fafc;
             --text-sub: #94a3b8;
             --border-color: #334155;
+            --danger-color: #ef4444;
         }
         body {
             font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
@@ -22,13 +23,13 @@
             margin: 40px auto;
             padding: 20px;
         }
-        h2 { color: var(--cafe-green); }
-        .form-box {
+        h2, h3 { color: var(--cafe-green); }
+        .box {
             background-color: var(--card-bg);
             padding: 20px;
             border-radius: 12px;
             border: 1px solid var(--border-color);
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
         input, textarea {
             width: 100%;
@@ -41,8 +42,7 @@
             box-sizing: border-box;
         }
         button {
-            width: 100%;
-            padding: 12px;
+            padding: 10px 15px;
             background-color: var(--cafe-green);
             color: white;
             border: none;
@@ -51,6 +51,22 @@
             cursor: pointer;
         }
         button:hover { background-color: var(--cafe-green-hover); }
+        .danger-btn { background-color: var(--danger-color); }
+        .danger-btn:hover { background-color: #dc2626; }
+        
+        .tab-btn {
+            background-color: transparent;
+            color: var(--text-sub);
+            border: 1px solid var(--border-color);
+            margin-right: 5px;
+            margin-bottom: 15px;
+        }
+        .tab-btn.active {
+            background-color: var(--cafe-green);
+            color: white;
+            border-color: var(--cafe-green);
+        }
+        
         .post-card {
             background-color: var(--card-bg);
             padding: 15px;
@@ -58,27 +74,73 @@
             border: 1px solid var(--border-color);
             margin-bottom: 15px;
         }
-        .post-author { font-weight: bold; color: var(--cafe-green); margin-bottom: 5px; }
-        .post-content { color: var(--text-main); white-space: pre-wrap; }
+        .post-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .post-author { font-weight: bold; color: var(--cafe-green); }
+        .post-content { color: var(--text-main); white-space: pre-wrap; margin-bottom: 10px; }
+        
+        .comment-section {
+            border-top: 1px solid var(--border-color);
+            padding-top: 10px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .comment-item {
+            background-color: rgba(15, 23, 42, 0.4);
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+        .comment-author { font-weight: bold; color: var(--text-sub); font-size: 13px; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
     <h2>🍀 짤·영상 카페</h2>
-    
-    <div class="form-box">
-        <input type="text" id="nickname" placeholder="닉네임">
-        <textarea id="content" rows="3" placeholder="게시글 내용을 입력해 주세요..."></textarea>
-        <button id="submitBtn">등록</button>
+
+    <!-- 인증 영역 (로그인/회원가입) -->
+    <div id="authBox" class="box">
+        <div>
+            <button id="loginTabBtn" class="tab-btn active" onclick="switchTab('login')">로그인</button>
+            <button id="signupTabBtn" class="tab-btn" onclick="switchTab('signup')">회원가입</button>
+        </div>
+
+        <!-- 로그인 폼 -->
+        <div id="loginForm">
+            <input type="text" id="loginId" placeholder="아이디 (닉네임)">
+            <input type="password" id="loginPw" placeholder="비밀번호">
+            <button onclick="handleLogin()">로그인</button>
+        </div>
+
+        <!-- 회원가입 폼 -->
+        <div id="signupForm" class="hidden">
+            <input type="text" id="signupId" placeholder="사용할 아이디 (닉네임)">
+            <input type="password" id="signupPw" placeholder="비밀번호">
+            <button onclick="handleSignup()">가입하기</button>
+        </div>
+    </div>
+
+    <!-- 메인 게시판 영역 (로그인 시에만 표시) -->
+    <div id="mainBox" class="hidden">
+        <div class="box" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>환영합니다, <span id="currentUserSpan" style="color: var(--cafe-green); font-weight: bold;"></span>님!</div>
+            <button class="danger-btn" onclick="handleLogout()" style="padding: 5px 10px; font-size: 12px;">로그아웃</button>
+        </div>
+
+        <div class="box">
+            <h3>글 작성하기</h3>
+            <textarea id="postContent" rows="3" placeholder="내용을 입력해 주세요..."></textarea>
+            <button onclick="handleCreatePost()">등록</button>
+        </div>
     </div>
 
     <h3>전체 목록</h3>
     <div id="postsContainer">게시글을 불러오는 중...</div>
 
-    <!-- Firebase 및 Firestore 로직 -->
+    <!-- Firebase 로직 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCfcOH-oargpwPPSxJwIycKnx7o9OGWxwo",
@@ -93,31 +155,223 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const submitBtn = document.getElementById('submitBtn');
-        const nicknameInput = document.getElementById('nickname');
-        const contentInput = document.getElementById('content');
-        const postsContainer = document.getElementById('postsContainer');
+        let currentUser = localStorage.getItem('cafe_user') || null;
 
-        // 게시글 불러오기
+        window.switchTab = function(type) {
+            const loginForm = document.getElementById('loginForm');
+            const signupForm = document.getElementById('signupForm');
+            const loginTab = document.getElementById('loginTabBtn');
+            const signupTab = document.getElementById('signupTabBtn');
+
+            if(type === 'login') {
+                loginForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+                loginTab.classList.add('active');
+                signupTab.classList.remove('active');
+            } else {
+                loginForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+                loginTab.classList.remove('active');
+                signupTab.classList.add('active');
+            }
+        };
+
+        // 회원가입
+        window.handleSignup = async function() {
+            const id = document.getElementById('signupId').value.trim();
+            const pw = document.getElementById('signupPw').value.trim();
+
+            if(!id || !pw) {
+                alert('아이디와 비밀번호를 모두 입력해 주세요!');
+                return;
+            }
+
+            try {
+                const userRef = doc(db, "users", id);
+                const userSnap = await getDoc(userRef);
+
+                if(userSnap.exists()) {
+                    alert('이미 존재하는 아이디입니다!');
+                    return;
+                }
+
+                await setDoc(userRef, { password: pw });
+                alert('회원가입 완료! 로그인해 주세요.');
+                switchTab('login');
+                document.getElementById('loginId').value = id;
+            } catch (error) {
+                console.error(error);
+                alert('회원가입 실패');
+            }
+        };
+
+        // 로그인
+        window.handleLogin = async function() {
+            const id = document.getElementById('loginId').value.trim();
+            const pw = document.getElementById('loginPw').value.trim();
+
+            if(!id || !pw) {
+                alert('아이디와 비밀번호를 입력해 주세요!');
+                return;
+            }
+
+            try {
+                const userRef = doc(db, "users", id);
+                const userSnap = await getDoc(userRef);
+
+                if(!userSnap.exists() || userSnap.data().password !== pw) {
+                    alert('아이디 또는 비밀번호가 일치하지 않습니다.');
+                    return;
+                }
+
+                currentUser = id;
+                localStorage.setItem('cafe_user', id);
+                checkAuthState();
+            } catch (error) {
+                console.error(error);
+                alert('로그인 실패');
+            }
+        };
+
+        window.handleLogout = function() {
+            currentUser = null;
+            localStorage.removeItem('cafe_user');
+            checkAuthState();
+        };
+
+        function checkAuthState() {
+            const authBox = document.getElementById('authBox');
+            const mainBox = document.getElementById('mainBox');
+            const currentUserSpan = document.getElementById('currentUserSpan');
+
+            if(currentUser) {
+                authBox.classList.add('hidden');
+                mainBox.classList.remove('hidden');
+                currentUserSpan.textContent = currentUser;
+            } else {
+                authBox.classList.remove('hidden');
+                mainBox.classList.add('hidden');
+            }
+            loadPosts();
+        }
+
+        // 게시글 작성
+        window.handleCreatePost = async function() {
+            const content = document.getElementById('postContent').value.trim();
+            if(!content) {
+                alert('내용을 입력해 주세요!');
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, "posts"), {
+                    author: currentUser,
+                    content: content,
+                    createdAt: Date.now(),
+                    comments: []
+                });
+                document.getElementById('postContent').value = '';
+                loadPosts();
+            } catch (error) {
+                console.error(error);
+                alert('게시글 등록 실패');
+            }
+        };
+
+        // 게시글 삭제
+        window.handleDeletePost = async function(postId, author) {
+            if(currentUser !== author) {
+                alert('자신이 쓴 글만 삭제할 수 있습니다!');
+                return;
+            }
+            if(!confirm('정말 이 게시글을 삭제하시겠습니까?')) return;
+
+            try {
+                await deleteDoc(doc(db, "posts", postId));
+                loadPosts();
+            } catch (error) {
+                console.error(error);
+                alert('삭제 실패');
+            }
+        };
+
+        // 댓글 작성
+        window.handleAddComment = async function(postId) {
+            const input = document.getElementById(`commentInput_${postId}`);
+            const commentText = input.value.trim();
+            if(!commentText) return;
+
+            try {
+                const postRef = doc(db, "posts", postId);
+                await updateDoc(postRef, {
+                    comments: arrayUnion({
+                        author: currentUser,
+                        content: commentText,
+                        createdAt: Date.now()
+                    })
+                });
+                input.value = '';
+                loadPosts();
+            } catch (error) {
+                console.error(error);
+                alert('댓글 등록 실패');
+            }
+        };
+
+        // 게시글 목록 불러오기
         async function loadPosts() {
+            const postsContainer = document.getElementById('postsContainer');
             postsContainer.innerHTML = '불러오는 중...';
             try {
-                const q = query(collection(db, "posts"));
-                const querySnapshot = await getDocs(q);
-                
-                if (querySnapshot.empty) {
-                    postsContainer.innerHTML = '등록된 게시물이 없습니다. 첫 글을 작성해 보세요!';
+                const querySnapshot = await getDocs(collection(db, "posts"));
+                if(querySnapshot.empty) {
+                    postsContainer.innerHTML = '등록된 게시물이 없습니다.';
                     return;
                 }
 
                 postsContainer.innerHTML = '';
-                querySnapshot.forEach((doc) => {
-                    const post = doc.data();
+                // 작성일 최신순 정렬
+                const posts = [];
+                querySnapshot.forEach((docSnap) => {
+                    posts.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                posts.sort((a, b) => b.createdAt - a.createdAt);
+
+                posts.forEach((post) => {
                     const card = document.createElement('div');
                     card.className = 'post-card';
+
+                    let deleteBtnHtml = '';
+                    if(currentUser === post.author) {
+                        deleteBtnHtml = `<button class="danger-btn" onclick="handleDeletePost('${post.id}', '${post.author}')" style="padding: 3px 8px; font-size: 11px;">삭제</button>`;
+                    }
+
+                    let commentsHtml = '';
+                    if(post.comments && post.comments.length > 0) {
+                        post.comments.forEach(c => {
+                            commentsHtml += `
+                                <div class="comment-item">
+                                    <div class="comment-author">${escapeHtml(c.author)}</div>
+                                    <div>${escapeHtml(c.content)}</div>
+                                </div>
+                            `;
+                        });
+                    }
+
                     card.innerHTML = `
-                        <div class="post-author">${escapeHtml(post.nickname || '익명')}</div>
-                        <div class="post-content">${escapeHtml(post.content || '')}</div>
+                        <div class="post-header">
+                            <span class="post-author">${escapeHtml(post.author)}</span>
+                            ${deleteBtnHtml}
+                        </div>
+                        <div class="post-content">${escapeHtml(post.content)}</div>
+                        <div class="comment-section">
+                            <div style="font-weight: bold; margin-bottom: 5px;">댓글</div>
+                            ${commentsHtml}
+                            <div style="display: flex; gap: 5px; margin-top: 8px;">
+                                <input type="text" id="commentInput_${post.id}" placeholder="댓글을 입력하세요..." style="margin-bottom:0;">
+                                <button onclick="handleAddComment('${post.id}')" style="white-space: nowrap;">등록</button>
+                            </div>
+                        </div>
                     `;
                     postsContainer.appendChild(card);
                 });
@@ -127,41 +381,14 @@
             }
         }
 
-        // 게시글 작성하기
-        submitBtn.addEventListener('click', async () => {
-            const nickname = nicknameInput.value.trim();
-            const content = contentInput.value.trim();
-
-            if (!nickname || !content) {
-                alert('닉네임과 내용을 모두 입력해 주세요!');
-                return;
-            }
-
-            try {
-                await addDoc(collection(db, "posts"), {
-                    nickname: nickname,
-                    content: content,
-                    createdAt: Date.now()
-                });
-
-                nicknameInput.value = '';
-                contentInput.value = '';
-                loadPosts(); // 작성 후 목록 새로고침
-            } catch (error) {
-                console.error(error);
-                alert('게시글 등록에 실패했습니다.');
-            }
-        });
-
-        // HTML 특수문자 이스케이프 (보안용)
         function escapeHtml(str) {
             return str.replace(/[&<>'"]/g, 
                 tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
             );
         }
 
-        // 페이지 접속 시 목록 불러오기
-        loadPosts();
+        // 처음 접속 시 로그인 상태 체크
+        checkAuthState();
     </script>
 </body>
 </html>
