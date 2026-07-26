@@ -122,16 +122,51 @@
         }
 
         /* 검색 영역 스타일 */
+        .search-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
         .search-row {
             display: flex;
             gap: 8px;
-            margin-bottom: 15px;
         }
         .search-row input {
             margin-bottom: 0;
         }
         .search-row button {
             white-space: nowrap;
+        }
+        
+        /* 회원 조회수 랭킹 드롭다운 스타일 */
+        .author-ranking-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-top: 5px;
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .ranking-item {
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .ranking-item:last-child {
+            border-bottom: none;
+        }
+        .ranking-item:hover {
+            background-color: rgba(3, 199, 90, 0.1);
+            color: var(--cafe-green);
         }
 
         /* 목록형 스타일 */
@@ -381,9 +416,13 @@
 
     <!-- 뷰 영역 (목록 또는 상세) -->
     <div id="contentArea">
-        <div id="searchSection" class="search-row">
-            <input type="text" id="searchInput" placeholder="작성자 이름 검색..." onkeyup="if(event.key==='Enter') handleSearch()">
-            <button onclick="handleSearch()">검색</button>
+        <div id="searchSection" class="search-container">
+            <div class="search-row">
+                <input type="text" id="searchInput" placeholder="작성자 이름 검색 또는 클릭하여 회원 목록 보기..." onfocus="showAuthorRanking()" oninput="filterAuthorRanking()" onkeyup="if(event.key==='Enter') { hideAuthorRanking(); handleSearch(); }">
+                <button onclick="hideAuthorRanking(); handleSearch();">검색</button>
+            </div>
+            <!-- 회원 조회수 랭킹 드롭다운 -->
+            <div id="authorRankingDropdown" class="author-ranking-dropdown hidden"></div>
         </div>
 
         <h3 id="listTitleHeader">전체 목록</h3>
@@ -414,8 +453,9 @@
         let currentView = 'list'; // 'list' 또는 'detail'
         let currentDetailPostId = null;
 
-        // 페이징 및 검색 상태 관리용 변수
+        // 페이징, 검색 및 회원 목록 상태 관리용 변수
         let allPosts = [];
+        let allUsers = []; // 회원가입된 사용자 아이디 목록
         let filteredPosts = [];
         let currentPage = 1;
         const postsPerPage = 10;
@@ -766,10 +806,102 @@
         };
 
         window.handleSearch = function() {
+            hideAuthorRanking();
             searchKeyword = document.getElementById('searchInput').value.trim().toLowerCase();
-            currentPage = 1; // 검색 시 첫 페이지로 이동
+            currentPage = 1;
             applyFilterAndRender();
         };
+
+        // 회원 조회수 순위 드롭다운 관련 함수들
+        window.showAuthorRanking = async function() {
+            await fetchUsersAndRanking();
+            renderAuthorRankingDropdown();
+            document.getElementById('authorRankingDropdown').classList.remove('hidden');
+        };
+
+        window.hideAuthorRanking = function() {
+            setTimeout(() => {
+                const dropdown = document.getElementById('authorRankingDropdown');
+                if (dropdown) dropdown.classList.add('hidden');
+            }, 200);
+        };
+
+        window.filterAuthorRanking = function() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            renderAuthorRankingDropdown(query);
+            document.getElementById('authorRankingDropdown').classList.remove('hidden');
+        };
+
+        window.selectAuthor = function(authorName) {
+            document.getElementById('searchInput').value = authorName;
+            hideAuthorRanking();
+            handleSearch();
+        };
+
+        async function fetchUsersAndRanking() {
+            try {
+                // 1. 회원 목록 가져오기
+                const usersSnap = await getDocs(collection(db, "users"));
+                allUsers = [];
+                usersSnap.forEach(docSnap => {
+                    allUsers.push(docSnap.id);
+                });
+
+                // 만약 posts에만 있고 users 문서에 아직 등록되지 않은 작성자가 있다면 추가
+                allPosts.forEach(post => {
+                    if (post.author && !allUsers.includes(post.author)) {
+                        allUsers.push(post.author);
+                    }
+                });
+            } catch (e) {
+                console.error("회원 목록 불러오기 에러:", e);
+            }
+        }
+
+        function renderAuthorRankingDropdown(filterQuery = '') {
+            const dropdown = document.getElementById('authorRankingDropdown');
+            
+            // 각 회원별 게시글 조회수 총합 계산
+            const userViewTotals = {};
+            allUsers.forEach(user => {
+                userViewTotals[user] = 0;
+            });
+
+            allPosts.forEach(post => {
+                const author = post.author;
+                if (author && userViewTotals[author] !== undefined) {
+                    const viewsCount = (post.viewedUsers || []).length;
+                    userViewTotals[author] += viewsCount;
+                }
+            });
+
+            // 조회수 총합이 높은 순서대로 정렬
+            let sortedUsers = [...allUsers].sort((a, b) => {
+                return (userViewTotals[b] || 0) - (userViewTotals[a] || 0);
+            });
+
+            // 검색어가 입력되어 있다면 필터링
+            if (filterQuery) {
+                sortedUsers = sortedUsers.filter(user => user.toLowerCase().includes(filterQuery));
+            }
+
+            if (sortedUsers.length === 0) {
+                dropdown.innerHTML = `<div style="padding: 12px; text-align: center; color: var(--text-sub); font-size: 13px;">검색된 회원이 없습니다.</div>`;
+                return;
+            }
+
+            let html = '';
+            sortedUsers.forEach((user, index) => {
+                const totalViews = userViewTotals[user] || 0;
+                html += `
+                    <div class="ranking-item" onclick="selectAuthor('${escapeHtml(user)}')">
+                        <div><b>${escapeHtml(user)}</b></div>
+                        <div style="font-size: 12px; color: var(--text-sub);">총 조회수: ${totalViews}회</div>
+                    </div>
+                `;
+            });
+            dropdown.innerHTML = html;
+        }
 
         window.changePage = function(page) {
             currentPage = page;
@@ -919,6 +1051,9 @@
                     allPosts.push({ id: docSnap.id, ...docSnap.data() });
                 });
                 allPosts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+                // 회원 및 랭킹 데이터 미리 준비
+                await fetchUsersAndRanking();
 
                 applyFilterAndRender();
             } catch (error) {
