@@ -202,7 +202,7 @@
         <button id="settingsToggleBtn" class="hidden" onclick="toggleSettings()" style="background-color: transparent; border: 1px solid var(--border-color); color: var(--text-main); padding: 5px 10px; font-size: 13px;">⚙️ 설정</button>
     </div>
 
-    <!-- 설정 영역 (숨김/표시) -->
+    <!-- 설정 영역 -->
     <div id="settingsBox" class="box hidden">
         <h3>계정 및 테마 설정</h3>
         <div style="margin-bottom: 10px;">
@@ -211,7 +211,7 @@
         </div>
         <div style="margin-bottom: 10px;">
             <label style="font-size: 13px; color: var(--text-sub);">새 비밀번호</label>
-            <input type="password" id="settingsPw" placeholder="변경할 비밀번호 입력">
+            <input type="password" id="settingsPw" placeholder="변경할 비밀번호 입력 (공백이면 유지)">
         </div>
         <div style="margin-bottom: 15px;">
             <label style="font-size: 13px; color: var(--text-sub);">화면 테마</label>
@@ -258,7 +258,7 @@
             <textarea id="postContent" rows="3" placeholder="내용을 입력해 주세요..."></textarea>
             
             <div id="dropZone" class="drop-zone">
-                사진 업로드
+                사진 업로드 (클래식/드래그앤드롭)
             </div>
             <input type="file" id="fileInput" accept="image/*" class="hidden">
             
@@ -276,10 +276,10 @@
     <h3>전체 목록</h3>
     <div id="postsContainer">게시글 불러오는 중...</div>
 
-    <!-- Firebase 로직 -->
+    <!-- Firebase SDK (안정적인 v10 버전 사용) -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCfcOH-oargpwPPSxJwIycKnx7o9OGWxwo",
@@ -331,6 +331,7 @@
                 switchTab('login');
                 document.getElementById('loginId').value = id;
             } catch (error) {
+                console.error(error);
                 alert('회원가입 실패: ' + error.message);
             }
         };
@@ -350,12 +351,12 @@
                 currentUser = id;
                 localStorage.setItem('cafe_user', id);
                 
-                // 계정 설정 테마 반영
                 const userData = userSnap.data();
                 applyTheme(userData.theme || 'dark');
 
                 checkAuthState();
             } catch (error) {
+                console.error(error);
                 alert('로그인 실패: ' + error.message);
             }
         };
@@ -363,7 +364,7 @@
         window.handleLogout = function() {
             currentUser = null;
             localStorage.removeItem('cafe_user');
-            applyTheme('dark'); // 로그아웃 시 기본 다크모드로 초기화
+            applyTheme('dark');
             document.getElementById('settingsBox').classList.add('hidden');
             checkAuthState();
         };
@@ -380,7 +381,6 @@
                 settingsToggleBtn.classList.remove('hidden');
                 currentUserSpan.textContent = currentUser;
 
-                // 유저 정보(테마 등) 동기화 불러오기
                 try {
                     const userRef = doc(db, "users", currentUser);
                     const userSnap = await getDoc(userRef);
@@ -388,7 +388,9 @@
                         const data = userSnap.data();
                         applyTheme(data.theme || 'dark');
                     }
-                } catch(e) {}
+                } catch(e) {
+                    console.error("테마 불러오기 에러:", e);
+                }
             } else {
                 authBox.classList.remove('hidden');
                 mainBox.classList.add('hidden');
@@ -398,11 +400,9 @@
             loadPosts();
         }
 
-        // --- 설정 창 관련 함수 ---
         window.toggleSettings = async function() {
             const settingsBox = document.getElementById('settingsBox');
             if(settingsBox.classList.contains('hidden')) {
-                // 열 때 현재 정보 세팅
                 document.getElementById('settingsId').value = currentUser;
                 document.getElementById('settingsPw').value = '';
                 try {
@@ -415,7 +415,7 @@
                 settingsBox.classList.remove('hidden');
             } else {
                 settingsBox.classList.add('hidden');
-                checkAuthState(); // 닫을 때 테마 원래대로 복구 가능하도록
+                checkAuthState();
             }
         };
 
@@ -446,11 +446,11 @@
                 alert('설정이 성공적으로 저장되었습니다!');
                 toggleSettings();
             } catch (error) {
+                console.error(error);
                 alert('설정 저장 실패: ' + error.message);
             }
         };
 
-        // --- 드래그 앤 드롭 및 이미지 압축 로직 ---
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
 
@@ -544,11 +544,11 @@
                 await deleteDoc(doc(db, "posts", postId));
                 loadPosts();
             } catch (error) {
+                console.error(error);
                 alert('삭제 실패: ' + error.message);
             }
         };
 
-        // 좋아요 토글 기능
         window.handleToggleLike = async function(postId) {
             if(!currentUser) return;
             try {
@@ -560,19 +560,19 @@
                 let likes = data.likes || [];
 
                 if(likes.includes(currentUser)) {
-                    likes = likes.filter(user => user !== currentUser); // 좋아요 취소
+                    likes = likes.filter(user => user !== currentUser);
                 } else {
-                    likes.push(currentUser); // 좋아요 추가
+                    likes.push(currentUser);
                 }
 
                 await updateDoc(postRef, { likes: likes });
                 loadPosts();
             } catch (error) {
+                console.error(error);
                 alert('좋아요 처리 실패: ' + error.message);
             }
         };
 
-        // 댓글 작성
         window.handleAddComment = async function(postId) {
             const input = document.getElementById(`commentInput_${postId}`);
             const commentText = input.value.trim();
@@ -590,11 +590,11 @@
                 input.value = '';
                 loadPosts();
             } catch (error) {
+                console.error(error);
                 alert('댓글 등록 실패: ' + error.message);
             }
         };
 
-        // 날짜포맷 함수 (YYYY-MM-DD HH:MM:SS)
         function formatDate(timestamp) {
             if (!timestamp) return '';
             const date = new Date(timestamp);
@@ -638,12 +638,10 @@
                         imgHtml = `<img src="${post.image}" class="post-img" alt="업로드 이미지">`;
                     }
 
-                    // 좋아요 개수 및 여부 확인
                     const likes = post.likes || [];
                     const likeCount = likes.length;
                     const isLiked = currentUser && likes.includes(currentUser);
 
-                    // 댓글 개수 확인
                     const comments = post.comments || [];
                     const commentCount = comments.length;
 
@@ -672,9 +670,8 @@
                         <div class="post-content">${escapeHtml(post.content)}</div>
                         ${imgHtml}
                         
-                        <!-- 좋아요 및 댓글 카운트 표시 -->
                         <div class="post-stats" style="margin-top: 10px;">
-                            <span>❤️ 좋아요 ${likeCount개</span>
+                            <span>❤️ 좋아요 ${likeCount}개</span>
                             <span>💬 댓글 ${commentCount}개</span>
                         </div>
 
@@ -696,6 +693,7 @@
                     postsContainer.appendChild(card);
                 });
             } catch (error) {
+                console.error(error);
                 postsContainer.innerHTML = `<div class="error-box"><b>[불러오기 에러 발생]</b><br>${error.message}</div>`;
             }
         }
