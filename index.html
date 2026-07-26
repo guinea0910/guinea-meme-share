@@ -335,19 +335,19 @@
                 querySnapshot.forEach((docSnap) => {
                     posts.push({ id: docSnap.id, ...docSnap.data() });
                 });
-                posts.sort((a, b) => b.createdAt - a.createdAt);
+                posts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
                 posts.forEach((post) => {
                     const card = document.createElement('div');
                     card.className = 'post-card';
 
                     let deleteBtnHtml = '';
-                    if(currentUser === post.author) {
+                    if(currentUser && currentUser === post.author) {
                         deleteBtnHtml = `<button class="danger-btn" onclick="handleDeletePost('${post.id}', '${post.author}')" style="padding: 3px 8px; font-size: 11px;">삭제</button>`;
                     }
 
                     let commentsHtml = '';
-                    if(post.comments && post.comments.length > 0) {
+                    if(post.comments && Array.isArray(post.comments)) {
                         post.comments.forEach(c => {
                             commentsHtml += `
                                 <div class="comment-item">
@@ -382,7 +382,8 @@
         }
 
         function escapeHtml(str) {
-            return str.replace(/[&<>'"]/g, 
+            if (!str) return '';
+            return String(str).replace(/[&<>'"]/g, 
                 tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
             );
         }
