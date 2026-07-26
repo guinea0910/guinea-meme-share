@@ -6,510 +6,642 @@
     <title>기니 짤방 웹버전</title>
     <style>
         :root {
-            --bg-color: #f7f9fa;
-            --card-bg: #ffffff;
-            --text-main: #333333;
-            --text-sub: #777777;
-            --border-color: #e1e8ed;
             --cafe-green: #03c75a;
             --cafe-green-hover: #02b350;
-            --danger-color: #ff4d4d;
-            --danger-hover: #e03e3e;
-            --input-bg: #ffffff;
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --border-color: #334155;
+            --danger-color: #ef4444;
+            --input-bg: #0f172a;
         }
 
-        [data-theme="dark"] {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --text-main: #e0e0e0;
-            --text-sub: #a0a0a0;
-            --border-color: #2c2c2c;
-            --cafe-green: #03c75a;
-            --cafe-green-hover: #02b350;
-            --danger-color: #ff5c5c;
-            --danger-hover: #e04848;
-            --input-bg: #2a2a2a;
+        body.light-mode {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+            --border-color: #cbd5e1;
+            --input-bg: #f8fafc;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-main);
-            margin: 0;
-            padding: 0;
-            transition: background-color 0.3s, color 0.3s;
-        }
-
-        header {
-            background-color: var(--card-bg);
-            border-bottom: 1px solid var(--border-color);
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .logo {
-            font-size: 18px;
-            font-weight: bold;
-            color: var(--cafe-green);
-            cursor: pointer;
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .container {
-            max-width: 680px;
-            margin: 20px auto;
-            padding: 0 15px;
-        }
-
-        .card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
+            max-width: 600px;
+            margin: 40px auto;
             padding: 20px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        h2, h3 { color: var(--cafe-green); }
+        .box {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: background-color 0.2s, border-color 0.2s;
         }
-
-        .section-title {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        input[type="text"], input[type="password"], textarea, select {
+        input, textarea, select {
             width: 100%;
             padding: 10px;
-            margin-bottom: 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
+            margin-bottom: 10px;
             background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
             color: var(--text-main);
+            border-radius: 6px;
             box-sizing: border-box;
-            font-size: 14px;
         }
-
-        textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
         button {
+            padding: 10px 15px;
             background-color: var(--cafe-green);
             color: white;
             border: none;
-            padding: 10px 16px;
             border-radius: 6px;
             font-weight: bold;
             cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.2s;
         }
-
-        button:hover {
-            background-color: var(--cafe-green-hover);
-        }
-
-        button.secondary {
+        button:hover { background-color: var(--cafe-green-hover); }
+        .danger-btn { background-color: var(--danger-color); }
+        .danger-btn:hover { background-color: #dc2626; }
+        
+        .tab-btn {
             background-color: transparent;
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-        }
-
-        button.secondary:hover {
-            background-color: var(--border-color);
-        }
-
-        button.danger-btn {
-            background-color: var(--danger-color);
-        }
-        button.danger-btn:hover {
-            background-color: var(--danger-hover);
-        }
-
-        .post-list-item {
-            display: flex;
-            align-items: center;
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 10px;
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-
-        .post-list-item:hover {
-            transform: translateY(-2px);
-            border-color: var(--cafe-green);
-        }
-
-        .list-thumb {
-            width: 60px;
-            height: 60px;
-            border-radius: 6px;
-            object-fit: cover;
-            background-color: var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
             color: var(--text-sub);
-            flex-shrink: 0;
-            margin-right: 12px;
-        }
-
-        .list-info {
-            flex-grow: 1;
-            overflow: hidden;
-        }
-
-        .list-meta {
-            font-size: 12px;
-            color: var(--text-sub);
-            margin-bottom: 4px;
-        }
-
-        .list-title {
-            font-size: 14px;
-            font-weight: bold;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .list-stats-badge {
-            font-size: 11px;
-            color: var(--text-sub);
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 2px;
-            margin-left: 10px;
-            flex-shrink: 0;
-        }
-
-        .post-card {
-            background-color: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 20px;
+            margin-right: 5px;
             margin-bottom: 15px;
         }
-
-        .post-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .post-author {
-            font-weight: bold;
-            color: var(--cafe-green);
-        }
-
-        .post-time {
-            font-size: 12px;
-            color: var(--text-sub);
-            margin-bottom: 10px;
-        }
-
-        .post-content {
-            font-size: 15px;
-            line-height: 1.5;
-            margin-bottom: 15px;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-
-        .post-img {
-            max-width: 100%;
-            border-radius: 6px;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        .post-stats {
-            font-size: 13px;
-            color: var(--text-sub);
-            display: flex;
-            gap: 15px;
-            margin-bottom: 15px;
-            border-top: 1px solid var(--border-color);
-            border-bottom: 1px solid var(--border-color);
-            padding: 10px 0;
-        }
-
-        .action-row {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .like-btn {
-            background-color: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .like-btn.liked {
-            border-color: var(--danger-color);
-            color: var(--danger-color);
-        }
-
-        .comment-section {
-            background-color: var(--bg-color);
-            border-radius: 6px;
-            padding: 12px;
-            margin-top: 10px;
-        }
-
-        .comment-item {
-            font-size: 13px;
-            padding: 8px 0;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-        .comment-item:last-child {
-            border-bottom: none;
-        }
-
-        .comment-body {
-            flex-grow: 1;
-        }
-
-        .comment-header {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 3px;
-        }
-
-        .comment-author {
-            font-weight: bold;
-        }
-
-        .comment-time {
-            color: var(--text-sub);
-            font-size: 11px;
-        }
-
-        .pagination {
-            display: flex;
-            justify-content: center;
-            gap: 5px;
-            margin: 20px 0;
-        }
-
-        .page-btn {
-            background-color: var(--card-bg);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .page-btn.active {
+        .tab-btn.active {
             background-color: var(--cafe-green);
             color: white;
             border-color: var(--cafe-green);
         }
-
-        .page-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            color: var(--text-sub);
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
         }
-
-        .hidden {
-            display: none !important;
+        .drop-zone.dragover {
+            background-color: rgba(3, 199, 90, 0.1);
+            border-color: var(--cafe-green);
+            color: var(--cafe-green);
         }
-
-        .error-box {
-            background-color: rgba(255, 77, 77, 0.1);
-            border: 1px solid var(--danger-color);
-            color: var(--danger-color);
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-            font-size: 13px;
-            word-break: break-all;
-        }
-
-        .dropdown-container {
+        
+        .preview-container {
             position: relative;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        .preview-img {
+            max-width: 100%;
+            max-height: 150px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+        .remove-img-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 12px;
+            cursor: pointer;
         }
 
-        .dropdown-list {
+        /* 검색 영역 스타일 */
+        .search-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        .search-row {
+            display: flex;
+            gap: 8px;
+        }
+        .search-row input {
+            margin-bottom: 0;
+        }
+        .search-row button {
+            white-space: nowrap;
+        }
+        
+        /* 회원 조회수 랭킹 드롭다운 스타일 */
+        .author-ranking-dropdown {
             position: absolute;
             top: 100%;
             left: 0;
             right: 0;
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 6px;
-            max-height: 200px;
+            border-radius: 8px;
+            margin-top: 5px;
+            max-height: 220px;
             overflow-y: auto;
-            z-index: 50;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
-
         .ranking-item {
-            padding: 10px 12px;
-            border-bottom: 1px solid var(--border-color);
-            cursor: pointer;
+            padding: 10px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }
-
-        .ranking-item:hover {
-            background-color: var(--bg-color);
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            font-size: 13px;
         }
         .ranking-item:last-child {
             border-bottom: none;
         }
+        .ranking-item:hover {
+            background-color: rgba(3, 199, 90, 0.1);
+            color: var(--cafe-green);
+        }
+
+        /* 목록형 스타일 */
+        .post-list-item {
+            background-color: var(--card-bg);
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .post-list-item:hover {
+            border-color: var(--cafe-green);
+        }
+        .list-thumb {
+            width: 48px;
+            height: 48px;
+            border-radius: 6px;
+            object-fit: cover;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+        .list-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .list-meta {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-bottom: 3px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .list-title {
+            font-size: 14px;
+            color: var(--text-main);
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .list-stats-badge {
+            font-size: 11px;
+            color: var(--text-sub);
+            text-align: right;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        /* 페이지네이션 스타일 */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        .page-btn {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .page-btn.active {
+            background-color: var(--cafe-green);
+            border-color: var(--cafe-green);
+            color: white;
+            font-weight: bold;
+        }
+        .page-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* 상세 보기 카드 스타일 */
+        .post-card {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        .post-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .post-author { font-weight: bold; color: var(--cafe-green); }
+        .post-time { font-size: 12px; color: var(--text-sub); margin-bottom: 12px; }
+        .post-content { color: var(--text-main); white-space: pre-wrap; margin-bottom: 15px; line-height: 1.5; }
+        .post-img { max-width: 100%; border-radius: 8px; margin-top: 10px; }
+        
+        .post-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: var(--text-sub);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .action-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .like-btn {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .like-btn.liked {
+            background-color: rgba(3, 199, 90, 0.15);
+            border-color: var(--cafe-green);
+            color: var(--cafe-green);
+        }
+
+        .comment-section {
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        .comment-item {
+            background-color: var(--input-bg);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .comment-body { flex: 1; min-width: 0; }
+        .comment-header { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 4px; }
+        .comment-author { font-weight: bold; color: var(--cafe-green); font-size: 13px; }
+        .comment-time { font-size: 11px; color: var(--text-sub); }
+        
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .hidden { display: none !important; }
+        .error-box { background-color: #451a03; border: 1px solid #b45309; color: #fde68a; padding: 10px; border-radius: 6px; margin-bottom: 10px; word-break: break-all; }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="logo" onclick="goToList()">🍀 기니 짤방 웹버전</div>
-        <div class="header-actions">
-            <button class="secondary" onclick="toggleTheme()" id="themeBtn" style="padding: 6px 10px; font-size: 12px;">다크모드</button>
-            <button class="secondary" onclick="toggleAuthModal()" id="authNavBtn" style="padding: 6px 10px; font-size: 12px;">계정 및 테마 설정</button>
-        </div>
-    </header>
-
-    <div class="container">
-
-        <div id="authCard" class="card hidden">
-            <div class="section-title">
-                <span id="authCardTitle">계정 설정</span>
-                <button class="secondary" onclick="toggleAuthModal()" style="padding: 2px 6px; font-size: 11px;">닫기</button>
-            </div>
-            
-            <div id="loggedOutView">
-                <p style="font-size: 13px; color: var(--text-sub); margin-top: 0;">닉네임과 비밀번호를 입력하여 로그인하거나 회원가입하세요.</p>
-                <input type="text" id="usernameInput" placeholder="닉네임 입력">
-                <input type="password" id="passwordInput" placeholder="비밀번호 입력">
-                <div style="display: flex; gap: 10px;">
-                    <button onclick="handleLogin()" style="flex: 1;">로그인</button>
-                    <button class="secondary" onclick="handleRegister()" style="flex: 1;">회원가입</button>
-                </div>
-            </div>
-
-            <div id="loggedInView" class="hidden">
-                <p style="font-size: 14px; margin-top: 0;">환영합니다, <b id="currentUsernameDisplay" style="color: var(--cafe-green);"></b>님!</p>
-                <button class="secondary" onclick="handleLogout()" style="width: 100%;">로그아웃</button>
-            </div>
-        </div>
-
-        <div class="card" id="writeSection">
-            <div class="section-title">글 작성하기</div>
-            <div id="writeLockedMsg" style="font-size: 13px; color: var(--text-sub); margin-bottom: 10px;" class="hidden">
-                글을 작성하려면 로그인이 필요합니다. 우측 상단 '계정 및 테마 설정'을 눌러주세요.
-            </div>
-            <div id="writeFormContainer">
-                <textarea id="postContentInput" placeholder="재미있는 짤이나 생각을 공유해보세요!"></textarea>
-                
-                <div style="margin-bottom: 12px;">
-                    <label style="font-size: 13px; font-weight: bold; display: block; margin-bottom: 5px;">사진 업로드 (선택)</label>
-                    <input type="file" id="imageInput" accept="image/*" style="margin-bottom: 5px;">
-                    <div id="imagePreviewContainer" style="margin-top: 5px;"></div>
-                </div>
-
-                <button onclick="handleCreatePost()" id="submitPostBtn" style="width: 100%;">업로드</button>
-            </div>
-        </div>
-
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <div id="listTitleHeader" style="font-size: 18px; font-weight: bold;">전체 목록</div>
-            <button class="secondary" onclick="refreshView()" style="padding: 5px 10px; font-size: 12px;">새로고침 🔄</button>
-        </div>
-
-        <div id="searchSection" class="card" style="padding: 12px; margin-bottom: 15px;">
-            <div class="dropdown-container">
-                <div style="display: flex; gap: 5px;">
-                    <input type="text" id="searchInput" placeholder="작성자 검색 또는 전체 목록 보기..." style="margin-bottom: 0;" oninput="handleSearchInput(event)" onfocus="handleSearchFocus()">
-                    <button onclick="handleSearchButtonClick()" style="white-space: nowrap;">검색</button>
-                </div>
-                <div id="searchDropdown" class="dropdown-list hidden"></div>
-            </div>
-        </div>
-
-        <div id="postsContainer">
-            게시글 불러오는 중...
-        </div>
-
-        <div id="paginationContainer" class="pagination"></div>
-
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2 style="margin: 0; cursor: pointer;" onclick="goToList()">🍀 기니 짤방 웹버전</h2>
+        <button id="settingsToggleBtn" class="hidden" onclick="toggleSettings()" style="background-color: transparent; border: 1px solid var(--border-color); color: var(--text-main); padding: 5px 10px; font-size: 13px;">⚙️ 설정</button>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, getDoc, doc, setDoc, addDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js"; // 수정용 플레이스홀더 (아래 실제 설정 반영됨)
+    <!-- 설정 영역 -->
+    <div id="settingsBox" class="box hidden">
+        <h3>계정 및 테마 설정</h3>
+        <div style="margin-bottom: 10px;">
+            <label style="font-size: 13px; color: var(--text-sub);">아이디 (변경 불가)</label>
+            <input type="text" id="settingsId" disabled style="opacity: 0.7; cursor: not-allowed;">
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label style="font-size: 13px; color: var(--text-sub);">새 비밀번호</label>
+            <input type="password" id="settingsPw" placeholder="변경할 비밀번호 입력 (공백이면 유지)">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="font-size: 13px; color: var(--text-sub);">화면 테마</label>
+            <select id="settingsTheme" onchange="previewTheme()">
+                <option value="dark">다크 모드</option>
+                <option value="light">라이트 모드</option>
+            </select>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="handleSaveSettings()" style="flex: 1;">설정 저장</button>
+            <button onclick="toggleSettings()" class="danger-btn" style="flex: 1;">닫기</button>
+        </div>
+    </div>
 
-        // Firebase 설정 (사용자 지정값)
+    <!-- 인증 영역 (로그인/회원가입) -->
+    <div id="authBox" class="box">
+        <div>
+            <button id="loginTabBtn" class="tab-btn active" onclick="switchTab('login')">로그인</button>
+            <button id="signupTabBtn" class="tab-btn" onclick="switchTab('signup')">회원가입</button>
+        </div>
+
+        <div id="loginForm">
+            <input type="text" id="loginId" placeholder="아이디 (닉네임)">
+            <input type="password" id="loginPw" placeholder="비밀번호">
+            <button onclick="handleLogin()">로그인</button>
+        </div>
+
+        <div id="signupForm" class="hidden">
+            <input type="text" id="signupId" placeholder="사용할 아이디 (닉네임)">
+            <input type="password" id="signupPw" placeholder="비밀번호">
+            <button onclick="handleSignup()">가입하기</button>
+        </div>
+    </div>
+
+    <!-- 메인 게시판 영역 -->
+    <div id="mainBox" class="hidden">
+        <div class="box top-bar">
+            <div>환영합니다, <span id="currentUserSpan" style="color: var(--cafe-green); font-weight: bold;"></span>님!</div>
+            <button class="danger-btn" onclick="handleLogout()" style="padding: 5px 10px; font-size: 12px;">로그아웃</button>
+        </div>
+
+        <div class="box">
+            <h3>글 작성하기</h3>
+            <textarea id="postContent" rows="3" placeholder="내용을 입력해 주세요..."></textarea>
+            
+            <div id="dropZone" class="drop-zone">
+                사진 업로드
+            </div>
+            <input type="file" id="fileInput" accept="image/*" class="hidden">
+            
+            <div id="previewArea" class="hidden" style="margin-bottom: 10px;">
+                <div class="preview-container">
+                    <img id="previewImg" class="preview-img" src="" alt="미리보기">
+                    <button class="remove-img-btn" onclick="removeImage()">✕</button>
+                </div>
+            </div>
+
+            <button onclick="handleCreatePost()">등록</button>
+        </div>
+    </div>
+
+    <!-- 뷰 영역 (목록 또는 상세) -->
+    <div id="contentArea">
+        <div id="searchSection" class="search-container">
+            <div class="search-row">
+                <input type="text" id="searchInput" placeholder="작성자 이름 검색 또는 클릭하여 회원 목록 보기..." onfocus="showAuthorRanking()" oninput="filterAuthorRanking()" onkeyup="if(event.key==='Enter') { hideAuthorRanking(); handleSearch(); }">
+                <button onclick="hideAuthorRanking(); handleSearch();">검색</button>
+            </div>
+            <!-- 회원 조회수 랭킹 드롭다운 -->
+            <div id="authorRankingDropdown" class="author-ranking-dropdown hidden"></div>
+        </div>
+
+        <h3 id="listTitleHeader">전체 목록</h3>
+        <div id="postsContainer">게시글 불러오는 중...</div>
+        <div id="paginationContainer" class="pagination"></div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
         const firebaseConfig = {
-            apiKey: "AIzaSyC0VpM8...", 
-            authDomain: "guinea-meme.firebaseapp.com",
-            projectId: "guinea-meme",
-            storageBucket: "guinea-meme.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcde"
+            apiKey: "AIzaSyCfcOH-oargpwPPSxJwIycKnx7o9OGWxwo",
+            authDomain: "guinea-meme-share.firebaseapp.com",
+            projectId: "guinea-meme-share",
+            storageBucket: "guinea-meme-share.firebasestorage.app",
+            messagingSenderId: "282265476408",
+            appId: "1:282265476408:web:f07087dd3a2cf80093b5cd",
+            measurementId: "G-9W4YK0GMK4"
         };
 
-        // 실제 SDK 모듈 올바른 로드
-        import { initializeApp as initApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, getDoc, doc, setDoc, addDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-        // Firebase 초기화
-        const app = initApp(firebaseConfig);
+        const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 전역 상태 변수
-        let currentUser = localStorage.getItem('guinea_currentUser') || null;
-        let currentTheme = localStorage.getItem('guinea_theme') || 'light';
-        let allPosts = [];
-        let filteredPosts = [];
-        let allUsers = [];
-        let userViewTotals = {}; // 작성자별 총 조회수 매핑
-        let currentPage = 1;
-        const postsPerPage = 5;
+        let currentUser = localStorage.getItem('cafe_user') || null;
+        let compressedImageData = null;
         let currentView = 'list'; // 'list' 또는 'detail'
         let currentDetailPostId = null;
-        let searchKeyword = '';
-        let base64Image = '';
 
-        // 초기 테마 적용
-        if (currentTheme === 'dark') {
-            document.documentElement.setAttribute('data-theme', 'dark');
-            document.getElementById('themeBtn').textContent = '라이트모드';
+        // 페이징, 검색 및 회원 목록 상태 관리용 변수
+        let allPosts = [];
+        let allUsers = []; // 회원가입된 사용자 아이디 목록
+        let filteredPosts = [];
+        let currentPage = 1;
+        const postsPerPage = 10;
+        let searchKeyword = '';
+
+        window.switchTab = function(type) {
+            const loginForm = document.getElementById('loginForm');
+            const signupForm = document.getElementById('signupForm');
+            const loginTab = document.getElementById('loginTabBtn');
+            const signupTab = document.getElementById('signupTabBtn');
+
+            if(type === 'login') {
+                loginForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+                loginTab.classList.add('active');
+                signupTab.classList.remove('active');
+            } else {
+                loginForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+                loginTab.classList.remove('active');
+                signupTab.classList.add('active');
+            }
+        };
+
+        window.handleSignup = async function() {
+            const id = document.getElementById('signupId').value.trim();
+            const pw = document.getElementById('signupPw').value.trim();
+            if(!id || !pw) { alert('아이디와 비밀번호를 모두 입력해 주세요!'); return; }
+
+            try {
+                const userRef = doc(db, "users", id);
+                const userSnap = await getDoc(userRef);
+                if(userSnap.exists()) { alert('이미 존재하는 아이디입니다!'); return; }
+
+                await setDoc(userRef, { password: pw, theme: 'dark' });
+                alert('회원가입 완료! 로그인해 주세요.');
+                switchTab('login');
+                document.getElementById('loginId').value = id;
+            } catch (error) {
+                console.error(error);
+                alert('회원가입 실패: ' + error.message);
+            }
+        };
+
+        window.handleLogin = async function() {
+            const id = document.getElementById('loginId').value.trim();
+            const pw = document.getElementById('loginPw').value.trim();
+            if(!id || !pw) { alert('아이디와 비밀번호를 입력해 주세요!'); return; }
+
+            try {
+                const userRef = doc(db, "users", id);
+                const userSnap = await getDoc(userRef);
+                if(!userSnap.exists() || userSnap.data().password !== pw) {
+                    alert('아이디 또는 비밀번호가 일치하지 않습니다.');
+                    return;
+                }
+                currentUser = id;
+                localStorage.setItem('cafe_user', id);
+                
+                const userData = userSnap.data();
+                applyTheme(userData.theme || 'dark');
+
+                checkAuthState();
+            } catch (error) {
+                console.error(error);
+                alert('로그인 실패: ' + error.message);
+            }
+        };
+
+        window.handleLogout = function() {
+            currentUser = null;
+            localStorage.removeItem('cafe_user');
+            applyTheme('dark');
+            document.getElementById('settingsBox').classList.add('hidden');
+            checkAuthState();
+        };
+
+        async function checkAuthState() {
+            const authBox = document.getElementById('authBox');
+            const mainBox = document.getElementById('mainBox');
+            const settingsToggleBtn = document.getElementById('settingsToggleBtn');
+            const currentUserSpan = document.getElementById('currentUserSpan');
+
+            if(currentUser) {
+                authBox.classList.add('hidden');
+                mainBox.classList.remove('hidden');
+                settingsToggleBtn.classList.remove('hidden');
+                currentUserSpan.textContent = currentUser;
+
+                try {
+                    const userRef = doc(db, "users", currentUser);
+                    const userSnap = await getDoc(userRef);
+                    if(userSnap.exists()) {
+                        const data = userSnap.data();
+                        applyTheme(data.theme || 'dark');
+                    }
+                } catch(e) {
+                    console.error("테마 불러오기 에러:", e);
+                }
+            } else {
+                authBox.classList.remove('hidden');
+                mainBox.classList.add('hidden');
+                settingsToggleBtn.classList.add('hidden');
+                document.getElementById('settingsBox').classList.add('hidden');
+            }
+            refreshView();
         }
 
-        // 이미지 압축 및 Base64 변환 리스너
-        document.getElementById('imageInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) {
-                base64Image = '';
-                document.getElementById('imagePreviewContainer').innerHTML = '';
+        window.toggleSettings = async function() {
+            const settingsBox = document.getElementById('settingsBox');
+            if(settingsBox.classList.contains('hidden')) {
+                document.getElementById('settingsId').value = currentUser;
+                document.getElementById('settingsPw').value = '';
+                try {
+                    const userRef = doc(db, "users", currentUser);
+                    const userSnap = await getDoc(userRef);
+                    if(userSnap.exists()) {
+                        document.getElementById('settingsTheme').value = userSnap.data().theme || 'dark';
+                    }
+                } catch(e) {}
+                settingsBox.classList.remove('hidden');
+            } else {
+                settingsBox.classList.add('hidden');
+                refreshView();
+            }
+        };
+
+        window.previewTheme = function() {
+            const theme = document.getElementById('settingsTheme').value;
+            applyTheme(theme);
+        };
+
+        function applyTheme(theme) {
+            if(theme === 'light') {
+                document.body.classList.add('light-mode');
+            } else {
+                document.body.classList.remove('light-mode');
+            }
+        }
+
+        window.handleSaveSettings = async function() {
+            const newPw = document.getElementById('settingsPw').value.trim();
+            const newTheme = document.getElementById('settingsTheme').value;
+
+            try {
+                const userRef = doc(db, "users", currentUser);
+                const updateData = { theme: newTheme };
+                if(newPw) {
+                    updateData.password = newPw;
+                }
+                await updateDoc(userRef, updateData);
+                alert('설정이 성공적으로 저장되었습니다!');
+                toggleSettings();
+            } catch (error) {
+                console.error(error);
+                alert('설정 저장 실패: ' + error.message);
+            }
+        };
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                processImageFile(e.dataTransfer.files[0]);
+            }
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                processImageFile(e.target.files[0]);
+            }
+        });
+
+        function processImageFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('이미지 파일만 업로드할 수 있습니다!');
                 return;
             }
 
@@ -518,357 +650,194 @@
                 const img = new Image();
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
-                    
-                    // 최대 너비 800px 기준으로 리사이징
-                    const MAX_WIDTH = 800;
-                    if (width > MAX_WIDTH) {
-                        height = Math.round((height * MAX_WIDTH) / width);
-                        width = MAX_WIDTH;
-                    }
+                    canvas.width = Math.floor(img.width / 2);
+                    canvas.height = Math.floor(img.height / 2);
 
-                    canvas.width = width;
-                    canvas.height = height;
                     const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                    // JPEG 압축 (품질 0.7)
-                    base64Image = canvas.toDataURL('image/jpeg', 0.7);
-                    
-                    document.getElementById('imagePreviewContainer').innerHTML = `
-                        <img src="${base64Image}" style="max-height: 100px; border-radius: 4px; border: 1px solid var(--border-color);">
-                        <button class="secondary" onclick="clearImage()" style="margin-top: 5px; padding: 2px 6px; font-size: 11px; display: block;">이미지 취소</button>
-                    `;
-                }
+                    compressedImageData = canvas.toDataURL('image/jpeg', 0.8);
+
+                    document.getElementById('previewImg').src = compressedImageData;
+                    document.getElementById('previewArea').classList.remove('hidden');
+                    dropZone.classList.add('hidden');
+                };
                 img.src = event.target.result;
-            }
+            };
             reader.readAsDataURL(file);
-        });
-
-        window.clearImage = function() {
-            base64Image = '';
-            document.getElementById('imageInput').value = '';
-            document.getElementById('imagePreviewContainer').innerHTML = '';
         }
 
-        // 테마 토글 함수
-        window.toggleTheme = function() {
-            if (currentTheme === 'light') {
-                currentTheme = 'dark';
-                document.documentElement.setAttribute('data-theme', 'dark');
-                document.getElementById('themeBtn').textContent = '라이트모드';
-            } else {
-                currentTheme = 'light';
-                document.documentElement.setAttribute('data-theme', 'light');
-                document.getElementById('themeBtn').textContent = '다크모드';
-            }
-            localStorage.setItem('guinea_theme', currentTheme);
-        }
-
-        // 인증 모달 토글
-        window.toggleAuthModal = function() {
-            const authCard = document.getElementById('authCard');
-            authCard.classList.toggle('hidden');
-        }
-
-        // 인증 상태 확인 및 UI 갱신
-        function checkAuthState() {
-            const loggedOutView = document.getElementById('loggedOutView');
-            const loggedInView = document.getElementById('loggedInView');
-            const currentUsernameDisplay = document.getElementById('currentUsernameDisplay');
-            const writeLockedMsg = document.getElementById('writeLockedMsg');
-            const writeFormContainer = document.getElementById('writeFormContainer');
-            const authNavBtn = document.getElementById('authNavBtn');
-
-            if (currentUser) {
-                loggedOutView.classList.add('hidden');
-                loggedInView.classList.remove('hidden');
-                currentUsernameDisplay.textContent = currentUser;
-                writeLockedMsg.classList.add('hidden');
-                writeFormContainer.classList.remove('hidden');
-                authNavBtn.textContent = `${currentUser}님 설정`;
-            } else {
-                loggedOutView.classList.remove('hidden');
-                loggedInView.classList.add('hidden');
-                writeLockedMsg.classList.remove('hidden');
-                writeFormContainer.classList.add('hidden');
-                authNavBtn.textContent = '계정 및 테마 설정';
-            }
-            loadPostsList();
-        }
-
-        // 회원가입 함수
-        window.handleRegister = async function() {
-            const username = document.getElementById('usernameInput').value.trim();
-            const password = document.getElementById('passwordInput').value.trim();
-
-            if (!username || !password) {
-                alert('닉네임과 비밀번호를 모두 입력해주세요.');
-                return;
-            }
-
-            try {
-                const userRef = doc(db, "users", username);
-                const userSnap = await getDoc(userRef);
-
-                if (userSnap.exists()) {
-                    alert('이미 존재하는 닉네임입니다. 다른 닉네임을 사용해주세요.');
-                    return;
-                }
-
-                await setDoc(userRef, {
-                    password: password,
-                    createdAt: Date.now()
-                });
-
-                alert('회원가입이 완료되었습니다! 자동으로 로그인됩니다.');
-                currentUser = username;
-                localStorage.setItem('guinea_currentUser', currentUser);
-                document.getElementById('passwordInput').value = '';
-                toggleAuthModal();
-                checkAuthState();
-            } catch (error) {
-                console.error(error);
-                alert('회원가입 중 오류가 발생했습니다: ' + error.message);
-            }
+        window.removeImage = function() {
+            compressedImageData = null;
+            fileInput.value = '';
+            document.getElementById('previewArea').classList.add('hidden');
+            dropZone.classList.remove('hidden');
         };
 
-        // 로그인 함수
-        window.handleLogin = async function() {
-            const username = document.getElementById('usernameInput').value.trim();
-            const password = document.getElementById('passwordInput').value.trim();
-
-            if (!username || !password) {
-                alert('닉네임과 비밀번호를 모두 입력해주세요.');
-                return;
-            }
-
-            try {
-                const userRef = doc(db, "users", username);
-                const userSnap = await getDoc(userRef);
-
-                if (!userSnap.exists()) {
-                    alert('존재하지 않는 닉네임입니다. 회원가입을 먼저 진행해주세요.');
-                    return;
-                }
-
-                const userData = userSnap.data();
-                if (userData.password !== password) {
-                    alert('비밀번호가 일치하지 않습니다.');
-                    return;
-                }
-
-                currentUser = username;
-                localStorage.setItem('guinea_currentUser', currentUser);
-                document.getElementById('passwordInput').value = '';
-                toggleAuthModal();
-                checkAuthState();
-            } catch (error) {
-                console.error(error);
-                alert('로그인 중 오류가 발생했습니다: ' + error.message);
-            }
-        };
-
-        // 로그아웃 함수
-        window.handleLogout = function() {
-            currentUser = null;
-            localStorage.removeItem('guinea_currentUser');
-            checkAuthState();
-        };
-
-        // 게시글 작성 함수
         window.handleCreatePost = async function() {
-            if (!currentUser) {
-                alert('로그인이 필요합니다.');
-                toggleAuthModal();
+            const content = document.getElementById('postContent').value.trim();
+            if(!content && !compressedImageData) {
+                alert('내용이나 사진을 입력해 주세요');
                 return;
             }
-
-            const content = document.getElementById('postContentInput').value.trim();
-            if (!content && !base64Image) {
-                alert('내용이나 이미지를 최소한 하나 이상 입력해주세요.');
-                return;
-            }
-
-            const submitBtn = document.getElementById('submitPostBtn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = '업로드 중...';
 
             try {
                 await addDoc(collection(db, "posts"), {
                     author: currentUser,
                     content: content,
-                    image: base64Image || '',
+                    image: compressedImageData || null,
                     createdAt: Date.now(),
-                    likes: [],
                     viewedUsers: [],
+                    likes: [],
                     comments: []
                 });
-
-                document.getElementById('postContentInput').value = '';
-                clearImage();
-                currentView = 'list';
-                currentPage = 1;
-                searchKeyword = '';
-                document.getElementById('searchInput').value = '';
-                loadPostsList();
-            } catch (error) {
-                console.error(error);
-                alert('게시글 업로드 중 오류가 발생했습니다: ' + error.message);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = '업로드';
-            }
-        };
-
-        // 게시글 삭제 함수
-        window.handleDeletePost = async function(postId, author) {
-            if (!currentUser || currentUser !== author) {
-                alert('삭제 권한이 없습니다.');
-                return;
-            }
-
-            if (!confirm('정말 이 게시글을 삭제하시겠습니까?')) return;
-
-            try {
-                await deleteDoc(doc(db, "posts", postId));
-                alert('게시글이 삭제되었습니다.');
+                
+                document.getElementById('postContent').value = '';
+                removeImage();
                 goToList();
             } catch (error) {
                 console.error(error);
-                alert('삭제 중 오류가 발생했습니다: ' + error.message);
+                alert('게시글 등록 실패: ' + error.message);
             }
         };
 
-        // 좋아요 토글 함수
-        window.handleToggleLike = async function(postId) {
-            if (!currentUser) {
-                alert('로그인이 필요합니다.');
-                toggleAuthModal();
-                return;
-            }
+        window.handleDeletePost = async function(postId, author) {
+            if(currentUser !== author) { alert('자신이 쓴 글만 삭제할 수 있습니다!'); return; }
+            if(!confirm('정말 이 게시글을 삭제하시겠습니까?')) return;
 
-            const postRef = doc(db, "posts", postId);
             try {
+                await deleteDoc(doc(db, "posts", postId));
+                goToList();
+            } catch (error) {
+                console.error(error);
+                alert('삭제 실패: ' + error.message);
+            }
+        };
+
+        window.handleToggleLike = async function(postId) {
+            if(!currentUser) return;
+            try {
+                const postRef = doc(db, "posts", postId);
                 const postSnap = await getDoc(postRef);
-                if (!postSnap.exists()) return;
+                if(!postSnap.exists()) return;
 
-                const postData = postSnap.data();
-                const likes = postData.likes || [];
+                const data = postSnap.data();
+                let likes = data.likes || [];
 
-                if (likes.includes(currentUser)) {
-                    await updateDoc(postRef, {
-                        likes: arrayRemove(currentUser)
-                    });
+                if(likes.includes(currentUser)) {
+                    likes = likes.filter(user => user !== currentUser);
                 } else {
-                    await updateDoc(postRef, {
-                        likes: arrayUnion(currentUser)
-                    });
+                    likes.push(currentUser);
                 }
+
+                await updateDoc(postRef, { likes: likes });
                 openDetail(postId);
             } catch (error) {
                 console.error(error);
-                alert('좋아요 처리 중 오류가 발생했습니다.');
+                alert('좋아요 처리 실패: ' + error.message);
             }
         };
 
-        // 댓글 등록 함수
         window.handleAddComment = async function(postId) {
-            if (!currentUser) {
-                alert('로그인이 필요합니다.');
-                toggleAuthModal();
-                return;
-            }
+            const input = document.getElementById(`commentInput_${postId}`);
+            const commentText = input.value.trim();
+            if(!commentText || !currentUser) return;
 
-            const inputEl = document.getElementById(`commentInput_${postId}`);
-            const content = inputEl.value.trim();
-            if (!content) return;
-
-            const newComment = {
-                author: currentUser,
-                content: content,
-                createdAt: Date.now()
-            };
-
-            const postRef = doc(db, "posts", postId);
             try {
+                const postRef = doc(db, "posts", postId);
+                const newComment = {
+                    id: 'c_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+                    author: currentUser,
+                    content: commentText,
+                    createdAt: Date.now()
+                };
                 await updateDoc(postRef, {
                     comments: arrayUnion(newComment)
                 });
-                inputEl.value = '';
+                input.value = '';
                 openDetail(postId);
             } catch (error) {
                 console.error(error);
-                alert('댓글 등록 중 오류가 발생했습니다.');
+                alert('댓글 등록 실패: ' + error.message);
             }
         };
 
-        // 댓글 삭제 함수
-        window.handleDeleteComment = async function(postId, commentObj) {
-            if (!currentUser || currentUser !== commentObj.author) {
-                alert('삭제 권한이 없습니다.');
-                return;
-            }
+        window.handleDeleteComment = async function(postId, targetComment) {
+            if(currentUser !== targetComment.author) { alert('자신이 쓴 댓글만 삭제할 수 있습니다!'); return; }
+            if(!confirm('정말 이 댓글을 삭제하시겠습니까?')) return;
 
-            if (!confirm('댓글을 삭제하시겠습니까?')) return;
-
-            const postRef = doc(db, "posts", postId);
             try {
-                await updateDoc(postRef, {
-                    comments: arrayRemove(commentObj)
+                const postRef = doc(db, "posts", postId);
+                const postSnap = await getDoc(postRef);
+                if(!postSnap.exists()) return;
+
+                let comments = postSnap.data().comments || [];
+                comments = comments.filter(c => {
+                    if (targetComment.id && c.id) {
+                        return c.id !== targetComment.id;
+                    }
+                    return !(c.author === targetComment.author && c.content === targetComment.content && c.createdAt === targetComment.createdAt);
                 });
+
+                await updateDoc(postRef, { comments: comments });
                 openDetail(postId);
             } catch (error) {
                 console.error(error);
-                alert('댓글 삭제 중 오류가 발생했습니다.');
+                alert('댓글 삭제 실패: ' + error.message);
             }
         };
 
-        // 목록으로 돌아가기
+        function formatDate(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            const hh = String(date.getHours()).padStart(2, '0');
+            const min = String(date.getMinutes()).padStart(2, '0');
+            const ss = String(date.getSeconds()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+        }
+
         window.goToList = function() {
             currentView = 'list';
             currentDetailPostId = null;
-            loadPostsList();
+            refreshView();
         };
 
-        // 검색어 입력 이벤트 (드롭다운 실시간 필터링)
-        window.handleSearchInput = function(e) {
-            const query = e.target.value.trim().toLowerCase();
-            searchKeyword = query;
-            renderUserDropdown(query);
+        window.handleSearch = function() {
+            hideAuthorRanking();
+            searchKeyword = document.getElementById('searchInput').value.trim().toLowerCase();
+            currentPage = 1;
             applyFilterAndRender();
         };
 
-        window.handleSearchFocus = function() {
-            renderUserDropdown(document.getElementById('searchInput').value.trim().toLowerCase());
+        // 회원 조회수 순위 드롭다운 관련 함수들
+        window.showAuthorRanking = async function() {
+            await fetchUsersAndRanking();
+            renderAuthorRankingDropdown();
+            document.getElementById('authorRankingDropdown').classList.remove('hidden');
         };
 
-        window.handleSearchButtonClick = function() {
+        window.hideAuthorRanking = function() {
+            setTimeout(() => {
+                const dropdown = document.getElementById('authorRankingDropdown');
+                if (dropdown) dropdown.classList.add('hidden');
+            }, 200);
+        };
+
+        window.filterAuthorRanking = function() {
             const query = document.getElementById('searchInput').value.trim().toLowerCase();
-            searchKeyword = query;
-            document.getElementById('searchDropdown').classList.add('hidden');
-            applyFilterAndRender();
+            renderAuthorRankingDropdown(query);
+            document.getElementById('authorRankingDropdown').classList.remove('hidden');
         };
 
-        // 드롭다운 클릭 시 회원 선택
         window.selectAuthor = function(authorName) {
             document.getElementById('searchInput').value = authorName;
-            searchKeyword = authorName.toLowerCase();
-            document.getElementById('searchDropdown').classList.add('hidden');
-            applyFilterAndRender();
+            hideAuthorRanking();
+            handleSearch();
         };
 
-        // 외부 클릭 시 드롭다운 닫기
-        document.addEventListener('click', function(e) {
-            const searchSection = document.getElementById('searchSection');
-            const dropdown = document.getElementById('searchDropdown');
-            if (searchSection && !searchSection.contains(e.target)) {
-                dropdown.classList.add('hidden');
-            }
-        });
-
-        // 회원 목록 및 총 조회수 랭킹 집계 준비
         async function fetchUsersAndRanking() {
             try {
                 // 1. 회원 목록 가져오기
@@ -884,24 +853,16 @@
                         allUsers.push(post.author);
                     }
                 });
-
-                // 2. 작성자별 총 조회수 집계
-                userViewTotals = {};
-                allUsers.forEach(user => {
-                    userViewTotals[user] = 0;
-                });
-
-            } catch (error) {
-                console.error("회원 및 랭킹 데이터 로드 실패:", error);
+            } catch (e) {
+                console.error("회원 목록 불러오기 에러:", e);
             }
         }
 
-        // 드롭다운 HTML 렌더링 (조회수 기준 정렬)
-        function renderUserDropdown(filterQuery) {
-            const dropdown = document.getElementById('searchDropdown');
-            dropdown.classList.remove('hidden');
-
-            // 각 사용자별 조회수 총합 계산
+        function renderAuthorRankingDropdown(filterQuery = '') {
+            const dropdown = document.getElementById('authorRankingDropdown');
+            
+            // 각 회원별 게시글 조회수 총합 계산
+            const userViewTotals = {};
             allUsers.forEach(user => {
                 userViewTotals[user] = 0;
             });
@@ -1178,18 +1139,6 @@
 
             paginationHtml += `<button class="page-btn" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>다음</button>`;
             paginationContainer.innerHTML = paginationHtml;
-        }
-
-        // 날짜 포맷팅 헬퍼
-        function formatDate(timestamp) {
-            if (!timestamp) return '';
-            const date = new Date(timestamp);
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const d = String(date.getDate()).padStart(2, '0');
-            const h = String(date.getHours()).padStart(2, '0');
-            const min = String(date.getMinutes()).padStart(2, '0');
-            return `${y}.${m}.${d} ${h}:${min}`;
         }
 
         function escapeHtml(str) {
