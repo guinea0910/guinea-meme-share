@@ -1769,7 +1769,7 @@
         }
 
         checkAuthState();
-        /* =======================
+  /* =======================
    🔔 알림 + 멘션 + 읽음 수 + 팀채팅 확장
    (기존 코드 수정 없음 / 확장만)
 ======================= */
@@ -1844,15 +1844,32 @@ window.handleCreatePost = async function () {
     });
 };
 
-/* 채팅 멘션 감지 */
+/* =======================
+   💬 채팅 확장 (멘션 + 알림 통합)  ← 여기 수정됨
+======================= */
+
 const originalSendChatMessage = window.sendChatMessage;
 window.sendChatMessage = function () {
     const text = document.getElementById("chatInput")?.value || "";
-    const mentions = extractMentions(text);
 
+    /* 멘션 알림 */
+    const mentions = extractMentions(text);
     mentions.forEach(user => {
         addNotification("mention", user, `${currentUser}님이 채팅에서 언급했습니다.`);
     });
+
+    /* 채팅방 전체 알림 */
+    if (window.chatRooms && window.currentChatRoomId) {
+        const room = chatRooms.find(r => r.id === currentChatRoomId);
+
+        if (room && room.members) {
+            room.members.forEach(user => {
+                if (user !== currentUser) {
+                    addNotification("chat", user, `${currentUser}님의 새 메시지`);
+                }
+            });
+        }
+    }
 
     originalSendChatMessage?.apply(this, arguments);
 };
@@ -1913,17 +1930,7 @@ function updateReadCountUI(messages, roomId) {
     });
 }
 
-/* =======================
-   🔔 채팅 알림 (새 메시지)
-======================= */
-
-const originalReceiveMessage = window.receiveChatMessage;
-window.receiveChatMessage = function (msg) {
-    if (msg.sender !== currentUser) {
-        addNotification("chat", currentUser, `${msg.sender}님의 새 메시지`);
-    }
-    originalReceiveMessage?.apply(this, arguments);
-};
+/* ❌ 기존 receiveChatMessage 완전히 제거됨 */
 
 /* =======================
    🧠 알림 탭 데이터 표시
