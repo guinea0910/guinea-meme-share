@@ -1769,6 +1769,256 @@
         }
 
         checkAuthState();
+        /* =======================
+   🔔 알림 + 멘션 + 읽음 수 + 팀채팅 확장
+   (기존 코드 수정 없음 / 확장만)
+======================= */
+
+let notifications = JSON.parse(localStorage.getItem("notifications") || "[]");
+let lastReadMessageIds = JSON.parse(localStorage.getItem("lastReadMessageIds") || "{}");
+
+/* =======================
+   🔔 알림 시스템
+======================= */
+
+function saveNotifications() {
+    localStorage.setItem("notifications", JSON.stringify(notifications));
+    updateNotificationBadge();
+}
+
+function addNotification(type, targetUser, message) {
+    if (!targetUser) return;
+    notifications.push({
+        id: Date.now() + Math.random(),
+        type,
+        targetUser,
+        message,
+        read: false,
+        time: new Date().toISOString()
+    });
+    saveNotifications();
+}
+
+function getMyNotifications() {
+    if (!currentUser) return [];
+    return notifications.filter(n => n.targetUser === currentUser);
+}
+
+function updateNotificationBadge() {
+    const myNotis = getMyNotifications().filter(n => !n.read);
+    const badge = document.getElementById("notificationBadge");
+    if (!badge) return;
+
+    if (myNotis.length > 0) {
+        badge.classList.remove("hidden");
+        badge.textContent = myNotis.length;
+    } else {
+        badge.classList.add("hidden");
+    }
+}
+
+/* =======================
+   📣 멘션 기능
+======================= */
+
+function extractMentions(text) {
+    const regex = /@([a-zA-Z0-9_가-힣]+)/g;
+    let result = [];
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+        result.push(match[1]);
+    }
+    return result;
+}
+
+/* 게시글 멘션 감지 */
+const originalCreatePost = window.handleCreatePost;
+window.handleCreatePost = async function () {
+    await originalCreatePost?.apply(this, arguments);
+
+    const content = document.getElementById("postContent")?.value || "";
+    const mentions = extractMentions(content);
+
+    mentions.forEach(user => {
+        addNotification("mention", user, `${currentUser}님이 게시글에서 언급했습니다.`);
+    });
+};
+
+/* 채팅 멘션 감지 */
+const originalSendChatMessage = window.sendChatMessage;
+window.sendChatMessage = function () {
+    const text = document.getElementById("chatInput")?.value || "";
+    const mentions = extractMentions(text);
+
+    mentions.forEach(user => {
+        addNotification("mention", user, `${currentUser}님이 채팅에서 언급했습니다.`);
+    });
+
+    originalSendChatMessage?.apply(this, arguments);
+};
+
+/* =======================
+   💬 채팅 읽음 수 시스템
+======================= */
+
+function markMessagesAsRead(roomId, messages) {
+    if (!currentUser || !roomId) return;
+
+    if (!lastReadMessageIds[roomId]) {
+        lastReadMessageIds[roomId] = {};
+    }
+
+    messages.forEach(msg => {
+        lastReadMessageIds[roomId][msg.id] = true;
+    });
+
+    localStorage.setItem("lastReadMessageIds", JSON.stringify(lastReadMessageIds));
+}
+
+/* 메시지 렌더 후 읽음 처리 */
+const originalRenderChat = window.renderChatMessages;
+window.renderChatMessages = function (messages, roomId) {
+    originalRenderChat?.apply(this, arguments);
+    markMessagesAsRead(roomId, messages);
+    updateReadCountUI(messages, roomId);
+};
+
+/* 읽은 사람 수 표시 */
+function updateReadCountUI(messages, roomId) {
+    const container = document.getElementById("chatMessages");
+    if (!container) return;
+
+    const rows = container.querySelectorAll(".chat-row");
+
+    rows.forEach((row, index) => {
+        const msg = messages[index];
+        if (!msg) return;
+
+        let readCount = 0;
+
+        Object.values(lastReadMessageIds[roomId] || {}).forEach(v => {
+            if (v) readCount++;
+        });
+
+        let countEl = row.querySelector(".read-count");
+        if (!countEl) {
+            countEl = document.createElement("div");
+            countEl.className = "read-count";
+            countEl.style.fontSize = "10px";
+            countEl.style.color = "var(--text-sub)";
+            row.appendChild(countEl);
+        }
+
+        countEl.textContent = `읽음 ${readCount}`;
+    });
+}
+
+/* =======================
+   🔔 채팅 알림 (새 메시지)
+======================= */
+
+const originalReceiveMessage = window.receiveChatMessage;
+window.receiveChatMessage = function (msg) {
+    if (msg.sender !== currentUser) {
+        addNotification("chat", currentUser, `${msg.sender}님의 새 메시지`);
+    }
+    originalReceiveMessage?.apply(this, arguments);
+};
+
+/* =======================
+   🧠 알림 탭 데이터 표시
+======================= */
+
+function renderNotifications() {
+    const list = getMyNotifications();
+    const container = document.getElementById("notificationsView");
+
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="box">
+            <h2>알림</h2>
+            ${list.map(n => `
+                <div class="post-list-item">
+                    <div>${n.message}</div>
+                </div>
+            `).join("")}
+        </div>
+    `;
+
+    list.forEach(n => n.read = true);
+    saveNotifications();
+}
+
+/* 사이드바 클릭 연결 */
+const originalShowSection = window.showAppSection;
+window.showAppSection = function (section) {
+    originalShowSection?.apply(this, arguments);
+
+    if (section === "notifications") {
+        renderNotifications();
+    }
+};
+
+/* =======================
+   👥 팀 채팅 시스템 확장
+======================= */
+
+let chatRoomsMeta = JSON.parse(localStorage.getItem("chatRoomsMeta") || "{}");
+
+function saveChatRoomsMeta() {
+    localStorage.setItem("chatRoomsMeta", JSON.stringify(chatRoomsMeta));
+}
+
+/* 채팅방 생성 확장 */
+const originalCreateRoom = window.createChatRoom;
+window.createChatRoom = function (roomData) {
+
+    if (roomData.type === "team") {
+        chatRoomsMeta[roomData.id] = {
+            owner: currentUser,
+            admins: [],
+            members: roomData.members || []
+        };
+        saveChatRoomsMeta();
+    }
+
+    originalCreateRoom?.apply(this, arguments);
+};
+
+/* 권한 체크 */
+function isRoomOwner(roomId) {
+    return chatRoomsMeta[roomId]?.owner === currentUser;
+}
+
+function isRoomAdmin(roomId) {
+    return chatRoomsMeta[roomId]?.admins?.includes(currentUser);
+}
+
+/* 부방장 추가 */
+function addAdmin(roomId, user) {
+    if (!isRoomOwner(roomId)) return;
+    chatRoomsMeta[roomId].admins.push(user);
+    saveChatRoomsMeta();
+}
+
+/* 강퇴 */
+function kickMember(roomId, user) {
+    if (!(isRoomOwner(roomId) || isRoomAdmin(roomId))) return;
+    chatRoomsMeta[roomId].members =
+        chatRoomsMeta[roomId].members.filter(u => u !== user);
+    saveChatRoomsMeta();
+}
+
+/* 방 이름 변경 */
+function renameRoom(roomId, newName) {
+    if (!(isRoomOwner(roomId) || isRoomAdmin(roomId))) return;
+
+    const room = chatRooms.find(r => r.id === roomId);
+    if (room) {
+        room.name = newName;
+    }
+}
     </script>
 </body>
 </html>
