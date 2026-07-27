@@ -1766,9 +1766,96 @@
                 isSendingChatMessage = false;
                 sendButton.disabled = false;
             }
-        }
+               }
 
         checkAuthState();
+
+        /* =======================
+           🔔 알림 + 멘션 + 읽음 수 + 팀채팅 확장
+           (기존 코드 수정 없음 / 확장만)
+        ======================= */
+
+        let notifications = JSON.parse(localStorage.getItem("notifications") || "[]");
+        let lastReadMessageIds = JSON.parse(localStorage.getItem("lastReadMessageIds") || "{}");
+
+        function saveNotifications() {
+            localStorage.setItem("notifications", JSON.stringify(notifications));
+            updateNotificationBadge();
+        }
+
+        function addNotification(type, targetUser, message) {
+            if (!targetUser) return;
+            notifications.push({
+                id: Date.now() + Math.random(),
+                type,
+                targetUser,
+                message,
+                read: false,
+                time: new Date().toISOString()
+            });
+            saveNotifications();
+        }
+
+        function getMyNotifications() {
+            if (!currentUser) return [];
+            return notifications.filter(n => n.targetUser === currentUser);
+        }
+
+        function updateNotificationBadge() {
+            const myNotis = getMyNotifications().filter(n => !n.read);
+            const badge = document.getElementById("notificationBadge");
+            if (!badge) return;
+
+            if (myNotis.length > 0) {
+                badge.classList.remove("hidden");
+                badge.textContent = myNotis.length;
+            } else {
+                badge.classList.add("hidden");
+            }
+        }
+
+        function extractMentions(text) {
+            const regex = /@([a-zA-Z0-9_가-힣]+)/g;
+            let result = [];
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                result.push(match[1]);
+            }
+            return result;
+        }
+
+        const originalCreatePost = window.handleCreatePost;
+        window.handleCreatePost = async function () {
+            await originalCreatePost?.apply(this, arguments);
+
+            const content = document.getElementById("postContent")?.value || "";
+            extractMentions(content).forEach(user => {
+                addNotification("mention", user, `${currentUser}님이 게시글에서 언급했습니다.`);
+            });
+        };
+
+        const originalSendChatMessage = window.sendChatMessage;
+        window.sendChatMessage = function () {
+            const text = document.getElementById("chatInput")?.value || "";
+
+            extractMentions(text).forEach(user => {
+                addNotification("mention", user, `${currentUser}님이 채팅에서 언급했습니다.`);
+            });
+
+            if (window.chatRooms && window.currentChatRoomId) {
+                const room = chatRooms.find(r => r.id === currentChatRoomId);
+                if (room && room.members) {
+                    room.members.forEach(user => {
+                        if (user !== currentUser) {
+                            addNotification("chat", user, `${currentUser}님의 새 메시지`);
+                        }
+                    });
+                }
+            }
+
+            originalSendChatMessage?.apply(this, arguments);
+        };
+
     </script>
 </body>
 </html>
