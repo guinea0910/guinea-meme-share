@@ -72,7 +72,7 @@
         .chat-time { color: var(--text-sub); font-size: 10px; white-space: nowrap; }
         .chat-input-area { display: flex; gap: 8px; align-items: flex-end; padding: 12px; background: var(--card-bg); border-top: 1px solid var(--border-color); }
         .chat-input-area textarea { min-height: 42px; max-height: 100px; resize: none; margin: 0; }
-        .chat-send-btn { height: 42px; padding: 0 14px; background: #eab308; color: #fff; }
+        .chat-send-btn { height: 42px; padding: 0 14px; background: #eab308; color: #fff; white-space: nowrap; writing-mode: horizontal-tb; flex: 0 0 auto; }
         .chat-send-btn:hover { background: #ca8a04; }
         .chat-login-notice { margin: auto; text-align: center; color: var(--text-sub); }
         .unread-badge { display: inline-grid; place-items: center; min-width: 17px; height: 17px; margin-left: 6px; padding: 0 4px; border: 2px solid var(--card-bg); border-radius: 999px; background: #ff3b30; color: #fff; font-size: 10px; font-weight: 700; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,.3); vertical-align: middle; }
@@ -90,6 +90,9 @@
         .member-choice input { width: auto; margin: 0; }
         .chat-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
         .chat-modal-actions button { flex: 1; }
+        .popular-sort { display: flex; gap: 7px; margin-bottom: 16px; }
+        .popular-sort button { flex: 1; padding: 8px; background: var(--card-bg); color: var(--text-sub); border: 1px solid var(--border-color); }
+        .popular-sort button.active { background: var(--cafe-green); border-color: var(--cafe-green); color: #fff; }
         @media (max-width: 700px) {
             .sidebar { width: 76px; padding: 18px 8px; }
             .sidebar-title { display: none; }
@@ -402,10 +405,10 @@
         <aside class="sidebar" aria-label="주 메뉴">
             <h1 class="sidebar-title">기니 짤방 웹버전</h1>
             <button id="cafeNavBtn" class="sidebar-item active" onclick="showAppSection('cafe')">☕ 카페</button>
+            <button id="popularNavBtn" class="sidebar-item" onclick="showAppSection('popular')">🔥 인기 짤</button>
             <button id="chatNavBtn" class="sidebar-item" onclick="showAppSection('chat')">💬 채팅<span id="unreadBadge" class="unread-badge hidden"></span></button>
-            <div class="sidebar-bottom">
-                <button id="settingsNavBtn" class="sidebar-item" onclick="openSettingsFromSidebar()">⚙️ 설정</button>
-            </div>
+            <button id="notificationsNavBtn" class="sidebar-item" onclick="showAppSection('notifications')">🔔 알림<span id="notificationBadge" class="unread-badge hidden"></span></button>
+            <button id="settingsNavBtn" class="sidebar-item" onclick="openSettingsFromSidebar()">⚙️ 설정</button>
         </aside>
 
         <main class="app-content">
@@ -507,7 +510,7 @@
         <section id="chatView" class="chat-view hidden" aria-live="polite">
             <div class="chat-header">
                 <div><h2 id="chatTitle">전체 채팅</h2><span id="chatStatus" class="chat-count">카페 회원들과 이야기해 보세요</span></div>
-                <div class="chat-header-actions"><span id="chatMemberCount" class="chat-count"></span><button id="leaveChatRoomBtn" class="chat-create-btn danger-btn hidden" onclick="leaveChatRoom()">나가기</button><button class="chat-create-btn" onclick="openCreateChatRoom()">+ 채팅방 만들기</button></div>
+                <div class="chat-header-actions"><span id="chatMemberCount" class="chat-count"></span><button id="teamManageBtn" class="chat-create-btn hidden" onclick="openTeamManage()">관리</button><button id="leaveChatRoomBtn" class="chat-create-btn danger-btn hidden" onclick="leaveChatRoom()">나가기</button><button class="chat-create-btn" onclick="openCreateChatRoom()">+ 채팅방 만들기</button></div>
             </div>
             <div id="chatRoomBar" class="chat-room-bar"></div>
             <div id="chatMessages" class="chat-messages"></div>
@@ -543,10 +546,25 @@
             </div>
         </section>
 
+        <section id="popularView" class="hidden">
+            <div class="box">
+                <h2 style="margin-top: 0;">인기 짤</h2>
+                <div class="popular-sort">
+                    <button id="popularViewsBtn" class="active" onclick="setPopularSort('views')">조회순</button>
+                    <button id="popularLikesBtn" onclick="setPopularSort('likes')">좋아요순</button>
+                    <button id="popularCommentsBtn" onclick="setPopularSort('comments')">댓글순</button>
+                </div>
+                <div id="popularPostsContainer">인기 짤을 불러오는 중...</div>
+            </div>
+        </section>
+
+        <section id="notificationsView" class="hidden"><div class="box"><h2 style="margin-top:0;">알림</h2><div id="notificationsContainer">알림을 불러오는 중...</div></div></section>
+
         <div id="chatRoomModal" class="chat-modal hidden" role="dialog" aria-modal="true" aria-labelledby="chatRoomModalTitle">
             <div class="chat-modal-card">
                 <h3 id="chatRoomModalTitle">새 채팅방 만들기</h3>
                 <input id="chatRoomNameInput" type="text" placeholder="채팅방 이름 (선택)">
+                <select id="chatRoomType"><option value="general">일반 채팅방</option><option value="team">팀채팅방</option></select>
                 <div id="chatRoomMemberList" class="member-picker"></div>
                 <div class="chat-modal-actions">
                     <button class="danger-btn" onclick="closeCreateChatRoom()">취소</button>
@@ -554,6 +572,7 @@
                 </div>
             </div>
         </div>
+        <div id="teamManageModal" class="chat-modal hidden"><div class="chat-modal-card"><h3>팀채팅방 관리</h3><input id="teamRoomNameInput" placeholder="팀채팅방 이름"><button onclick="saveTeamRoomName()" style="width:100%; margin-bottom:10px;">이름 저장</button><div id="teamMembersList" class="member-picker"></div><div id="teamInviteList" class="member-picker"></div><button onclick="inviteTeamMembers()" style="width:100%; margin-bottom:10px;">선택한 멤버 초대</button><button class="danger-btn" onclick="closeTeamManage()" style="width:100%;">닫기</button></div></div>
         </main>
     </div>
 
@@ -590,9 +609,12 @@
         let unsubscribeChat = null;
         let unsubscribeChatRooms = null;
         let unreadChatUnsubscribers = [];
+        let unsubscribeNotifications = null;
+        let mentionNotifications = [];
         let chatMessages = [];
         let chatRooms = [];
         let unreadByRoom = {};
+        let popularSort = 'views';
         let activeChatRoomId = 'global';
         let pendingChatRoomId = null;
         let isSendingChatMessage = false;
@@ -667,11 +689,13 @@
             localStorage.removeItem('cafe_user');
             if (unsubscribeChat) { unsubscribeChat(); unsubscribeChat = null; }
             if (unsubscribeChatRooms) { unsubscribeChatRooms(); unsubscribeChatRooms = null; }
+            if (unsubscribeNotifications) { unsubscribeNotifications(); unsubscribeNotifications = null; }
             unreadChatUnsubscribers.forEach(unsubscribe => unsubscribe());
             unreadChatUnsubscribers = [];
             chatMessages = [];
             chatRooms = [];
             unreadByRoom = {};
+            mentionNotifications = [];
             activeChatRoomId = 'global';
             applyTheme('dark');
             document.getElementById('settingsBox').classList.add('hidden');
@@ -691,6 +715,7 @@
                 currentUserSpan.textContent = currentUser;
                 subscribeUnreadChats();
                 subscribeChatRooms();
+                subscribeNotifications();
 
                 try {
                     const userRef = doc(db, "users", currentUser);
@@ -829,7 +854,7 @@
             }
 
             try {
-                await addDoc(collection(db, "posts"), {
+                const postRef = await addDoc(collection(db, "posts"), {
                     author: currentUser,
                     content: content,
                     image: compressedImageData || null,
@@ -838,6 +863,7 @@
                     likes: [],
                     comments: []
                 });
+                await notifyMentions(content, { type: 'post', postId: postRef.id });
                 
                 document.getElementById('postContent').value = '';
                 removeImage();
@@ -1299,13 +1325,52 @@
             const isCafe = section === 'cafe';
             const isChat = section === 'chat';
             const isSettings = section === 'settings';
+            const isPopular = section === 'popular';
             document.getElementById('cafeView').classList.toggle('hidden', !isCafe);
             document.getElementById('chatView').classList.toggle('hidden', !isChat);
             document.getElementById('settingsView').classList.toggle('hidden', !isSettings);
+            document.getElementById('popularView').classList.toggle('hidden', !isPopular);
             document.getElementById('cafeNavBtn').classList.toggle('active', isCafe);
             document.getElementById('chatNavBtn').classList.toggle('active', isChat);
             document.getElementById('settingsNavBtn').classList.toggle('active', isSettings);
+            document.getElementById('popularNavBtn').classList.toggle('active', isPopular);
             if (isChat) openChat();
+            if (isPopular) loadPopularPosts();
+        }
+
+        window.setPopularSort = function(sort) {
+            popularSort = sort;
+            ['views', 'likes', 'comments'].forEach(type => document.getElementById(`popular${type.charAt(0).toUpperCase() + type.slice(1)}Btn`).classList.toggle('active', type === sort));
+            loadPopularPosts();
+        }
+
+        async function loadPopularPosts() {
+            const container = document.getElementById('popularPostsContainer');
+            container.innerHTML = '인기 짤을 불러오는 중...';
+            try {
+                const snapshot = await getDocs(collection(db, 'posts'));
+                const posts = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+                const getScore = post => popularSort === 'views' ? (post.viewedUsers || []).length : popularSort === 'likes' ? (post.likes || []).length : (post.comments || []).length;
+                posts.sort((a, b) => getScore(b) - getScore(a) || (b.createdAt || 0) - (a.createdAt || 0));
+                if (!posts.length) { container.innerHTML = '등록된 짤이 없습니다.'; return; }
+                container.innerHTML = posts.map((post, index) => {
+                    const title = post.content || '(이미지 게시물)';
+                    const thumbnail = post.image ? `<img class="list-thumb" src="${post.image}" alt="짤">` : '<div class="list-thumb">No Img</div>';
+                    return `<div class="post-list-item" onclick="openPopularPost('${post.id}')">
+                        <div style="color: var(--cafe-green); font-weight: bold; width: 20px;">${index + 1}</div>${thumbnail}
+                        <div class="list-info"><div class="list-meta"><span>${escapeHtml(post.author || '알 수 없음')}</span></div><div class="list-title">${escapeHtml(title)}</div></div>
+                        <div class="list-stats-badge"><span>조회 ${(post.viewedUsers || []).length}</span><span>좋아요 ${(post.likes || []).length}</span><span>댓글 ${(post.comments || []).length}</span></div>
+                    </div>`;
+                }).join('');
+            } catch (error) {
+                console.error(error);
+                container.innerHTML = '<div class="error-box">인기 짤을 불러오지 못했습니다.</div>';
+            }
+        }
+
+        window.openPopularPost = function(postId) {
+            showAppSection('cafe');
+            openDetail(postId);
         }
 
         window.openSettingsFromSidebar = async function() {
@@ -1369,11 +1434,48 @@
             const badge = document.getElementById('unreadBadge');
             if (!currentUser || !document.getElementById('chatView').classList.contains('hidden')) {
                 badge.classList.add('hidden');
+                updateNotificationBadge();
                 return;
             }
             const unread = Object.values(unreadByRoom).reduce((total, count) => total + count, 0);
             badge.textContent = unread > 99 ? '99+' : unread;
             badge.classList.toggle('hidden', unread === 0);
+            updateNotificationBadge();
+        }
+
+        function updateNotificationBadge() {
+            const badge = document.getElementById('notificationBadge');
+            if (!currentUser) { badge.classList.add('hidden'); return; }
+            const chatCount = Object.values(unreadByRoom).reduce((total, count) => total + count, 0);
+            const mentionCount = mentionNotifications.filter(item => !item.read).length;
+            const total = chatCount + mentionCount;
+            badge.textContent = total > 99 ? '99+' : total;
+            badge.classList.toggle('hidden', total === 0);
+        }
+
+        function subscribeNotifications() {
+            if (!currentUser || unsubscribeNotifications) return;
+            unsubscribeNotifications = onSnapshot(query(collection(db, 'notifications'), where('recipientId', '==', currentUser)), snapshot => {
+                mentionNotifications = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+                updateNotificationBadge();
+            }, error => console.error(error));
+        }
+
+        async function notifyMentions(content, source) {
+            const matches = [...String(content || '').matchAll(/@\(([^)]+)\)|@([^\s@]+)/g)].map(match => (match[1] || match[2] || '').trim());
+            if (!matches.length) return;
+            const users = allUsers.length ? allUsers : (await getDocs(collection(db, 'users'))).docs.map(item => item.id);
+            const recipients = [...new Set(matches.filter(id => id !== currentUser && users.includes(id)))];
+            await Promise.all(recipients.map(recipientId => addDoc(collection(db, 'notifications'), { recipientId, sender: currentUser, source, content: `${currentUser}님이 회원님을 언급했습니다: ${content}`, createdAt: Date.now(), read: false })));
+        }
+
+        window.openNotifications = async function() {
+            subscribeNotifications();
+            const container = document.getElementById('notificationsContainer');
+            const unreadChatCount = Object.values(unreadByRoom).reduce((total, count) => total + count, 0);
+            const sorted = [...mentionNotifications].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            container.innerHTML = `<div class="chat-notice">읽지 않은 채팅 ${unreadChatCount}개</div>` + (sorted.length ? sorted.map(item => `<div class="comment-item"><div class="comment-body"><b>${escapeHtml(item.sender || '')}</b>님이 회원님을 언급했습니다.<br><span style="color:var(--text-sub); font-size:12px;">${escapeHtml(item.content || '')}</span></div></div>`).join('') : '<div style="padding:14px; color:var(--text-sub);">멘션 알림이 없습니다.</div>');
+            await Promise.all(mentionNotifications.filter(item => !item.read).map(item => updateDoc(doc(db, 'notifications', item.id), { read: true })));
         }
 
         function markChatRoomRead(roomId = activeChatRoomId) {
@@ -1390,7 +1492,14 @@
             const trackedRooms = [{ id: 'global', ref: collection(db, 'chatMessages') }, ...chatRooms.map(room => ({ id: room.id, ref: collection(db, 'chatRooms', room.id, 'messages') }))];
             trackedRooms.forEach(room => {
                 unreadChatUnsubscribers.push(onSnapshot(query(room.ref, orderBy('createdAt', 'asc')), snapshot => {
-                    const lastSeen = Number(localStorage.getItem(getChatSeenKey(room.id)) || 0);
+                    const seenKey = getChatSeenKey(room.id);
+                    if (!localStorage.getItem(seenKey)) {
+                        localStorage.setItem(seenKey, String(Date.now()));
+                        unreadByRoom[room.id] = 0;
+                        updateUnreadBadge();
+                        return;
+                    }
+                    const lastSeen = Number(localStorage.getItem(seenKey));
                     unreadByRoom[room.id] = snapshot.docs.filter(item => {
                         const message = item.data();
                         return message.author !== currentUser && message.createdAt > lastSeen;
@@ -1412,6 +1521,7 @@
                 messagesBox.innerHTML = '<div class="chat-notice">아직 메시지가 없습니다. 먼저 인사를 건네 보세요!</div>';
             } else {
                 messagesBox.innerHTML = '<div class="chat-notice">전체 채팅방에 오신 것을 환영합니다</div>' + chatMessages.map(message => {
+                    if (message.system) return `<div class="chat-notice">${escapeHtml(message.content)}</div>`;
                     const mine = message.author === currentUser;
                     return `<div class="chat-row ${mine ? 'mine' : ''}">
                         ${mine ? '' : `<div class="chat-avatar">${escapeHtml(String(message.author || '?').slice(0, 2))}</div>`}
@@ -1419,11 +1529,18 @@
                             <div class="chat-sender">${escapeHtml(message.author || '알 수 없음')}</div>
                             <div class="chat-bubble">${escapeHtml(message.content)}</div>
                         </div>
-                        <span class="chat-time">${formatChatTime(message.createdAt)}</span>
+                        <span class="chat-time">읽음 ${Math.max(0, (message.readBy || []).length - 1)}<br>${formatChatTime(message.createdAt)}</span>
                     </div>`;
                 }).join('');
             }
             requestAnimationFrame(() => { messagesBox.scrollTop = messagesBox.scrollHeight; });
+        }
+
+        async function markMessagesRead() {
+            if (!currentUser) return;
+            const messageRef = activeChatRoomId === 'global' ? collection(db, 'chatMessages') : collection(db, 'chatRooms', activeChatRoomId, 'messages');
+            const unreadMessages = chatMessages.filter(message => !message.system && !(message.readBy || []).includes(currentUser));
+            await Promise.all(unreadMessages.map(message => updateDoc(doc(messageRef, message.id), { readBy: arrayUnion(currentUser) }).catch(error => console.error(error))));
         }
 
         function subscribeChat() {
@@ -1434,6 +1551,7 @@
             unsubscribeChat = onSnapshot(query(messageRef, orderBy('createdAt', 'asc')), snapshot => {
                 chatMessages = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
                 renderChatMessages();
+                markMessagesRead();
                 updateUnreadBadge();
             }, error => {
                 console.error(error);
@@ -1450,6 +1568,8 @@
             const title = activeChatRoomId === 'global' ? '전체 채팅' : (activeRoom?.name || '채팅방');
             document.getElementById('chatTitle').textContent = title;
             document.getElementById('leaveChatRoomBtn').classList.toggle('hidden', activeChatRoomId === 'global');
+            const canManage = activeRoom && activeRoom.roomType === 'team' && (activeRoom.owner === currentUser || (activeRoom.admins || []).includes(currentUser));
+            document.getElementById('teamManageBtn').classList.toggle('hidden', !canManage);
         }
 
         function subscribeChatRooms() {
@@ -1501,12 +1621,62 @@
             document.getElementById('chatRoomModal').classList.add('hidden');
         }
 
+        function getActiveTeamRoom() {
+            return chatRooms.find(room => room.id === activeChatRoomId && room.roomType === 'team');
+        }
+
+        window.openTeamManage = async function() {
+            const room = getActiveTeamRoom();
+            if (!room || !(room.owner === currentUser || (room.admins || []).includes(currentUser))) return;
+            document.getElementById('teamRoomNameInput').value = room.name || '';
+            const users = (await getDocs(collection(db, 'users'))).docs.map(item => item.id);
+            const canSetAdmin = room.owner === currentUser;
+            document.getElementById('teamMembersList').innerHTML = room.members.map(member => {
+                const role = member === room.owner ? '방장' : (room.admins || []).includes(member) ? '부방장' : '멤버';
+                const adminButton = canSetAdmin && member !== room.owner ? `<button onclick="setTeamAdmin('${member}', ${!(room.admins || []).includes(member)})" style="padding:4px 6px; font-size:11px;">${(room.admins || []).includes(member) ? '부방장 해제' : '부방장 지정'}</button>` : '';
+                const kickButton = member !== room.owner ? `<button class="danger-btn" onclick="kickTeamMember('${member}')" style="padding:4px 6px; font-size:11px;">내보내기</button>` : '';
+                return `<div class="member-choice"><span style="flex:1;">${escapeHtml(member)} · ${role}</span>${adminButton}${kickButton}</div>`;
+            }).join('');
+            document.getElementById('teamInviteList').innerHTML = users.filter(user => !room.members.includes(user)).map(user => `<label class="member-choice"><input type="checkbox" value="${escapeHtml(user)}"><span>${escapeHtml(user)}</span></label>`).join('') || '<div style="padding:10px; color:var(--text-sub);">초대할 회원이 없습니다.</div>';
+            document.getElementById('teamManageModal').classList.remove('hidden');
+        }
+
+        window.closeTeamManage = function() { document.getElementById('teamManageModal').classList.add('hidden'); }
+        window.saveTeamRoomName = async function() {
+            const room = getActiveTeamRoom(); const name = document.getElementById('teamRoomNameInput').value.trim();
+            if (!room || !name) return;
+            await updateDoc(doc(db, 'chatRooms', room.id), { name });
+        }
+        window.inviteTeamMembers = async function() {
+            const room = getActiveTeamRoom(); if (!room) return;
+            const members = Array.from(document.querySelectorAll('#teamInviteList input:checked')).map(input => input.value);
+            if (members.length) await updateDoc(doc(db, 'chatRooms', room.id), { members: arrayUnion(...members) });
+            openTeamManage();
+        }
+        window.setTeamAdmin = async function(member, makeAdmin) {
+            const room = getActiveTeamRoom(); if (!room || room.owner !== currentUser) return;
+            await updateDoc(doc(db, 'chatRooms', room.id), { admins: makeAdmin ? arrayUnion(member) : arrayRemove(member) });
+            openTeamManage();
+        }
+        window.kickTeamMember = async function(member) {
+            const room = getActiveTeamRoom(); if (!room || member === room.owner) return;
+            await updateDoc(doc(db, 'chatRooms', room.id), { members: arrayRemove(member), admins: arrayRemove(member) });
+            await addDoc(collection(db, 'chatRooms', room.id, 'messages'), { content: `${member}님이 내보내졌습니다.`, createdAt: Date.now(), system: true });
+            openTeamManage();
+        }
+
         window.leaveChatRoom = async function() {
             if (activeChatRoomId === 'global' || !currentUser) return;
             const room = chatRooms.find(item => item.id === activeChatRoomId);
             if (!room || !confirm(`'${room.name || '이 채팅방'}'에서 나갈까요?`)) return;
+            if (room.roomType === 'team' && room.owner === currentUser) { alert('방장은 팀채팅방을 나갈 수 없습니다.'); return; }
             const roomId = activeChatRoomId;
             try {
+                await addDoc(collection(db, 'chatRooms', roomId, 'messages'), {
+                    content: `${currentUser}님이 나가셨습니다.`,
+                    createdAt: Date.now(),
+                    system: true
+                });
                 await updateDoc(doc(db, 'chatRooms', roomId), { members: arrayRemove(currentUser) });
                 activeChatRoomId = 'global';
                 if (unsubscribeChat) { unsubscribeChat(); unsubscribeChat = null; }
@@ -1528,6 +1698,7 @@
             if (selectedMembers.length === 0) { alert('채팅할 회원을 한 명 이상 선택해 주세요.'); return; }
             const nameInput = document.getElementById('chatRoomNameInput').value.trim();
             const roomName = nameInput || [currentUser, ...selectedMembers].join(', ');
+            const roomType = document.getElementById('chatRoomType').value;
             isCreatingChatRoom = true;
             const createButton = document.querySelector('#chatRoomModal .chat-modal-actions button:last-child');
             createButton.disabled = true;
@@ -1535,6 +1706,9 @@
                 const room = await addDoc(collection(db, 'chatRooms'), {
                     name: roomName,
                     members: [currentUser, ...selectedMembers],
+                    roomType,
+                    owner: roomType === 'team' ? currentUser : null,
+                    admins: [],
                     createdAt: Date.now(),
                     createdBy: currentUser
                 });
@@ -1581,7 +1755,8 @@
                 const messageRef = activeChatRoomId === 'global'
                     ? collection(db, 'chatMessages')
                     : collection(db, 'chatRooms', activeChatRoomId, 'messages');
-                await addDoc(messageRef, { author: currentUser, content, createdAt: Date.now() });
+                await addDoc(messageRef, { author: currentUser, content, createdAt: Date.now(), readBy: [currentUser] });
+                await notifyMentions(content, { type: 'chat', roomId: activeChatRoomId });
                 input.value = '';
                 markChatRoomRead();
             } catch (error) {
