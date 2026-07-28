@@ -47,7 +47,7 @@
         .sidebar-item {
             width: 100%; padding: 12px 14px; box-sizing: border-box; border: 0;
             border-radius: 8px; background: transparent; color: var(--text-sub);
-            text-align: left; font-size: 15px;
+            text-align: left; font-size: 15px; cursor: pointer;
         }
         .sidebar-item:hover { background: var(--input-bg); color: var(--text-main); }
         .sidebar-item.active { background: rgba(3, 199, 90, 0.14); color: var(--cafe-green); }
@@ -70,14 +70,14 @@
         .chat-time { color: var(--text-sub); font-size: 10px; white-space: nowrap; }
         .chat-input-area { display: flex; gap: 8px; align-items: flex-end; padding: 12px; background: var(--card-bg); border-top: 1px solid var(--border-color); }
         .chat-input-area textarea { min-height: 42px; max-height: 100px; resize: none; margin: 0; }
-        .chat-send-btn { height: 42px; padding: 0 14px; background: #eab308; color: #fff; white-space: nowrap; writing-mode: horizontal-tb; flex: 0 0 auto; }
+        .chat-send-btn { height: 42px; padding: 0 14px; background: #eab308; color: #fff; white-space: nowrap; flex: 0 0 auto; }
         .chat-send-btn:hover { background: #ca8a04; }
         .chat-login-notice { margin: auto; text-align: center; color: var(--text-sub); }
         .unread-badge { display: inline-grid; place-items: center; min-width: 17px; height: 17px; margin-left: 6px; padding: 0 4px; border: 2px solid var(--card-bg); border-radius: 999px; background: #ff3b30; color: #fff; font-size: 10px; font-weight: 700; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,.3); vertical-align: middle; }
         .chat-header-actions { display: flex; gap: 6px; align-items: center; }
         .chat-create-btn { padding: 7px 9px; font-size: 12px; }
         .chat-room-bar { display: flex; gap: 7px; overflow-x: auto; padding: 9px 12px; background: var(--input-bg); border-bottom: 1px solid var(--border-color); }
-        .chat-room-btn { flex: 0 0 auto; padding: 6px 10px; border-radius: 15px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-sub); font-size: 12px; }
+        .chat-room-btn { flex: 0 0 auto; padding: 6px 10px; border-radius: 15px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-sub); font-size: 12px; cursor: pointer; }
         .chat-room-btn.active { background: var(--cafe-green); border-color: var(--cafe-green); color: #fff; }
         .chat-modal { position: fixed; inset: 0; z-index: 1000; padding: 20px; background: rgba(0, 0, 0, .55); display: grid; place-items: center; box-sizing: border-box; }
         .chat-modal-card { width: min(420px, 100%); max-height: min(620px, 90vh); overflow: auto; padding: 22px; border-radius: 14px; background: var(--card-bg); border: 1px solid var(--border-color); }
@@ -196,7 +196,6 @@
         .search-row button {
             white-space: nowrap;
         }
-        
         .author-ranking-dropdown {
             position: absolute;
             top: 100%;
@@ -385,7 +384,7 @@
             align-items: center;
         }
         .hidden { display: none !important; }
-        .error-box { background-color: #451a03; border: 1px solid #b45309; color: #fde68a; padding: 10px; border-radius: 6px; margin-bottom: 10px; word-break: break-all; }
+        .error-box { background-color: #451a03; border: 1px solid #b45309; color: #fde68a; padding: 12px; border-radius: 6px; margin-bottom: 10px; word-break: break-all; line-height: 1.5; }
     </style>
 </head>
 <body>
@@ -400,87 +399,82 @@
         </aside>
         <main class="app-content">
         <section id="cafeView">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h2 style="margin: 0; cursor: pointer;" onclick="goToList()">🍀 기니 짤방 웹버전</h2>
-    </div>
-    <!-- 설정 영역 -->
-    <div id="settingsBox" class="box hidden">
-        <h3>계정 및 테마 설정</h3>
-        <div style="margin-bottom: 10px;">
-            <label style="font-size: 13px; color: var(--text-sub);">아이디 (변경 불가)</label>
-            <input type="text" id="settingsId" disabled style="opacity: 0.7; cursor: not-allowed;">
-        </div>
-        <div style="margin-bottom: 10px;">
-            <label style="font-size: 13px; color: var(--text-sub);">새 비밀번호</label>
-            <input type="password" id="settingsPw" placeholder="변경할 비밀번호 입력 (공백이면 유지)">
-        </div>
-        <div style="margin-bottom: 15px;">
-            <label style="font-size: 13px; color: var(--text-sub);">화면 테마</label>
-            <select id="settingsTheme" onchange="previewTheme()">
-                <option value="dark">다크 모드</option>
-                <option value="light">라이트 모드</option>
-            </select>
-        </div>
-        <div style="display: flex; gap: 10px;">
-            <button onclick="handleSaveSettings()" style="flex: 1;">설정 저장</button>
-            <button onclick="toggleSettings()" class="danger-btn" style="flex: 1;">닫기</button>
-        </div>
-    </div>
-    <!-- 인증 영역 (로그인/회원가입) -->
-    <div id="authBox" class="box">
-        <div>
-            <button id="loginTabBtn" class="tab-btn active" onclick="switchTab('login')">로그인</button>
-            <button id="signupTabBtn" class="tab-btn" onclick="switchTab('signup')">회원가입</button>
-        </div>
-        <div id="loginForm">
-            <input type="text" id="loginId" placeholder="아이디 (닉네임)">
-            <input type="password" id="loginPw" placeholder="비밀번호">
-            <button onclick="handleLogin()">로그인</button>
-        </div>
-        <div id="signupForm" class="hidden">
-            <input type="text" id="signupId" placeholder="사용할 아이디 (닉네임)">
-            <input type="password" id="signupPw" placeholder="비밀번호">
-            <button onclick="handleSignup()">가입하기</button>
-        </div>
-    </div>
-    <!-- 메인 게시판 영역 -->
-    <div id="mainBox" class="hidden">
-        <div class="box top-bar">
-            <div>환영합니다, <span id="currentUserSpan" style="color: var(--cafe-green); font-weight: bold;"></span>님!</div>
-            <button class="danger-btn" onclick="handleLogout()" style="padding: 5px 10px; font-size: 12px;">로그아웃</button>
-        </div>
-        <div class="box">
-            <h3>글 작성하기</h3>
-            <textarea id="postContent" rows="3" placeholder="내용을 입력해 주세요..."></textarea>
-            
-            <div id="dropZone" class="drop-zone">
-                사진 업로드
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0; cursor: pointer;" onclick="goToList()">🍀 기니 짤방 웹버전</h2>
             </div>
-            <input type="file" id="fileInput" accept="image/*" class="hidden">
-            
-            <div id="previewArea" class="hidden" style="margin-bottom: 10px;">
-                <div class="preview-container">
-                    <img id="previewImg" class="preview-img" src="" alt="미리보기">
-                    <button class="remove-img-btn" onclick="removeImage()">✕</button>
+            <div id="settingsBox" class="box hidden">
+                <h3>계정 및 테마 설정</h3>
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size: 13px; color: var(--text-sub);">아이디 (변경 불가)</label>
+                    <input type="text" id="settingsId" disabled style="opacity: 0.7; cursor: not-allowed;">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size: 13px; color: var(--text-sub);">새 비밀번호</label>
+                    <input type="password" id="settingsPw" placeholder="변경할 비밀번호 입력 (공백이면 유지)">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 13px; color: var(--text-sub);">화면 테마</label>
+                    <select id="settingsTheme" onchange="previewTheme()">
+                        <option value="dark">다크 모드</option>
+                        <option value="light">라이트 모드</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="handleSaveSettings()" style="flex: 1;">설정 저장</button>
+                    <button onclick="toggleSettings()" class="danger-btn" style="flex: 1;">닫기</button>
                 </div>
             </div>
-            <button onclick="handleCreatePost()">등록</button>
-        </div>
-    </div>
-    <!-- 뷰 영역 (목록 또는 상세) -->
-    <div id="contentArea">
-        <div id="searchSection" class="search-container">
-            <div class="search-row">
-                <input type="text" id="searchInput" placeholder="작성자 이름 검색 또는 클릭하여 회원 목록 보기..." onfocus="showAuthorRanking()" oninput="filterAuthorRanking()" onkeyup="if(event.key==='Enter') { hideAuthorRanking(); handleSearch(); }">
-                <button onclick="hideAuthorRanking(); handleSearch();">검색</button>
+            <div id="authBox" class="box">
+                <div>
+                    <button id="loginTabBtn" class="tab-btn active" onclick="switchTab('login')">로그인</button>
+                    <button id="signupTabBtn" class="tab-btn" onclick="switchTab('signup')">회원가입</button>
+                </div>
+                <div id="loginForm">
+                    <input type="text" id="loginId" placeholder="아이디 (닉네임)">
+                    <input type="password" id="loginPw" placeholder="비밀번호">
+                    <button onclick="handleLogin()">로그인</button>
+                </div>
+                <div id="signupForm" class="hidden">
+                    <input type="text" id="signupId" placeholder="사용할 아이디 (닉네임)">
+                    <input type="password" id="signupPw" placeholder="비밀번호">
+                    <button onclick="handleSignup()">가입하기</button>
+                </div>
             </div>
-            <!-- 회원 조회수 랭킹 드롭다운 -->
-            <div id="authorRankingDropdown" class="author-ranking-dropdown hidden"></div>
-        </div>
-        <h3 id="listTitleHeader">전체 목록</h3>
-        <div id="postsContainer">게시글 불러오는 중...</div>
-        <div id="paginationContainer" class="pagination"></div>
-    </div>
+            <div id="mainBox" class="hidden">
+                <div class="box top-bar">
+                    <div>환영합니다, <span id="currentUserSpan" style="color: var(--cafe-green); font-weight: bold;"></span>님!</div>
+                    <button class="danger-btn" onclick="handleLogout()" style="padding: 5px 10px; font-size: 12px;">로그아웃</button>
+                </div>
+                <div class="box">
+                    <h3>글 작성하기</h3>
+                    <textarea id="postContent" rows="3" placeholder="내용을 입력해 주세요..."></textarea>
+                    
+                    <div id="dropZone" class="drop-zone">
+                        사진 업로드
+                    </div>
+                    <input type="file" id="fileInput" accept="image/*" class="hidden">
+                    
+                    <div id="previewArea" class="hidden" style="margin-bottom: 10px;">
+                        <div class="preview-container">
+                            <img id="previewImg" class="preview-img" src="" alt="미리보기">
+                            <button class="remove-img-btn" onclick="removeImage()">✕</button>
+                        </div>
+                    </div>
+                    <button onclick="handleCreatePost()">등록</button>
+                </div>
+            </div>
+            <div id="contentArea">
+                <div id="searchSection" class="search-container">
+                    <div class="search-row">
+                        <input type="text" id="searchInput" placeholder="작성자 이름 검색 또는 클릭하여 회원 목록 보기..." onfocus="showAuthorRanking()" oninput="filterAuthorRanking()" onkeyup="if(event.key==='Enter') { hideAuthorRanking(); handleSearch(); }">
+                        <button onclick="hideAuthorRanking(); handleSearch();">검색</button>
+                    </div>
+                    <div id="authorRankingDropdown" class="author-ranking-dropdown hidden"></div>
+                </div>
+                <h3 id="listTitleHeader">전체 목록</h3>
+                <div id="postsContainer">게시글 불러오는 중...</div>
+                <div id="paginationContainer" class="pagination"></div>
+            </div>
         </section>
         <section id="chatView" class="chat-view hidden" aria-live="polite">
             <div class="chat-header">
@@ -515,7 +509,6 @@
                     </div>
                     <button onclick="saveSettingsView()" style="width: 100%; margin-bottom: 10px;">설정 저장</button>
                     <button class="danger-btn" onclick="logoutFromSettings()" style="width: 100%; margin-bottom: 10px;">로그아웃</button>
-                    <button onclick="switchAccount()" style="width: 100%; background: var(--border-color);">계정 전환</button>
                 </div>
             </div>
         </section>
@@ -530,10 +523,10 @@
                 <div id="popularPostsContainer">인기 짤을 불러오는 중...</div>
             </div>
         </section>
-        <section id="notificationsView" class="hidden"><div class="box"><h2 style="margin-top:0;">알림</h2><div id="notificationsContainer">알림을 불러오는 중...</div></div></section>
-        <div id="chatRoomModal" class="chat-modal hidden" role="dialog" aria-modal="true" aria-labelledby="chatRoomModalTitle">
+        <section id="notificationsView" class="hidden"><div class="box"><h2 style="margin-top:0;">알림</h2><div id="notificationsContainer">알림이 없습니다.</div></div></section>
+        <div id="chatRoomModal" class="chat-modal hidden" role="dialog" aria-modal="true">
             <div class="chat-modal-card">
-                <h3 id="chatRoomModalTitle">새 채팅방 만들기</h3>
+                <h3>새 채팅방 만들기</h3>
                 <input id="chatRoomNameInput" type="text" placeholder="채팅방 이름 (선택)">
                 <select id="chatRoomType"><option value="general">일반 채팅방</option><option value="team">팀채팅방</option></select>
                 <div id="chatRoomMemberList" class="member-picker"></div>
@@ -543,59 +536,63 @@
                 </div>
             </div>
         </div>
-        <div id="teamManageModal" class="chat-modal hidden"><div class="chat-modal-card"><h3>팀채팅방 관리</h3><input id="teamRoomNameInput" placeholder="팀채팅방 이름"><button onclick="saveTeamRoomName()" style="width:100%; margin-bottom:10px;">이름 저장</button><div id="teamMembersList" class="member-picker"></div><div id="teamInviteList" class="member-picker"></div><button onclick="inviteTeamMembers()" style="width:100%; margin-bottom:10px;">선택한 멤버 초대</button><button class="danger-btn" onclick="closeTeamManage()" style="width:100%;">닫기</button></div></div>
         </main>
     </div>
 
-    <!-- GAS API 통신 클라이언트 스크립트 -->
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycby5ziq-j460eP0PNcGSNNznYZNGydqlkrZ-GFeTQjhNxaTGGL_c9y8y9o_qdqkPB9C4RQ/exec';
+        // 새로 배포한 Web App URL을 여기에 붙여 넣습니다.
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxH3rXfP3quj3q9uARAFhg3I8qmSqICsU2EQHAy-CTbuyg60UUEZku2Q32BQxD3z1q8ow/exec';
 
         async function fetchGAS(action, params = {}) {
             const url = new URL(GAS_URL);
             url.searchParams.append('action', action);
-            Object.keys(params).forEach(k => url.searchParams.append(k, params[k]));
-            const res = await fetch(url.toString());
-            const json = await res.json();
-            if (json.status !== 'success') throw new Error(json.message);
-            return json.data;
+            Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+
+            const response = await fetch(url);
+            const text = await response.text();
+            
+            try {
+                const result = JSON.parse(text);
+                if (result.status !== 'success') throw new Error(result.message);
+                return result.data;
+            } catch (e) {
+                console.error("GAS 응답 원본:", text);
+                throw new Error("서버 응답 오류 (Google Apps Script [새 배포]가 제대로 완료되었는지, 접근 권한이 '모든 사용자'인지 확인하세요)");
+            }
         }
 
         async function postGAS(action, payload) {
-            const res = await fetch(GAS_URL, {
+            const response = await fetch(GAS_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ action, payload })
             });
-            const json = await res.json();
-            if (json.status !== 'success') throw new Error(json.message);
-            return json.data;
+            const text = await response.text();
+            
+            try {
+                const result = JSON.parse(text);
+                if (result.status !== 'success') throw new Error(result.message);
+                return result.data;
+            } catch (e) {
+                console.error("GAS 응답 원본:", text);
+                throw new Error("서버 응답 오류가 발생했습니다.");
+            }
         }
 
         let currentUser = localStorage.getItem('cafe_user') || null;
         let compressedImageData = null;
         let currentView = 'list';
         let currentDetailPostId = null;
-
         let allPosts = [];
         let allUsers = [];
         let filteredPosts = [];
         let currentPage = 1;
         const postsPerPage = 10;
         let searchKeyword = '';
-        let pollingTimer = null;
-
-        let mentionNotifications = [];
-        let chatInvites = [];
-        let ownerTransferRequests = [];
         let chatMessages = [];
         let chatRooms = [];
-        let unreadByRoom = {};
-        let popularSort = 'views';
         let activeChatRoomId = 'global';
-        let pendingChatRoomId = null;
-        let isSendingChatMessage = false;
-        let isCreatingChatRoom = false;
+        let chatTimer = null;
 
         window.switchTab = function(type) {
             const loginForm = document.getElementById('loginForm');
@@ -620,9 +617,7 @@
             const pw = document.getElementById('signupPw').value.trim();
             if(!id || !pw) { alert('아이디와 비밀번호를 모두 입력해 주세요!'); return; }
             try {
-                const users = await fetchGAS('getUsers');
-                if(users.some(u => u.id === id)) { alert('이미 존재하는 아이디입니다!'); return; }
-                await postGAS('saveUser', { id: id, password: pw, theme: 'dark' });
+                await postGAS('signup', { id, pw });
                 alert('회원가입 완료! 로그인해 주세요.');
                 switchTab('login');
                 document.getElementById('loginId').value = id;
@@ -637,15 +632,10 @@
             const pw = document.getElementById('loginPw').value.trim();
             if(!id || !pw) { alert('아이디와 비밀번호를 입력해 주세요!'); return; }
             try {
-                const users = await fetchGAS('getUsers');
-                const user = users.find(u => u.id === id);
-                if(!user || user.password !== pw) {
-                    alert('아이디 또는 비밀번호가 일치하지 않습니다.');
-                    return;
-                }
+                const userData = await postGAS('login', { id, pw });
                 currentUser = id;
                 localStorage.setItem('cafe_user', id);
-                applyTheme(user.theme || 'dark');
+                applyTheme(userData.theme || 'dark');
                 checkAuthState();
             } catch (error) {
                 console.error(error);
@@ -656,13 +646,9 @@
         window.handleLogout = function() {
             currentUser = null;
             localStorage.removeItem('cafe_user');
-            if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; }
+            if(chatTimer) clearInterval(chatTimer);
             chatMessages = [];
             chatRooms = [];
-            unreadByRoom = {};
-            mentionNotifications = [];
-            chatInvites = [];
-            ownerTransferRequests = [];
             activeChatRoomId = 'global';
             applyTheme('dark');
             document.getElementById('settingsBox').classList.add('hidden');
@@ -679,14 +665,6 @@
                 mainBox.classList.remove('hidden');
                 contentArea.classList.remove('hidden');
                 currentUserSpan.textContent = currentUser;
-                startPolling();
-                try {
-                    const users = await fetchGAS('getUsers');
-                    const user = users.find(u => u.id === currentUser);
-                    if(user) applyTheme(user.theme || 'dark');
-                } catch(e) {
-                    console.error("테마 불러오기 에러:", e);
-                }
             } else {
                 authBox.classList.remove('hidden');
                 mainBox.classList.add('hidden');
@@ -696,59 +674,11 @@
             refreshView();
         }
 
-        function startPolling() {
-            if (pollingTimer) clearInterval(pollingTimer);
-            pollRealtimeData();
-            pollingTimer = setInterval(pollRealtimeData, 3000);
-        }
-
-        async function pollRealtimeData() {
-            if (!currentUser) return;
-            try {
-                const [notis, invites, transfers, rooms] = await Promise.all([
-                    fetchGAS('getNotifications'),
-                    fetchGAS('getChatInvites'),
-                    fetchGAS('getOwnerTransfers'),
-                    fetchGAS('getChatRooms')
-                ]);
-
-                mentionNotifications = notis.filter(n => n.recipientId === currentUser);
-                chatInvites = invites.filter(i => i.invitedUser === currentUser);
-                ownerTransferRequests = transfers.filter(t => t.toUser === currentUser);
-                chatRooms = rooms.filter(r => (r.members || []).includes(currentUser));
-
-                if (!document.getElementById('chatView').classList.contains('hidden')) {
-                    fetchChatMessages();
-                }
-
-                updateNotificationBadge();
-            } catch (err) {
-                console.error('폴링 에러:', err);
-            }
-        }
-
-        async function fetchChatMessages() {
-            try {
-                const action = activeChatRoomId === 'global' ? 'getGlobalChats' : 'getRoomChats';
-                const params = activeChatRoomId === 'global' ? {} : { roomId: activeChatRoomId };
-                chatMessages = await fetchGAS(action, params);
-                renderChatMessages();
-                markMessagesRead();
-            } catch (err) {
-                console.error('채팅 로드 에러:', err);
-            }
-        }
-
-        window.toggleSettings = async function() {
+        window.toggleSettings = function() {
             const settingsBox = document.getElementById('settingsBox');
             if(settingsBox.classList.contains('hidden')) {
                 document.getElementById('settingsId').value = currentUser;
                 document.getElementById('settingsPw').value = '';
-                try {
-                    const users = await fetchGAS('getUsers');
-                    const user = users.find(u => u.id === currentUser);
-                    if(user) document.getElementById('settingsTheme').value = user.theme || 'dark';
-                } catch(e) {}
                 settingsBox.classList.remove('hidden');
             } else {
                 settingsBox.classList.add('hidden');
@@ -756,9 +686,20 @@
             }
         };
 
+        window.openSettingsFromSidebar = function() {
+            showAppSection('settings');
+            if (currentUser) {
+                document.getElementById('settingsLoggedIn').classList.remove('hidden');
+                document.getElementById('settingsLoggedOut').classList.add('hidden');
+                document.getElementById('settingsViewId').value = currentUser;
+            } else {
+                document.getElementById('settingsLoggedIn').classList.add('hidden');
+                document.getElementById('settingsLoggedOut').classList.remove('hidden');
+            }
+        };
+
         window.previewTheme = function() {
-            const theme = document.getElementById('settingsTheme').value;
-            applyTheme(theme);
+            applyTheme(document.getElementById('settingsTheme').value);
         };
 
         function applyTheme(theme) {
@@ -773,9 +714,7 @@
             const newPw = document.getElementById('settingsPw').value.trim();
             const newTheme = document.getElementById('settingsTheme').value;
             try {
-                const payload = { id: currentUser, theme: newTheme };
-                if(newPw) payload.password = newPw;
-                await postGAS('saveUser', payload);
+                await postGAS('saveSettings', { id: currentUser, pw: newPw, theme: newTheme });
                 alert('설정이 성공적으로 저장되었습니다!');
                 toggleSettings();
             } catch (error) {
@@ -787,31 +726,18 @@
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
         dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
         dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                processImageFile(e.dataTransfer.files[0]);
-            }
+            e.preventDefault(); dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) processImageFile(e.dataTransfer.files[0]);
         });
         fileInput.addEventListener('change', (e) => {
-            if (e.target.files && e.target.files[0]) {
-                processImageFile(e.target.files[0]);
-            }
+            if (e.target.files && e.target.files[0]) processImageFile(e.target.files[0]);
         });
 
         function processImageFile(file) {
-            if (!file.type.startsWith('image/')) {
-                alert('이미지 파일만 업로드할 수 있습니다!');
-                return;
-            }
+            if (!file.type.startsWith('image/')) { alert('이미지 파일만 업로드할 수 있습니다!'); return; }
             const reader = new FileReader();
             reader.onload = function(event) {
                 const img = new Image();
@@ -840,21 +766,9 @@
 
         window.handleCreatePost = async function() {
             const content = document.getElementById('postContent').value.trim();
-            if(!content && !compressedImageData) {
-                alert('내용이나 사진을 입력해 주세요');
-                return;
-            }
+            if(!content && !compressedImageData) { alert('내용이나 사진을 입력해 주세요'); return; }
             try {
-                const newPost = await postGAS('savePost', {
-                    author: currentUser,
-                    content: content,
-                    image: compressedImageData || null,
-                    createdAt: Date.now(),
-                    viewedUsers: [],
-                    likes: [],
-                    comments: []
-                });
-                await notifyMentions(content, { type: 'post', postId: newPost.id });
+                await postGAS('createPost', { author: currentUser, content, image: compressedImageData });
                 document.getElementById('postContent').value = '';
                 removeImage();
                 goToList();
@@ -868,7 +782,7 @@
             if(currentUser !== author) { alert('자신이 쓴 글만 삭제할 수 있습니다!'); return; }
             if(!confirm('정말 이 게시글을 삭제하시겠습니까?')) return;
             try {
-                await postGAS('deletePost', postId);
+                await postGAS('deletePost', { postId, user: currentUser });
                 goToList();
             } catch (error) {
                 console.error(error);
@@ -879,17 +793,7 @@
         window.handleToggleLike = async function(postId) {
             if(!currentUser) return;
             try {
-                const posts = await fetchGAS('getPosts');
-                const post = posts.find(p => p.id === postId);
-                if(!post) return;
-                let likes = post.likes || [];
-                if(likes.includes(currentUser)) {
-                    likes = likes.filter(user => user !== currentUser);
-                } else {
-                    likes.push(currentUser);
-                }
-                post.likes = likes;
-                await postGAS('updatePost', post);
+                await postGAS('toggleLike', { postId, user: currentUser });
                 openDetail(postId);
             } catch (error) {
                 console.error(error);
@@ -902,20 +806,7 @@
             const commentText = input.value.trim();
             if(!commentText || !currentUser) return;
             try {
-                const posts = await fetchGAS('getPosts');
-                const post = posts.find(p => p.id === postId);
-                if(!post) return;
-
-                const newComment = {
-                    id: 'c_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-                    author: currentUser,
-                    content: commentText,
-                    createdAt: Date.now()
-                };
-                post.comments = post.comments || [];
-                post.comments.push(newComment);
-                await postGAS('updatePost', post);
-                await notifyMentions(commentText, { type: 'comment', postId });
+                await postGAS('addComment', { postId, author: currentUser, content: commentText });
                 input.value = '';
                 openDetail(postId);
             } catch (error) {
@@ -924,46 +815,14 @@
             }
         };
 
-        window.handleDeleteComment = async function(postId, targetComment) {
-            if(currentUser !== targetComment.author) { alert('자신이 쓴 댓글만 삭제할 수 있습니다!'); return; }
-            if(!confirm('정말 이 댓글을 삭제하시겠습니까?')) return;
-            try {
-                const posts = await fetchGAS('getPosts');
-                const post = posts.find(p => p.id === postId);
-                if(!post) return;
-
-                let comments = post.comments || [];
-                comments = comments.filter(c => {
-                    if (targetComment.id && c.id) {
-                        return c.id !== targetComment.id;
-                    }
-                    return !(c.author === targetComment.author && c.content === targetComment.content && c.createdAt === targetComment.createdAt);
-                });
-                post.comments = comments;
-                await postGAS('updatePost', post);
-                openDetail(postId);
-            } catch (error) {
-                console.error(error);
-                alert('댓글 삭제 실패: ' + error.message);
-            }
-        };
-
         function formatDate(timestamp) {
             if (!timestamp) return '';
             const date = new Date(timestamp);
-            const yyyy = date.getFullYear();
-            const mm = String(date.getMonth() + 1).padStart(2, '0');
-            const dd = String(date.getDate()).padStart(2, '0');
-            const hh = String(date.getHours()).padStart(2, '0');
-            const min = String(date.getMinutes()).padStart(2, '0');
-            const ss = String(date.getSeconds()).padStart(2, '0');
-            return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+            return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
         }
 
         window.goToList = function() {
-            currentView = 'list';
-            currentDetailPostId = null;
-            refreshView();
+            currentView = 'list'; currentDetailPostId = null; refreshView();
         };
 
         window.handleSearch = function() {
@@ -987,8 +846,7 @@
         };
 
         window.filterAuthorRanking = function() {
-            const query = document.getElementById('searchInput').value.trim().toLowerCase();
-            renderAuthorRankingDropdown(query);
+            renderAuthorRankingDropdown(document.getElementById('searchInput').value.trim().toLowerCase());
             document.getElementById('authorRankingDropdown').classList.remove('hidden');
         };
 
@@ -1000,137 +858,56 @@
 
         async function fetchUsersAndRanking() {
             try {
-                const users = await fetchGAS('getUsers');
-                allUsers = users.map(u => u.id);
-                allPosts.forEach(post => {
-                    if (post.author && !allUsers.includes(post.author)) {
-                        allUsers.push(post.author);
-                    }
-                });
-            } catch (e) {
-                console.error("회원 목록 불러오기 에러:", e);
-            }
+                allUsers = await fetchGAS('getMembers');
+            } catch (e) { console.error("회원 목록 불러오기 에러:", e); }
         }
 
         function renderAuthorRankingDropdown(filterQuery = '') {
             const dropdown = document.getElementById('authorRankingDropdown');
-            const userViewTotals = {};
-            allUsers.forEach(user => { userViewTotals[user] = 0; });
-            allPosts.forEach(post => {
-                const author = post.author;
-                if (author && userViewTotals[author] !== undefined) {
-                    const viewsCount = (post.viewedUsers || []).length;
-                    userViewTotals[author] += viewsCount;
-                }
-            });
-
-            let sortedUsers = [...allUsers].sort((a, b) => (userViewTotals[b] || 0) - (userViewTotals[a] || 0));
-            if (filterQuery) {
-                sortedUsers = sortedUsers.filter(user => user.toLowerCase().includes(filterQuery));
-            }
+            let sortedUsers = [...allUsers];
+            if (filterQuery) sortedUsers = sortedUsers.filter(user => user.toLowerCase().includes(filterQuery));
             if (sortedUsers.length === 0) {
                 dropdown.innerHTML = `<div style="padding: 12px; text-align: center; color: var(--text-sub); font-size: 13px;">검색된 회원이 없습니다.</div>`;
                 return;
             }
-            let html = '';
-            sortedUsers.forEach((user) => {
-                const totalViews = userViewTotals[user] || 0;
-                html += `
-                    <div class="ranking-item" onclick="selectAuthor('${escapeHtml(user)}')">
-                        <div><b>${escapeHtml(user)}</b></div>
-                        <div style="font-size: 12px; color: var(--text-sub);">총 조회수: ${totalViews}회</div>
-                    </div>
-                `;
-            });
-            dropdown.innerHTML = html;
+            dropdown.innerHTML = sortedUsers.map(user => `
+                <div class="ranking-item" onclick="selectAuthor('${escapeHtml(user)}')">
+                    <div><b>${escapeHtml(user)}</b></div>
+                </div>
+            `).join('');
         }
 
         window.changePage = function(page) {
-            currentPage = page;
-            renderPostList();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            currentPage = page; renderPostList(); window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
         window.openDetail = async function(postId) {
-            currentView = 'detail';
-            currentDetailPostId = postId;
-            
+            currentView = 'detail'; currentDetailPostId = postId;
             const postsContainer = document.getElementById('postsContainer');
-            const listTitleHeader = document.getElementById('listTitleHeader');
-            const searchSection = document.getElementById('searchSection');
-            const paginationContainer = document.getElementById('paginationContainer');
-            listTitleHeader.textContent = '게시글 상세';
-            searchSection.classList.add('hidden');
-            paginationContainer.classList.add('hidden');
+            document.getElementById('listTitleHeader').textContent = '게시글 상세';
+            document.getElementById('searchSection').classList.add('hidden');
+            document.getElementById('paginationContainer').classList.add('hidden');
             postsContainer.innerHTML = '불러오는 중...';
 
             try {
-                const posts = await fetchGAS('getPosts');
-                const post = posts.find(p => p.id === postId);
-                if(!post) {
-                    postsContainer.innerHTML = '존재하지 않는 게시글입니다.';
-                    return;
-                }
+                const post = await fetchGAS('getPostDetail', { postId });
+                if(!post) { postsContainer.innerHTML = '존재하지 않는 게시글입니다.'; return; }
+                const isLiked = currentUser && post.likes.includes(currentUser);
 
-                if (currentUser) {
-                    const viewedUsers = post.viewedUsers || [];
-                    if (!viewedUsers.includes(currentUser)) {
-                        post.viewedUsers = [...viewedUsers, currentUser];
-                        await postGAS('updatePost', post);
-                    }
-                }
-
-                const viewsCount = (post.viewedUsers || []).length;
-                const likes = post.likes || [];
-                const likeCount = likes.length;
-                const isLiked = currentUser && likes.includes(currentUser);
-                const comments = post.comments || [];
-                let deleteBtnHtml = '';
-                if(currentUser && currentUser === post.author) {
-                    deleteBtnHtml = `<button class="danger-btn" onclick="handleDeletePost('${post.id}', '${post.author}')" style="padding: 3px 8px; font-size: 11px;">삭제</button>`;
-                }
-                let imgHtml = '';
-                if(post.image) {
-                    imgHtml = `<img src="${post.image}" class="post-img" alt="업로드 이미지">`;
-                }
-                let commentsHtml = '';
-                if(Array.isArray(comments)) {
-                    comments.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-                    comments.forEach((c) => {
-                        let commentDeleteBtn = '';
-                        if (currentUser && currentUser === c.author) {
-                            const commentDataJson = JSON.stringify(c).replace(/"/g, '&quot;');
-                            commentDeleteBtn = `<button class="danger-btn" onclick="handleDeleteComment('${post.id}', JSON.parse('${commentDataJson}'))" style="padding: 2px 6px; font-size: 10px;">삭제</button>`;
-                        }
-                        commentsHtml += `
-                            <div class="comment-item">
-                                <div class="comment-body">
-                                    <div class="comment-header">
-                                        <span class="comment-author">${escapeHtml(c.author || '알 수 없음')}</span>
-                                        <span class="comment-time">${formatDate(c.createdAt)}</span>
-                                    </div>
-                                    <div>${escapeHtml(c.content)}</div>
-                                </div>
-                                ${commentDeleteBtn}
-                            </div>
-                        `;
-                    });
-                }
                 postsContainer.innerHTML = `
                     <button onclick="goToList()" style="margin-bottom: 15px; background-color: var(--border-color); font-size: 13px; padding: 6px 12px;">← 목록으로</button>
                     <div class="post-card">
                         <div class="post-header">
                             <span class="post-author">${escapeHtml(post.author)}</span>
-                            ${deleteBtnHtml}
+                            ${currentUser === post.author ? `<button class="danger-btn" onclick="handleDeletePost('${post.id}', '${post.author}')" style="padding: 3px 8px; font-size: 11px;">삭제</button>` : ''}
                         </div>
                         <div class="post-time">${formatDate(post.createdAt)}</div>
                         <div class="post-content">${escapeHtml(post.content)}</div>
-                        ${imgHtml}
+                        ${post.image ? `<img src="${post.image}" class="post-img" alt="업로드 이미지">` : ''}
                         
                         <div class="post-stats" style="margin-top: 15px;">
-                            <span>👀 조회 ${viewsCount}회</span>
-                            <span>❤️ 좋아요 ${likeCount}개</span>
-                            <span>💬 댓글 ${comments.length}개</span>
+                            <span>❤️ 좋아요 ${post.likes.length}개</span>
+                            <span>💬 댓글 ${post.comments.length}개</span>
                         </div>
                         <div class="action-row">
                             <button class="like-btn ${isLiked ? 'liked' : ''}" onclick="handleToggleLike('${post.id}')">
@@ -1139,7 +916,17 @@
                         </div>
                         <div class="comment-section">
                             <div style="font-weight: bold; margin-bottom: 8px;">댓글</div>
-                            ${commentsHtml}
+                            ${post.comments.map(c => `
+                                <div class="comment-item">
+                                    <div class="comment-body">
+                                        <div class="comment-header">
+                                            <span class="comment-author">${escapeHtml(c.author)}</span>
+                                            <span class="comment-time">${formatDate(c.createdAt)}</span>
+                                        </div>
+                                        <div>${escapeHtml(c.content)}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
                             <div style="display: flex; gap: 5px; margin-top: 10px;">
                                 <input type="text" id="commentInput_${post.id}" placeholder="댓글을 입력하세요..." style="margin-bottom:0;" onkeyup="if(event.key==='Enter') handleAddComment('${post.id}')">
                                 <button onclick="handleAddComment('${post.id}')" style="white-space: nowrap;">등록</button>
@@ -1148,48 +935,35 @@
                     </div>
                 `;
             } catch (error) {
-                console.error(error);
                 postsContainer.innerHTML = `<div class="error-box"><b>[상세보기 에러 발생]</b><br>${error.message}</div>`;
             }
         };
 
         function refreshView() {
-            if (currentView === 'list') {
-                loadPostsList();
-            } else if (currentDetailPostId) {
-                openDetail(currentDetailPostId);
-            }
+            if (currentView === 'list') loadPostsList();
+            else if (currentDetailPostId) openDetail(currentDetailPostId);
         }
 
         async function loadPostsList() {
             const postsContainer = document.getElementById('postsContainer');
-            const listTitleHeader = document.getElementById('listTitleHeader');
-            const searchSection = document.getElementById('searchSection');
-            const paginationContainer = document.getElementById('paginationContainer');
-            listTitleHeader.textContent = '전체 목록';
-            searchSection.classList.remove('hidden');
-            paginationContainer.classList.remove('hidden');
+            document.getElementById('listTitleHeader').textContent = '전체 목록';
+            document.getElementById('searchSection').classList.remove('hidden');
+            document.getElementById('paginationContainer').classList.remove('hidden');
             postsContainer.innerHTML = '불러오는 중...';
+
             try {
                 allPosts = await fetchGAS('getPosts');
                 allPosts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                 await fetchUsersAndRanking();
                 applyFilterAndRender();
             } catch (error) {
-                console.error(error);
                 postsContainer.innerHTML = `<div class="error-box"><b>[목록 불러오기 에러 발생]</b><br>${error.message}</div>`;
             }
         }
 
         function applyFilterAndRender() {
-            if (!searchKeyword) {
-                filteredPosts = [...allPosts];
-            } else {
-                filteredPosts = allPosts.filter(post => {
-                    const author = (post.author || '').toLowerCase();
-                    return author.includes(searchKeyword);
-                });
-            }
+            if (!searchKeyword) filteredPosts = [...allPosts];
+            else filteredPosts = allPosts.filter(post => (post.author || '').toLowerCase().includes(searchKeyword));
             renderPostList();
         }
 
@@ -1204,45 +978,25 @@
             const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
             if (currentPage > totalPages) currentPage = totalPages;
             if (currentPage < 1) currentPage = 1;
-            const startIndex = (currentPage - 1) * postsPerPage;
-            const endIndex = startIndex + postsPerPage;
-            const currentPosts = filteredPosts.slice(startIndex, endIndex);
-            postsContainer.innerHTML = '';
-            currentPosts.forEach((post) => {
-                const item = document.createElement('div');
-                item.className = 'post-list-item';
-                item.onclick = () => openDetail(post.id);
-                let thumbHtml = '';
-                if (post.image) {
-                    thumbHtml = `<img src="${post.image}" class="list-thumb" alt="짤">`;
-                } else {
-                    thumbHtml = `<div class="list-thumb">No Img</div>`;
-                }
-                const viewsCount = (post.viewedUsers || []).length;
-                const likeCount = (post.likes || []).length;
-                const commentCount = (post.comments || []).length;
-                const displayTitle = post.content ? post.content : '(이미지 게시물)';
-                item.innerHTML = `
-                    ${thumbHtml}
+            const currentPosts = filteredPosts.slice((currentPage - 1) * postsPerPage, currentPage * postsPerPage);
+
+            postsContainer.innerHTML = currentPosts.map(post => `
+                <div class="post-list-item" onclick="openDetail('${post.id}')">
+                    ${post.image ? `<img src="${post.image}" class="list-thumb" alt="짤">` : `<div class="list-thumb">No Img</div>`}
                     <div class="list-info">
                         <div class="list-meta">
-                            <span>${formatDate(post.createdAt)}</span>
-                            <span>/</span>
-                            <span style="color: var(--cafe-green); font-weight: bold;">${escapeHtml(post.author)}</span>
+                            <span>${formatDate(post.createdAt)}</span> / <span style="color: var(--cafe-green); font-weight: bold;">${escapeHtml(post.author)}</span>
                         </div>
-                        <div class="list-title">${escapeHtml(displayTitle)}</div>
+                        <div class="list-title">${escapeHtml(post.content || '(이미지 게시물)')}</div>
                     </div>
                     <div class="list-stats-badge">
-                        <span>조회 ${viewsCount}</span>
-                        <span>좋아요 ${likeCount}</span>
-                        <span>댓글 ${commentCount}</span>
+                        <span>좋아요 ${(post.likes || []).length}</span>
+                        <span>댓글 ${(post.comments || []).length}</span>
                     </div>
-                `;
-                postsContainer.appendChild(item);
-            });
-            let paginationHtml = '';
-            paginationHtml += `<button class="page-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>이전</button>`;
-            
+                </div>
+            `).join('');
+
+            let paginationHtml = `<button class="page-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>이전</button>`;
             for (let i = 1; i <= totalPages; i++) {
                 paginationHtml += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
             }
@@ -1252,511 +1006,96 @@
 
         function escapeHtml(str) {
             if (!str) return '';
-            return String(str).replace(/[&<>'"]/g, 
-                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-            );
+            return String(str).replace(/[&<>"']/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
         }
 
         window.showAppSection = function(section) {
-            const isCafe = section === 'cafe';
-            const isChat = section === 'chat';
-            const isSettings = section === 'settings';
-            const isPopular = section === 'popular';
-            const isNotifications = section === 'notifications';
-            document.getElementById('cafeView').classList.toggle('hidden', !isCafe);
-            document.getElementById('chatView').classList.toggle('hidden', !isChat);
-            document.getElementById('settingsView').classList.toggle('hidden', !isSettings);
-            document.getElementById('popularView').classList.toggle('hidden', !isPopular);
-            document.getElementById('notificationsView').classList.toggle('hidden', !isNotifications);
-            document.getElementById('cafeNavBtn').classList.toggle('active', isCafe);
-            document.getElementById('chatNavBtn').classList.toggle('active', isChat);
-            document.getElementById('settingsNavBtn').classList.toggle('active', isSettings);
-            document.getElementById('popularNavBtn').classList.toggle('active', isPopular);
-            document.getElementById('notificationsNavBtn').classList.toggle('active', isNotifications);
-            if (isChat) openChat();
-            if (isPopular) loadPopularPosts();
-            if (isNotifications) openNotifications();
-        }
+            ['cafeView', 'chatView', 'settingsView', 'popularView', 'notificationsView'].forEach(v => document.getElementById(v).classList.add('hidden'));
+            ['cafeNavBtn', 'chatNavBtn', 'settingsNavBtn', 'popularNavBtn', 'notificationsNavBtn'].forEach(b => document.getElementById(b).classList.remove('active'));
+            
+            document.getElementById(section + 'View').classList.remove('hidden');
+            document.getElementById(section + 'NavBtn').classList.add('active');
 
-        window.setPopularSort = function(sort) {
-            popularSort = sort;
-            ['views', 'likes', 'comments'].forEach(type => document.getElementById(`popular${type.charAt(0).toUpperCase() + type.slice(1)}Btn`).classList.toggle('active', type === sort));
-            loadPopularPosts();
-        }
+            if (section === 'chat') openChat();
+            else if (chatTimer) clearInterval(chatTimer);
+        };
 
-        async function loadPopularPosts() {
-            const container = document.getElementById('popularPostsContainer');
-            container.innerHTML = '인기 짤을 불러오는 중...';
-            try {
-                const posts = await fetchGAS('getPosts');
-                const getScore = post => popularSort === 'views' ? (post.viewedUsers || []).length : popularSort === 'likes' ? (post.likes || []).length : (post.comments || []).length;
-                posts.sort((a, b) => getScore(b) - getScore(a) || (b.createdAt || 0) - (a.createdAt || 0));
-                if (!posts.length) { container.innerHTML = '등록된 짤이 없습니다.'; return; }
-                container.innerHTML = posts.map((post, index) => {
-                    const title = post.content || '(이미지 게시물)';
-                    const thumbnail = post.image ? `<img class="list-thumb" src="${post.image}" alt="짤">` : '<div class="list-thumb">No Img</div>';
-                    return `<div class="post-list-item" onclick="openPopularPost('${post.id}')">
-                        <div style="color: var(--cafe-green); font-weight: bold; width: 20px;">${index + 1}</div>${thumbnail}
-                        <div class="list-info"><div class="list-meta"><span>${escapeHtml(post.author || '알 수 없음')}</span></div><div class="list-title">${escapeHtml(title)}</div></div>
-                        <div class="list-stats-badge"><span>조회 ${(post.viewedUsers || []).length}</span><span>좋아요 ${(post.likes || []).length}</span><span>댓글 ${(post.comments || []).length}</span></div>
-                    </div>`;
-                }).join('');
-            } catch (error) {
-                console.error(error);
-                container.innerHTML = '<div class="error-box">인기 짤을 불러오지 못했습니다.</div>';
-            }
-        }
-
-        window.openPopularPost = function(postId) {
-            showAppSection('cafe');
-            openDetail(postId);
-        }
-
-        window.openSettingsFromSidebar = async function() {
-            showAppSection('settings');
-            const loggedIn = document.getElementById('settingsLoggedIn');
-            const loggedOut = document.getElementById('settingsLoggedOut');
-            loggedIn.classList.toggle('hidden', !currentUser);
-            loggedOut.classList.toggle('hidden', !!currentUser);
+        window.openChat = async function() {
             if (!currentUser) return;
-            document.getElementById('settingsViewId').value = currentUser;
-            document.getElementById('settingsViewPw').value = '';
-            try {
-                const users = await fetchGAS('getUsers');
-                const user = users.find(u => u.id === currentUser);
-                if (user) document.getElementById('settingsViewTheme').value = user.theme || 'dark';
-            } catch (error) {
-                console.error(error);
-            }
+            fetchChatRooms();
+            fetchChatMessages();
+            if (chatTimer) clearInterval(chatTimer);
+            chatTimer = setInterval(fetchChatMessages, 3000);
+        };
+
+        async function fetchChatRooms() {
+            chatRooms = await fetchGAS('getChatRooms', { user: currentUser });
+            const roomBar = document.getElementById('chatRoomBar');
+            roomBar.innerHTML = `<button class="chat-room-btn ${activeChatRoomId === 'global' ? 'active' : ''}" onclick="selectChatRoom('global')">전체 채팅</button>` +
+                chatRooms.map(r => `<button class="chat-room-btn ${activeChatRoomId === r.id ? 'active' : ''}" onclick="selectChatRoom('${r.id}')">${escapeHtml(r.name)}</button>`).join('');
         }
 
-        window.previewSettingsViewTheme = function() {
-            applyTheme(document.getElementById('settingsViewTheme').value);
-        }
-
-        window.saveSettingsView = async function() {
-            const newPw = document.getElementById('settingsViewPw').value.trim();
-            const newTheme = document.getElementById('settingsViewTheme').value;
-            try {
-                const payload = { id: currentUser, theme: newTheme };
-                if (newPw) payload.password = newPw;
-                await postGAS('saveUser', payload);
-                alert('설정이 성공적으로 저장되었습니다!');
-                document.getElementById('settingsViewPw').value = '';
-            } catch (error) {
-                console.error(error);
-                alert('설정 저장 실패: ' + error.message);
-            }
-        }
-
-        window.logoutFromSettings = function() {
-            handleLogout();
-            showAppSection('cafe');
-        }
-
-        window.switchAccount = function() {
-            handleLogout();
-            showAppSection('cafe');
-            switchTab('login');
-            document.getElementById('loginId').focus();
-        }
-
-        function formatChatTime(timestamp) {
-            if (!timestamp) return '';
-            return new Date(timestamp).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
-        }
-
-        function updateNotificationBadge() {
-            const badge = document.getElementById('notificationBadge');
-            if (!currentUser) { badge.classList.add('hidden'); return; }
-            const mentionCount = mentionNotifications.filter(item => !item.read).length;
-            const transferCount = ownerTransferRequests.filter(item => item.status === 'pending').length;
-            const inviteCount = chatInvites.filter(item => item.status === 'pending').length;
-            const total = (mentionCount || 0) + (transferCount || 0) + (inviteCount || 0);
-            badge.textContent = total > 99 ? '99+' : total;
-            badge.classList.toggle('hidden', total === 0);
-        }
-
-        async function notifyMentions(content, source) {
-            const matches = [...String(content || '').matchAll(/@\(([^)]+)\)|@([^\s@]+)/g)].map(match => (match[1] || match[2] || '').trim());
-            if (!matches.length) return;
-            const users = (await fetchGAS('getUsers')).map(u => u.id);
-            const recipients = [...new Set(matches.filter(id => id !== currentUser && users.includes(id)))];
-            await Promise.all(recipients.map(recipientId => postGAS('saveNotification', { recipientId, sender: currentUser, source, content: `${currentUser}님이 회원님을 언급했습니다: ${content}`, createdAt: Date.now(), read: false })));
-        }
-
-        window.openNotifications = async function() {
-            const container = document.getElementById('notificationsContainer');
-            const pendingTransfers = ownerTransferRequests.filter(item => item.status === 'pending');
-            const pendingInvites = chatInvites.filter(item => item.status === 'pending');
-            const sorted = [...mentionNotifications].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-            let html = '';
-
-            html += `<div style="font-weight:bold; margin:4px 0 8px; color: var(--text-sub); font-size: 13px;">방장 권한 위임 요청</div>`;
-            html += pendingTransfers.length ? pendingTransfers.map(item => `
-                <div class="comment-item">
-                    <div class="comment-body"><b>${escapeHtml(item.fromUser || '')}</b>님이 '${escapeHtml(item.roomName || '채팅방')}'의 방장 권한을 위임하려 합니다.</div>
-                    <div style="display:flex; gap:6px; flex-shrink:0;">
-                        <button onclick="acceptOwnerTransfer('${item.id}', '${item.roomId}', '${escapeHtml(item.fromUser || '')}')" style="padding:4px 8px; font-size:11px;">수락</button>
-                        <button class="danger-btn" onclick="declineOwnerTransfer('${item.id}')" style="padding:4px 8px; font-size:11px;">거절</button>
-                    </div>
-                </div>
-            `).join('') : `<div style="padding:10px 14px; color:var(--text-sub); font-size:13px;">받은 방장 위임 요청이 없습니다.</div>`;
-
-            html += `<div style="font-weight:bold; margin:16px 0 8px; color: var(--text-sub); font-size: 13px;">채팅방 초대 요청</div>`;
-            html += pendingInvites.length ? pendingInvites.map(item => `
-                <div class="comment-item">
-                    <div class="comment-body"><b>${escapeHtml(item.invitedBy || '')}</b>님이 '${escapeHtml(item.roomName || '채팅방')}'에 초대했습니다.</div>
-                    <div style="display:flex; gap:6px; flex-shrink:0;">
-                        <button onclick="acceptChatInvite('${item.id}', '${item.roomId}')" style="padding:4px 8px; font-size:11px;">수락</button>
-                        <button class="danger-btn" onclick="declineChatInvite('${item.id}')" style="padding:4px 8px; font-size:11px;">거절</button>
-                    </div>
-                </div>
-            `).join('') : `<div style="padding:10px 14px; color:var(--text-sub); font-size:13px;">받은 채팅방 초대 요청이 없습니다.</div>`;
-
-            html += `<div style="font-weight:bold; margin:16px 0 8px; color: var(--text-sub); font-size: 13px;">멘션 알림</div>`;
-            html += sorted.length ? sorted.map(item => `<div class="comment-item"><div class="comment-body"><b>${escapeHtml(item.sender || '')}</b>님이 회원님을 언급했습니다.<br><span style="color:var(--text-sub); font-size:12px;">${escapeHtml(item.content || '')}</span></div></div>`).join('') : '<div style="padding:10px 14px; color:var(--text-sub); font-size:13px;">멘션 알림이 없습니다.</div>';
-            container.innerHTML = html;
-
-            const unreadIds = mentionNotifications.filter(item => !item.read).map(i => i.id);
-            if (unreadIds.length) {
-                await postGAS('updateNotifications', { ids: unreadIds });
-            }
-        }
-
-        window.requestOwnerTransfer = async function(member) {
-            const room = getActiveTeamRoom();
-            if (!room || room.owner !== currentUser || member === currentUser) return;
-            if (!confirm(`${member}님에게 방장 권한을 위임하시겠습니까? (상대방이 수락해야 위임이 완료됩니다)`)) return;
-            try {
-                await postGAS('saveOwnerTransfer', {
-                    roomId: room.id,
-                    roomName: room.name || '팀채팅방',
-                    fromUser: currentUser,
-                    toUser: member,
-                    createdAt: Date.now(),
-                    status: 'pending'
-                });
-                alert(`${member}님에게 방장 위임 요청을 보냈습니다.`);
-            } catch (error) {
-                console.error(error);
-                alert('방장 위임 요청을 보내지 못했습니다.');
-            }
-        }
-
-        window.acceptOwnerTransfer = async function(requestId, roomId, fromUser) {
-            try {
-                const rooms = await fetchGAS('getChatRooms');
-                const room = rooms.find(r => r.id === roomId);
-                if (room) {
-                    room.admins = (room.admins || []).filter(a => a !== currentUser);
-                    room.owner = currentUser;
-                    if (!room.admins.includes(fromUser)) room.admins.push(fromUser);
-                    await postGAS('updateChatRoom', room);
-                }
-                await postGAS('updateOwnerTransfer', { id: requestId, status: 'accepted' });
-                await postGAS('sendChat', { roomId: roomId, content: `${currentUser}님이 새로운 방장이 되었습니다.`, createdAt: Date.now(), system: true });
-                alert('방장 권한을 수락했습니다.');
-            } catch (error) {
-                console.error(error);
-                alert('방장 위임 수락에 실패했습니다.');
-            }
-        }
-
-        window.declineOwnerTransfer = async function(requestId) {
-            try {
-                await postGAS('updateOwnerTransfer', { id: requestId, status: 'declined' });
-            } catch (error) {
-                console.error(error);
-                alert('처리에 실패했습니다.');
-            }
-        }
-
-        window.acceptChatInvite = async function(inviteId, roomId) {
-            try {
-                const rooms = await fetchGAS('getChatRooms');
-                const room = rooms.find(r => r.id === roomId);
-                if (room) {
-                    room.members = room.members || [];
-                    if (!room.members.includes(currentUser)) room.members.push(currentUser);
-                    await postGAS('updateChatRoom', room);
-                }
-                await postGAS('updateChatInvite', { id: inviteId, status: 'accepted' });
-                await postGAS('sendChat', { roomId: roomId, content: `${currentUser}님이 초대를 수락하고 참여했습니다.`, createdAt: Date.now(), system: true });
-                alert('채팅방 초대를 수락했습니다.');
-            } catch (error) {
-                console.error(error);
-                alert('초대 수락에 실패했습니다.');
-            }
-        }
-
-        window.declineChatInvite = async function(inviteId) {
-            try {
-                await postGAS('updateChatInvite', { id: inviteId, status: 'declined' });
-            } catch (error) {
-                console.error(error);
-                alert('처리에 실패했습니다.');
-            }
+        async function fetchChatMessages() {
+            chatMessages = await fetchGAS('getChatMessages', { roomId: activeChatRoomId });
+            renderChatMessages();
         }
 
         function renderChatMessages() {
             const messagesBox = document.getElementById('chatMessages');
-            if (!currentUser) {
-                messagesBox.innerHTML = '<div class="chat-login-notice"><b>로그인 후 채팅에 참여할 수 있습니다.</b><br><span style="font-size:13px;">카페 탭에서 로그인해 주세요.</span></div>';
-                document.getElementById('chatInputArea').classList.add('hidden');
-                return;
-            }
-            document.getElementById('chatInputArea').classList.remove('hidden');
-            if (chatMessages.length === 0) {
-                messagesBox.innerHTML = '<div class="chat-notice">아직 메시지가 없습니다. 먼저 인사를 건네 보세요!</div>';
-            } else {
-                messagesBox.innerHTML = '<div class="chat-notice">전체 채팅방에 오신 것을 환영합니다</div>' + chatMessages.map(message => {
-                    if (message.system) return `<div class="chat-notice">${escapeHtml(message.content)}</div>`;
-                    const mine = message.author === currentUser;
-                    return `<div class="chat-row ${mine ? 'mine' : ''}">
-                        ${mine ? '' : `<div class="chat-avatar">${escapeHtml(String(message.author || '?').slice(0, 2))}</div>`}
+            messagesBox.innerHTML = chatMessages.map(m => {
+                const mine = m.author === currentUser;
+                return `
+                    <div class="chat-row ${mine ? 'mine' : ''}">
+                        ${mine ? '' : `<div class="chat-avatar">${escapeHtml(String(m.author).slice(0, 2))}</div>`}
                         <div class="chat-message-wrap">
-                            <div class="chat-sender">${escapeHtml(message.author || '알 수 없음')}</div>
-                            <div class="chat-bubble">${escapeHtml(message.content)}</div>
+                            <div class="chat-sender">${escapeHtml(m.author)}</div>
+                            <div class="chat-bubble">${escapeHtml(m.content)}</div>
                         </div>
-                        <span class="chat-time">${formatChatTime(message.createdAt)}</span>
-                    </div>`;
-                }).join('');
-            }
-            requestAnimationFrame(() => { messagesBox.scrollTop = messagesBox.scrollHeight; });
-        }
-
-        async function markMessagesRead() {
-            // GAS 모드 메시지 읽음 표시 상태 업데이트 유틸
-        }
-
-        function renderChatRooms() {
-            const roomBar = document.getElementById('chatRoomBar');
-            const activeRoom = activeChatRoomId === 'global' ? null : chatRooms.find(room => room.id === activeChatRoomId);
-            if (activeChatRoomId !== 'global' && !activeRoom) activeChatRoomId = 'global';
-            const roomsHtml = chatRooms.map(room => `<button class="chat-room-btn ${room.id === activeChatRoomId ? 'active' : ''}" onclick="selectChatRoom('${room.id}')">${escapeHtml(room.name || '이름 없는 채팅방')}</button>`).join('');
-            roomBar.innerHTML = `<button class="chat-room-btn ${activeChatRoomId === 'global' ? 'active' : ''}" onclick="selectChatRoom('global')">전체 채팅</button>${roomsHtml}`;
-            const title = activeChatRoomId === 'global' ? '전체 채팅' : (activeRoom?.name || '채팅방');
-            document.getElementById('chatTitle').textContent = title;
-            document.getElementById('leaveChatRoomBtn').classList.toggle('hidden', activeChatRoomId === 'global');
-            const canManage = activeRoom && activeRoom.roomType === 'team' && (activeRoom.owner === currentUser || (activeRoom.admins || []).includes(currentUser));
-            document.getElementById('teamManageBtn').classList.toggle('hidden', !canManage);
+                    </div>
+                `;
+            }).join('');
+            messagesBox.scrollTop = messagesBox.scrollHeight;
         }
 
         window.selectChatRoom = function(roomId) {
-            if (roomId !== 'global' && !chatRooms.some(room => room.id === roomId)) return;
-            if (activeChatRoomId === roomId) return;
             activeChatRoomId = roomId;
-            chatMessages = [];
-            renderChatRooms();
             fetchChatMessages();
-        }
-
-        window.openCreateChatRoom = async function() {
-            if (!currentUser) { alert('로그인 후 채팅방을 만들 수 있습니다.'); return; }
-            const memberList = document.getElementById('chatRoomMemberList');
-            memberList.innerHTML = '회원 목록을 불러오는 중...';
-            document.getElementById('chatRoomNameInput').value = '';
-            document.getElementById('chatRoomModal').classList.remove('hidden');
-            try {
-                const users = await fetchGAS('getUsers');
-                const userIds = users.map(u => u.id).filter(id => id !== currentUser);
-                memberList.innerHTML = userIds.length
-                    ? userIds.map(id => `<label class="member-choice"><input type="checkbox" value="${escapeHtml(id)}"><span>${escapeHtml(id)}</span></label>`).join('')
-                    : '<div style="padding: 12px; color: var(--text-sub);">초대할 다른 회원이 없습니다.</div>';
-            } catch (error) {
-                console.error(error);
-                memberList.innerHTML = '<div style="padding: 12px; color: var(--danger-color);">회원 목록을 불러오지 못했습니다.</div>';
-            }
-        }
-
-        window.closeCreateChatRoom = function() {
-            document.getElementById('chatRoomModal').classList.add('hidden');
-        }
-
-        function getActiveTeamRoom() {
-            return chatRooms.find(room => room.id === activeChatRoomId && room.roomType === 'team');
-        }
-
-        window.openTeamManage = async function() {
-            const room = getActiveTeamRoom();
-            if (!room || !(room.owner === currentUser || (room.admins || []).includes(currentUser))) return;
-            document.getElementById('teamRoomNameInput').value = room.name || '';
-            const users = (await fetchGAS('getUsers')).map(u => u.id);
-            const canSetAdmin = room.owner === currentUser;
-            document.getElementById('teamMembersList').innerHTML = room.members.map(member => {
-                const role = member === room.owner ? '방장' : (room.admins || []).includes(member) ? '부방장' : '멤버';
-                const adminButton = canSetAdmin && member !== room.owner ? `<button onclick="setTeamAdmin('${member}', ${!(room.admins || []).includes(member)})" style="padding:4px 6px; font-size:11px;">${(room.admins || []).includes(member) ? '부방장 해제' : '부방장 지정'}</button>` : '';
-                const transferButton = canSetAdmin && member !== room.owner ? `<button onclick="requestOwnerTransfer('${member}')" style="padding:4px 6px; font-size:11px;">방장 위임</button>` : '';
-                const kickButton = member !== room.owner ? `<button class="danger-btn" onclick="kickTeamMember('${member}')" style="padding:4px 6px; font-size:11px;">내보내기</button>` : '';
-                return `<div class="member-choice"><span style="flex:1;">${escapeHtml(member)} · ${role}</span>${adminButton}${transferButton}${kickButton}</div>`;
-            }).join('');
-            document.getElementById('teamInviteList').innerHTML = users.filter(user => !room.members.includes(user)).map(user => `<label class="member-choice"><input type="checkbox" value="${escapeHtml(user)}"><span>${escapeHtml(user)}</span></label>`).join('') || '<div style="padding:10px; color:var(--text-sub);">초대할 회원이 없습니다.</div>';
-            document.getElementById('teamManageModal').classList.remove('hidden');
-        }
-
-        window.closeTeamManage = function() { document.getElementById('teamManageModal').classList.add('hidden'); }
-
-        window.saveTeamRoomName = async function() {
-            const room = getActiveTeamRoom(); const name = document.getElementById('teamRoomNameInput').value.trim();
-            if (!room || !name) return;
-            room.name = name;
-            await postGAS('updateChatRoom', room);
-        }
-
-        window.inviteTeamMembers = async function() {
-            const room = getActiveTeamRoom(); if (!room) return;
-            const members = Array.from(document.querySelectorAll('#teamInviteList input:checked')).map(input => input.value);
-            if (members.length) {
-                await Promise.all(members.map(member => postGAS('saveChatInvite', {
-                    roomId: room.id,
-                    roomName: room.name || '팀채팅방',
-                    roomType: 'team',
-                    invitedBy: currentUser,
-                    invitedUser: member,
-                    createdAt: Date.now(),
-                    status: 'pending'
-                })));
-                alert('선택한 멤버에게 초대 요청을 보냈습니다.');
-            }
-            openTeamManage();
-        }
-
-        window.setTeamAdmin = async function(member, makeAdmin) {
-            const room = getActiveTeamRoom(); if (!room || room.owner !== currentUser) return;
-            room.admins = room.admins || [];
-            if (makeAdmin) room.admins.push(member);
-            else room.admins = room.admins.filter(a => a !== member);
-            await postGAS('updateChatRoom', room);
-            openTeamManage();
-        }
-
-        window.kickTeamMember = async function(member) {
-            const room = getActiveTeamRoom(); if (!room || member === room.owner) return;
-            room.members = (room.members || []).filter(m => m !== member);
-            room.admins = (room.admins || []).filter(a => a !== member);
-            await postGAS('updateChatRoom', room);
-            await postGAS('sendChat', { roomId: room.id, content: `${member}님이 내보내졌습니다.`, createdAt: Date.now(), system: true });
-            openTeamManage();
-        }
-
-        window.leaveChatRoom = async function() {
-            if (activeChatRoomId === 'global' || !currentUser) return;
-            const room = chatRooms.find(item => item.id === activeChatRoomId);
-            if (!room || !confirm(`'${room.name || '이 채팅방'}'에서 나갈까요?`)) return;
-            const isSoleMember = (room.members || []).length <= 1;
-
-            if (room.roomType === 'team' && room.owner === currentUser && !isSoleMember) {
-                alert('방장은 팀채팅방을 나갈 수 없습니다. 먼저 다른 멤버에게 방장 권한을 위임해 주세요.');
-                return;
-            }
-            const roomId = activeChatRoomId;
-            try {
-                if (room.roomType === 'team' && room.owner === currentUser && isSoleMember) {
-                    await postGAS('deleteChatRoom', roomId);
-                } else {
-                    await postGAS('sendChat', {
-                        roomId: roomId,
-                        content: `${currentUser}님이 나가셨습니다.`,
-                        createdAt: Date.now(),
-                        system: true
-                    });
-                    room.members = (room.members || []).filter(m => m !== currentUser);
-                    await postGAS('updateChatRoom', room);
-                }
-                activeChatRoomId = 'global';
-                chatMessages = [];
-                renderChatRooms();
-                fetchChatMessages();
-            } catch (error) {
-                console.error(error);
-                alert('채팅방에서 나가지 못했습니다. 다시 시도해 주세요.');
-            }
-        }
-
-        window.createChatRoom = async function() {
-            if (!currentUser) return;
-            if (isCreatingChatRoom) return;
-            const selectedMembers = Array.from(document.querySelectorAll('#chatRoomMemberList input:checked')).map(input => input.value);
-            if (selectedMembers.length === 0) { alert('채팅할 회원을 한 명 이상 선택해 주세요.'); return; }
-            const nameInput = document.getElementById('chatRoomNameInput').value.trim();
-            const roomName = nameInput || [currentUser, ...selectedMembers].join(', ');
-            const roomType = document.getElementById('chatRoomType').value;
-            isCreatingChatRoom = true;
-            const createButton = document.querySelector('#chatRoomModal .chat-modal-actions button:last-child');
-            createButton.disabled = true;
-            try {
-                const room = await postGAS('saveChatRoom', {
-                    name: roomName,
-                    members: [currentUser],
-                    roomType,
-                    owner: roomType === 'team' ? currentUser : null,
-                    admins: [],
-                    createdAt: Date.now(),
-                    createdBy: currentUser
-                });
-                await Promise.all(selectedMembers.map(member => postGAS('saveChatInvite', {
-                    roomId: room.id,
-                    roomName,
-                    roomType,
-                    invitedBy: currentUser,
-                    invitedUser: member,
-                    createdAt: Date.now(),
-                    status: 'pending'
-                })));
-                closeCreateChatRoom();
-                activeChatRoomId = room.id;
-                fetchChatMessages();
-            } catch (error) {
-                console.error(error);
-                alert('채팅방을 만들지 못했습니다. 다시 시도해 주세요.');
-            } finally {
-                isCreatingChatRoom = false;
-                createButton.disabled = false;
-            }
-        }
-
-        window.openChat = function() {
-            document.getElementById('chatStatus').textContent = currentUser ? `${currentUser}님으로 참여 중` : '로그인 후 참여할 수 있습니다';
-            document.getElementById('chatMemberCount').textContent = currentUser ? '실시간 채팅' : '';
-            renderChatRooms();
-            fetchChatMessages();
-        }
+        };
 
         window.handleChatKeydown = function(event) {
             if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                sendChatMessage();
+                event.preventDefault(); sendChatMessage();
             }
-        }
+        };
 
         window.sendChatMessage = async function() {
-            if (!currentUser) { alert('로그인 후 채팅에 참여할 수 있습니다.'); return; }
-            if (isSendingChatMessage) return;
             const input = document.getElementById('chatInput');
             const content = input.value.trim();
-            if (!content) return;
-            isSendingChatMessage = true;
-            const sendButton = document.querySelector('.chat-send-btn');
-            sendButton.disabled = true;
-            try {
-                await postGAS('sendChat', {
-                    roomId: activeChatRoomId,
-                    author: currentUser,
-                    content,
-                    createdAt: Date.now()
-                });
-                await notifyMentions(content, { type: 'chat', roomId: activeChatRoomId });
-                input.value = '';
-                fetchChatMessages();
-            } catch (error) {
-                console.error(error);
-                alert('메시지를 보내지 못했습니다. 다시 시도해 주세요.');
-            } finally {
-                isSendingChatMessage = false;
-                sendButton.disabled = false;
-            }
-        }
+            if (!content || !currentUser) return;
+            input.value = '';
+            await postGAS('sendChat', { roomId: activeChatRoomId, author: currentUser, content });
+            fetchChatMessages();
+        };
+
+        window.openCreateChatRoom = async function() {
+            if (!currentUser) return;
+            const memberList = document.getElementById('chatRoomMemberList');
+            const members = await fetchGAS('getMembers');
+            memberList.innerHTML = members.filter(m => m !== currentUser).map(m => `
+                <label class="member-choice"><input type="checkbox" value="${escapeHtml(m)}"><span>${escapeHtml(m)}</span></label>
+            `).join('');
+            document.getElementById('chatRoomModal').classList.remove('hidden');
+        };
+
+        window.closeCreateChatRoom = function() { document.getElementById('chatRoomModal').classList.add('hidden'); };
+
+        window.createChatRoom = async function() {
+            const selected = Array.from(document.querySelectorAll('#chatRoomMemberList input:checked')).map(i => i.value);
+            const name = document.getElementById('chatRoomNameInput').value.trim() || '새 채팅방';
+            await postGAS('createChatRoom', { name, members: [currentUser, ...selected], roomType: 'general', owner: currentUser });
+            closeCreateChatRoom();
+            fetchChatRooms();
+        };
 
         checkAuthState();
     </script>
