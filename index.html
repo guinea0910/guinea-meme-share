@@ -488,6 +488,8 @@
             
             <div id="previewArea" class="hidden" style="margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
 
+            <input type="text" id="youtubeUrlInput" placeholder="영상은 유튜브에 올리고 링크를 여기에 붙여넣으세요 (예: https://youtu.be/...)">
+
             <button onclick="handleCreatePost()">등록</button>
         </div>
     </div>
@@ -1012,11 +1014,40 @@
             return [];
         }
 
+        // 다양한 형태의 유튜브 URL(watch/youtu.be/shorts/embed)에서 영상 ID만 추출
+        function parseYoutubeId(url) {
+            if (!url) return null;
+            const trimmed = url.trim();
+            const patterns = [
+                /youtu\.be\/([a-zA-Z0-9_-]{6,})/,
+                /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{6,})/,
+                /youtube\.com\/shorts\/([a-zA-Z0-9_-]{6,})/,
+                /youtube\.com\/embed\/([a-zA-Z0-9_-]{6,})/
+            ];
+            for (const p of patterns) {
+                const m = trimmed.match(p);
+                if (m) return m[1];
+            }
+            return null;
+        }
+
+        // 게시글에 유튜브 영상이 연결되어 있으면 { type: 'youtube', id } 형태로 반환, 없으면 null
+        function getPostVideo(post) {
+            if (post.youtubeId) return { type: 'youtube', id: post.youtubeId };
+            return null;
+        }
+
         window.handleCreatePost = async function() {
             const content = document.getElementById('postContent').value.trim();
             const category = document.getElementById('postCategory').value;
-            if(!content && compressedImages.length === 0) {
-                alert('내용이나 사진을 입력해 주세요');
+            const youtubeUrl = document.getElementById('youtubeUrlInput').value.trim();
+            const youtubeId = parseYoutubeId(youtubeUrl);
+            if (youtubeUrl && !youtubeId) {
+                alert('유튜브 링크 형식을 확인해 주세요. (예: https://youtu.be/영상ID)');
+                return;
+            }
+            if(!content && compressedImages.length === 0 && !youtubeId) {
+                alert('내용이나 사진, 유튜브 링크 중 하나는 입력해 주세요');
                 return;
             }
 
@@ -1027,6 +1058,7 @@
                     category: category,
                     images: compressedImages,
                     image: compressedImages[0] || null,
+                    youtubeId: youtubeId || null,
                     createdAt: Date.now(),
                     viewedUsers: [],
                     likes: [],
@@ -1039,10 +1071,12 @@
                     category: category,
                     content: content,
                     imageCount: compressedImages.length,
+                    youtubeId: youtubeId || '',
                     createdAt: Date.now()
-                }); // 이미지 원본(base64)은 용량 문제로 시트에 보내지 않고 개수만 기록
+                }); // 이미지 원본은 용량 문제로 시트에 보내지 않고 메타데이터만 기록
                 
                 document.getElementById('postContent').value = '';
+                document.getElementById('youtubeUrlInput').value = '';
                 compressedImages = [];
                 renderImagePreviews();
                 goToList();
@@ -1397,6 +1431,12 @@
                     imgHtml = `<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;">${images.map(src => `<img src="${src}" class="post-img" style="max-width:100%; width:auto; max-height:320px;" alt="업로드 이미지">`).join('')}</div>`;
                 }
 
+                const video = getPostVideo(post);
+                let videoHtml = '';
+                if (video && video.type === 'youtube') {
+                    videoHtml = `<div style="position:relative; padding-bottom:56.25%; margin-top:10px; border-radius:8px; overflow:hidden;"><iframe src="https://www.youtube.com/embed/${video.id}" style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen></iframe></div>`;
+                }
+
                 const categoryHtml = post.category ? `<span style="font-size:11px; color: var(--cafe-green); border:1px solid var(--cafe-green); padding:2px 8px; border-radius:10px; margin-right:8px;">${escapeHtml(post.category)}</span>` : '';
 
                 const commentsHtml = Array.isArray(comments)
@@ -1413,6 +1453,7 @@
                         <div class="post-time">${formatDate(post.createdAt)}</div>
                         <div class="post-content">${escapeHtml(post.content)}</div>
                         ${imgHtml}
+                        ${videoHtml}
                         
                         <div class="post-stats" style="margin-top: 15px;">
                             <span>👀 조회 ${viewsCount}회</span>
@@ -1539,8 +1580,11 @@
                 item.onclick = () => openDetail(post.id);
 
                 const postImages = getPostImages(post);
+                const postVideo = getPostVideo(post);
                 let thumbHtml = '';
-                if (postImages.length) {
+                if (postVideo && postVideo.type === 'youtube') {
+                    thumbHtml = `<img src="https://img.youtube.com/vi/${postVideo.id}/mqdefault.jpg" class="list-thumb" alt="유튜브 영상">`;
+                } else if (postImages.length) {
                     thumbHtml = `<img src="${postImages[0]}" class="list-thumb" alt="짤">`;
                 } else {
                     thumbHtml = `<div class="list-thumb">No Img</div>`;
@@ -1670,7 +1714,15 @@
                 container.innerHTML = posts.map((post, index) => {
                     const title = post.content || '(이미지 게시물)';
                     const postImages = getPostImages(post);
-                    const thumbnail = postImages.length ? `<img class="list-thumb" src="${postImages[0]}" alt="짤">` : '<div class="list-thumb">No Img</div>';
+                    const postVideo = getPostVideo(post);
+                    let thumbnail;
+                    if (postVideo && postVideo.type === 'youtube') {
+                        thumbnail = `<img class="list-thumb" src="https://img.youtube.com/vi/${postVideo.id}/mqdefault.jpg" alt="유튜브 영상">`;
+                    } else if (postImages.length) {
+                        thumbnail = `<img class="list-thumb" src="${postImages[0]}" alt="짤">`;
+                    } else {
+                        thumbnail = '<div class="list-thumb">No Img</div>';
+                    }
                     return `<div class="post-list-item" onclick="openPopularPost('${post.id}')">
                         <div style="color: var(--cafe-green); font-weight: bold; width: 20px;">${index + 1}</div>${thumbnail}
                         <div class="list-info"><div class="list-meta"><span>${escapeHtml(post.author || '알 수 없음')}</span></div><div class="list-title">${escapeHtml(title)}</div></div>
