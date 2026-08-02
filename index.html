@@ -688,8 +688,8 @@
         }
 
         let currentUser = localStorage.getItem('cafe_user') || null;
-        let currentView = 'list'; // 'list' 또는 'detail'
-        let currentDetailPostId = null;
+        let currentView = localStorage.getItem('cafe_last_view') || 'list'; // 'list' 또는 'detail' (새로고침 시 복원)
+        let currentDetailPostId = localStorage.getItem('cafe_last_post_id') || null;
 
         // 페이징, 검색 및 회원 목록 상태 관리용 변수
         let allPosts = [];
@@ -827,11 +827,18 @@
             pendingAvatarData = null;
             typingUsers = [];
             if (unsubscribeTyping) { unsubscribeTyping(); unsubscribeTyping = null; }
+            currentView = 'list';
+            currentDetailPostId = null;
+            localStorage.setItem('cafe_last_section', 'cafe');
+            localStorage.setItem('cafe_last_view', 'list');
+            localStorage.removeItem('cafe_last_post_id');
+            localStorage.setItem('cafe_last_chat_room', 'global');
             document.getElementById('adminNavBtn').classList.add('hidden');
             applyTheme('dark');
             applyAccent('#03c75a');
             document.getElementById('settingsBox').classList.add('hidden');
             checkAuthState();
+            showAppSection('cafe');
         };
 
         async function checkAuthState() {
@@ -1271,6 +1278,8 @@
         window.goToList = function() {
             currentView = 'list';
             currentDetailPostId = null;
+            localStorage.setItem('cafe_last_view', 'list');
+            localStorage.removeItem('cafe_last_post_id');
             refreshView();
         };
 
@@ -1382,6 +1391,8 @@
         window.openDetail = async function(postId) {
             currentView = 'detail';
             currentDetailPostId = postId;
+            localStorage.setItem('cafe_last_view', 'detail');
+            localStorage.setItem('cafe_last_post_id', postId);
             
             const postsContainer = document.getElementById('postsContainer');
             const listTitleHeader = document.getElementById('listTitleHeader');
@@ -1653,6 +1664,7 @@
         }
 
         window.showAppSection = function(section) {
+            localStorage.setItem('cafe_last_section', section); // 새로고침 시 이 화면으로 복원
             const isCafe = section === 'cafe';
             const isChat = section === 'chat';
             const isSettings = section === 'settings';
@@ -2493,6 +2505,7 @@
             if (roomId !== 'global' && !chatRooms.some(room => room.id === roomId)) return;
             if (activeChatRoomId === roomId) return;
             activeChatRoomId = roomId;
+            localStorage.setItem('cafe_last_chat_room', roomId); // 새로고침 시 이 채팅방으로 복원
             if (unsubscribeChat) { unsubscribeChat(); unsubscribeChat = null; }
             chatMessages = [];
             renderChatRooms();
@@ -2605,6 +2618,7 @@
                     await updateDoc(doc(db, 'chatRooms', roomId), { members: arrayRemove(currentUser) });
                 }
                 activeChatRoomId = 'global';
+                localStorage.setItem('cafe_last_chat_room', 'global');
                 if (unsubscribeChat) { unsubscribeChat(); unsubscribeChat = null; }
                 chatMessages = [];
                 renderChatRooms();
@@ -2706,7 +2720,27 @@
             }
         }
 
-        checkAuthState();
+        // 탭이 백그라운드에 있다가 다시 보일 때(화면 꺼졌다 켜짐 등) 채팅 구독이 끊겨 있을 수 있으니
+        // 안전하게 다시 연결합니다. (실시간 수신이 이미 붙어있으면 아무 일도 하지 않음)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'visible') return;
+            if (!currentUser) return;
+            if (document.getElementById('chatView').classList.contains('hidden')) return;
+            if (unsubscribeChat) { unsubscribeChat(); unsubscribeChat = null; }
+            subscribeChat();
+            subscribeTyping();
+        });
+
+        // 앱 시작: 로그인 상태를 반영한 뒤, 새로고침 전에 보고 있던 화면(및 채팅방)을 그대로 복원합니다.
+        (async function initApp() {
+            await checkAuthState();
+            const savedSection = localStorage.getItem('cafe_last_section') || 'cafe';
+            const savedRoomId = localStorage.getItem('cafe_last_chat_room');
+            if (savedRoomId && savedRoomId !== 'global') {
+                pendingChatRoomId = savedRoomId; // chatRooms 목록이 로드되면 자동으로 이 방으로 전환됨
+            }
+            showAppSection(savedSection);
+        })();
     </script>
 </body>
 </html>
