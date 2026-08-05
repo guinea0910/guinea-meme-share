@@ -610,6 +610,13 @@ button:hover { background-color: var(--cafe-green-hover); }
 <section id="adminView" class="hidden">
 <div class="box">
 <div style="display: flex; justify-content: space-between; align-items: center;">
+<h2 style="margin-top: 0;">통계 대시보드</h2>
+<button onclick="loadAdminStats()" style="padding: 6px 10px; font-size: 12px;">새로고침</button>
+</div>
+<div id="adminStatsContainer">불러오는 중...</div>
+</div>
+<div class="box">
+<div style="display: flex; justify-content: space-between; align-items: center;">
 <h2 style="margin-top: 0;">현재 접속자</h2>
 <span id="adminOnlineCountBadge" style="font-size: 12px; color: var(--text-sub);"></span>
 </div>
@@ -750,6 +757,7 @@ let lastKnownNotifTotal = 0;
 let pushEnabled = false;
 let chatRoomSearchKeyword = '';
 let editingMessageId = null;
+let editingPostId = null; // 현재 수정 중인 게시글 id (게시글 상세 화면에서 인라인 수정)
 let pendingAvatarData = null;
 let presenceHeartbeatInterval = null; // 내 접속 상태를 주기적으로 서버에 알리는 타이머
 let unsubscribePresence = null; // 관리자 화면의 접속자 목록 실시간 구독 해제 함수
@@ -783,8 +791,9 @@ window.handleSignup = async function() {
     const userRef = doc(db, "users", id);
     const userSnap = await getDoc(userRef);
     if(userSnap.exists()) { alert('이미 존재하는 아이디입니다!'); return; }
-    await setDoc(userRef, { password: pw, theme: 'dark' });
-    syncToSheet('user', 'create', { id, theme: 'dark', createdAt: Date.now() });
+    const signupTimestamp = Date.now();
+    await setDoc(userRef, { password: pw, theme: 'dark', createdAt: signupTimestamp });
+    syncToSheet('user', 'create', { id, theme: 'dark', createdAt: signupTimestamp });
     alert('회원가입 완료! 로그인해 주세요.');
     switchTab('login');
     document.getElementById('loginId').value = id;
@@ -846,6 +855,7 @@ window.handleLogout = function() {
   categoryFilter = '';
   chatRoomSearchKeyword = '';
   editingMessageId = null;
+  editingPostId = null;
   pendingAvatarData = null;
   typingUsers = [];
   if (unsubscribeTyping) { unsubscribeTyping(); unsubscribeTyping = null; }
@@ -1058,6 +1068,22 @@ function getPostVideo(post) {
   return null;
 }
 
+// 이미지를 기기(사진 앱)에 저장. data URL이라 대부분의 데스크톱/안드로이드 브라우저는 바로
+// 다운로드되고, iOS Safari 등 일부 환경은 새 탭으로 열려 길게 눌러 저장하는 방식으로 동작합니다.
+window.downloadImage = function(src, filename) {
+  try {
+    const link = document.createElement('a');
+    link.href = src;
+    link.download = filename || `guinea_meme_${Date.now()}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error(error);
+    window.open(src, '_blank');
+  }
+};
+
 window.handleCreatePost = async function() {
   const content = document.getElementById('postContent').value.trim();
   const category = document.getElementById('postCategory').value;
@@ -1114,6 +1140,51 @@ window.handleDeletePost = async function(postId, author) {
   } catch (error) {
     console.error(error);
     alert('삭제 실패: ' + error.message);
+  }
+};
+
+// 게시글 인라인 수정 (내용/카테고리만 수정, 이미지·영상은 유지)
+function renderPostEditForm(post) {
+  const cats = ['잡담', '짤', '질문', '공지'];
+  return `
+    <div style="margin: 8px 0 4px;">
+      <select id="editPostCategory_${post.id}" style="margin-bottom: 8px;">
+        ${cats.map(cat => `<option value="${cat}" ${post.category === cat ? 'selected' : ''}>${escapeHtml(cat)}</option>`).join('')}
+      </select>
+      <textarea id="editPostContent_${post.id}" rows="4" style="margin-bottom: 8px;">${escapeHtml(post.content)}</textarea>
+      <div style="display:flex; gap:8px;">
+        <button onclick="savePostEdit('${post.id}')" style="flex:1;">저장</button>
+        <button class="danger-btn" onclick="cancelPostEdit('${post.id}')" style="flex:1;">취소</button>
+      </div>
+    </div>
+  `;
+}
+
+window.startPostEdit = function(postId) {
+  editingPostId = postId;
+  openDetail(postId);
+};
+
+window.cancelPostEdit = function(postId) {
+  editingPostId = null;
+  openDetail(postId);
+};
+
+window.savePostEdit = async function(postId) {
+  const contentInput = document.getElementById(`editPostContent_${postId}`);
+  const categoryInput = document.getElementById(`editPostCategory_${postId}`);
+  if (!contentInput) return;
+  const newContent = contentInput.value.trim();
+  if (!newContent) { alert('내용을 입력해 주세요'); return; }
+  try {
+    const updateData = { content: newContent, editedAt: Date.now() };
+    if (categoryInput) updateData.category = categoryInput.value;
+    await updateDoc(doc(db, "posts", postId), updateData);
+    editingPostId = null;
+    openDetail(postId);
+  } catch (error) {
+    console.error(error);
+    alert('게시글 수정 실패: ' + error.message);
   }
 };
 
@@ -1280,6 +1351,7 @@ function renderCommentTree(postId, comments, parentId, depth) {
 window.goToList = function() {
   currentView = 'list';
   currentDetailPostId = null;
+  editingPostId = null;
   localStorage.setItem('cafe_last_view', 'list');
   localStorage.removeItem('cafe_last_post_id');
   refreshView();
@@ -1415,10 +1487,19 @@ window.openDetail = async function(postId) {
     if(currentUser && (currentUser === post.author || currentUserRole === 'admin')) {
       deleteBtnHtml = `<button class="danger-btn" onclick="handleDeletePost('${post.id}', '${post.author}')" style="padding: 3px 8px; font-size: 11px;">삭제${currentUserRole === 'admin' && currentUser !== post.author ? ' (관리자)' : ''}</button>`;
     }
+    let editBtnHtml = '';
+    if (currentUser && currentUser === post.author && editingPostId !== post.id) {
+      editBtnHtml = `<button onclick="startPostEdit('${post.id}')" style="padding: 3px 8px; font-size: 11px;">수정</button>`;
+    }
     const images = getPostImages(post);
     let imgHtml = '';
     if(images.length) {
-      imgHtml = `<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;">${images.map(src => `<img src="${src}" class="post-img" style="max-width:100%; width:auto; max-height:320px;" alt="업로드 이미지">`).join('')}</div>`;
+      imgHtml = `<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;">${images.map((src, idx) => `
+        <div style="position:relative; display:inline-block;">
+          <img src="${src}" class="post-img" style="max-width:100%; width:auto; max-height:320px; display:block;" alt="업로드 이미지">
+          <button onclick="downloadImage('${src}', 'guinea_meme_${post.id}_${idx + 1}.jpg')" style="position:absolute; top:8px; right:8px; padding:5px 9px; font-size:11px; background:rgba(0,0,0,0.6); border:none; border-radius:6px;">💾 저장</button>
+        </div>
+      `).join('')}</div>`;
     }
     const video = getPostVideo(post);
     let videoHtml = '';
@@ -1434,10 +1515,10 @@ window.openDetail = async function(postId) {
       <div class="post-card">
         <div class="post-header">
           <span class="post-author">${categoryHtml}${escapeHtml(post.author)}</span>
-          ${deleteBtnHtml}
+          <div style="display:flex; gap:6px;">${editBtnHtml}${deleteBtnHtml}</div>
         </div>
         <div class="post-time">${formatDate(post.createdAt)}</div>
-        <div class="post-content">${escapeHtml(post.content)}</div>
+        ${editingPostId === post.id ? renderPostEditForm(post) : `<div class="post-content">${escapeHtml(post.content)}${post.editedAt ? ' <span style="font-size:11px; color:var(--text-sub);">(수정됨)</span>' : ''}</div>`}
         ${imgHtml}
         ${videoHtml}
         <div class="post-stats" style="margin-top: 15px;">
@@ -1640,7 +1721,7 @@ window.showAppSection = function(section) {
   if (isPopular) { loadPopularPosts(); loadHotRooms(); }
   if (isNotifications) openNotifications();
   if (isRanking) loadRankingView();
-  if (isAdmin) { loadAdminPanel(); loadAdminUsers(); loadAdminChatRooms(); subscribeAdminPresence(); }
+  if (isAdmin) { loadAdminStats(); loadAdminPanel(); loadAdminUsers(); loadAdminChatRooms(); subscribeAdminPresence(); }
   else { unsubscribeAdminPresence(); }
 }
 
@@ -1816,6 +1897,96 @@ window.triggerSheetResync = function() {
   syncToSheet('resync', 'trigger', { requestedBy: currentUser, requestedAt: Date.now() });
   alert('재동기화를 요청했습니다. 잠시 후 구글 시트를 확인해 주세요.');
 };
+
+// ===== 관리자 통계 대시보드 =====
+window.loadAdminStats = async function() {
+  const container = document.getElementById('adminStatsContainer');
+  if (!container) return;
+  if (currentUserRole !== 'admin') { container.innerHTML = '<div style="padding:14px; color:var(--text-sub);">관리자만 접근할 수 있습니다.</div>'; return; }
+  container.innerHTML = '통계를 불러오는 중...';
+  try {
+    const [usersSnap, postsSnap, globalChatSnap, roomsSnap] = await Promise.all([
+      getDocs(collection(db, 'users')),
+      getDocs(collection(db, 'posts')),
+      getDocs(collection(db, 'chatMessages')),
+      getDocs(collection(db, 'chatRooms'))
+    ]);
+    const users = usersSnap.docs.map(item => item.data());
+    const posts = postsSnap.docs.map(item => item.data());
+
+    // 채팅 메시지 총합 (전체 채팅 + 모든 개별 채팅방)
+    const roomMessageSnaps = await Promise.all(roomsSnap.docs.map(roomDoc => getDocs(collection(db, 'chatRooms', roomDoc.id, 'messages'))));
+    const totalRoomMessages = roomMessageSnaps.reduce((sum, snap) => sum + snap.size, 0);
+    const totalChatMessages = globalChatSnap.size + totalRoomMessages;
+
+    const totalUsers = users.length;
+    const totalPosts = posts.length;
+    const totalComments = posts.reduce((sum, post) => sum + (post.comments || []).length, 0);
+    const totalLikes = posts.reduce((sum, post) => sum + (post.likes || []).length, 0);
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const todayNewUsers = users.filter(user => (user.createdAt || 0) >= todayStart).length;
+    const todayNewPosts = posts.filter(post => (post.createdAt || 0) >= todayStart).length;
+
+    // 최근 7일 일별 추이
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const dayStart = todayStart - i * 86400000;
+      const dayEnd = dayStart + 86400000;
+      days.push({
+        label: new Date(dayStart).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' }),
+        postCount: posts.filter(post => (post.createdAt || 0) >= dayStart && (post.createdAt || 0) < dayEnd).length,
+        userCount: users.filter(user => (user.createdAt || 0) >= dayStart && (user.createdAt || 0) < dayEnd).length
+      });
+    }
+    const maxPostCount = Math.max(1, ...days.map(day => day.postCount));
+    const maxUserCount = Math.max(1, ...days.map(day => day.userCount));
+
+    const summaryHtml = `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(105px, 1fr)); gap:10px; margin-bottom:20px;">
+      ${renderStatCard('총 회원', totalUsers)}
+      ${renderStatCard('총 게시글', totalPosts)}
+      ${renderStatCard('총 댓글', totalComments)}
+      ${renderStatCard('총 좋아요', totalLikes)}
+      ${renderStatCard('총 채팅 메시지', totalChatMessages)}
+      ${renderStatCard('오늘 가입', todayNewUsers)}
+      ${renderStatCard('오늘 게시글', todayNewPosts)}
+    </div>`;
+
+    const postsChartHtml = renderBarChart('최근 7일 게시글 작성 추이', days.map(day => ({ label: day.label, value: day.postCount })), maxPostCount);
+    const usersChartHtml = renderBarChart('최근 7일 신규 가입 추이', days.map(day => ({ label: day.label, value: day.userCount })), maxUserCount);
+
+    container.innerHTML = summaryHtml + postsChartHtml + usersChartHtml;
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = '<div class="error-box">통계를 불러오지 못했습니다.</div>';
+  }
+};
+
+function renderStatCard(label, value) {
+  return `<div style="background: var(--input-bg); border:1px solid var(--border-color); border-radius:8px; padding:12px; text-align:center;">
+    <div style="font-size:20px; font-weight:bold; color: var(--cafe-green);">${value}</div>
+    <div style="font-size:11px; color: var(--text-sub); margin-top:4px;">${label}</div>
+  </div>`;
+}
+
+function renderBarChart(title, data, maxValue) {
+  const barsHtml = data.map(item => {
+    const heightPx = maxValue ? Math.max(4, Math.round((item.value / maxValue) * 80)) : 4;
+    return `<div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;">
+      <div style="font-size:10px; color: var(--text-sub); margin-bottom:2px;">${item.value}</div>
+      <div style="width:60%; height:${heightPx}px; background: var(--cafe-green); border-radius:3px 3px 0 0;"></div>
+    </div>`;
+  }).join('');
+  const labelsHtml = data.map(item => `<div style="flex:1; text-align:center; font-size:10px; color: var(--text-sub);">${escapeHtml(item.label)}</div>`).join('');
+  return `<div style="margin-bottom:20px;">
+    <div style="font-size:13px; font-weight:bold; margin-bottom:10px;">${escapeHtml(title)}</div>
+    <div style="background: var(--input-bg); border:1px solid var(--border-color); border-radius:8px; padding:10px;">
+      <div style="display:flex; align-items:flex-end; gap:6px; height:80px;">${barsHtml}</div>
+      <div style="display:flex; gap:6px; margin-top:4px;">${labelsHtml}</div>
+    </div>
+  </div>`;
+}
 
 async function loadAdminPanel() {
   const container = document.getElementById('adminReportsContainer');
@@ -2341,7 +2512,10 @@ function renderChatMessages() {
       if (message.deleted) {
         bodyHtml = `<div class="chat-bubble" style="opacity:.6; font-style:italic;">삭제된 메시지입니다.</div>`;
       } else if (message.type === 'image') {
-        bodyHtml = `<img src="${message.imageData}" style="max-width:220px; border-radius:12px; display:block;" alt="이미지 메시지">`;
+        bodyHtml = `<div style="position:relative; display:inline-block;">
+          <img src="${message.imageData}" style="max-width:220px; border-radius:12px; display:block;" alt="이미지 메시지">
+          <button onclick="downloadImage('${message.imageData}', 'guinea_chat_${message.id}.jpg')" style="position:absolute; top:6px; right:6px; padding:4px 7px; font-size:10px; background:rgba(0,0,0,0.6); border:none; border-radius:5px;">💾</button>
+        </div>`;
       } else if (editingMessageId === message.id) {
         bodyHtml = `<div style="display:flex; gap:4px;"><input type="text" id="editInput_${message.id}" value="${escapeHtml(message.content)}" style="margin:0; padding:6px;"><button onclick="saveMessageEdit('${message.id}')" style="padding:4px 8px; font-size:11px;">저장</button><button class="danger-btn" onclick="cancelMessageEdit()" style="padding:4px 8px; font-size:11px;">취소</button></div>`;
       } else {
