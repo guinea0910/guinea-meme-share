@@ -423,6 +423,18 @@ button:hover { background-color: var(--cafe-green-hover); }
 }
 .hidden { display: none !important; }
 .error-box { background-color: #451a03; border: 1px solid #b45309; color: #fde68a; padding: 10px; border-radius: 6px; margin-bottom: 10px; word-break: break-all; }
+.admin-layout { display: flex; gap: 12px; align-items: flex-start; }
+.admin-sidebar { width: 128px; flex: 0 0 auto; display: flex; flex-direction: column; gap: 4px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px; position: sticky; top: 16px; }
+.admin-sidebar-item { padding: 10px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text-sub); text-align: left; font-size: 13px; white-space: nowrap; }
+.admin-sidebar-item:hover { background: var(--input-bg); color: var(--text-main); }
+.admin-sidebar-item.active { background: rgba(3, 199, 90, 0.14); color: var(--cafe-green); font-weight: bold; }
+.admin-content { flex: 1; min-width: 0; }
+.admin-tab-panel.box { margin-bottom: 0; }
+@media (max-width: 700px) {
+  .admin-layout { flex-direction: column; }
+  .admin-sidebar { width: 100%; flex-direction: row; overflow-x: auto; position: static; }
+  .admin-sidebar-item { flex: 0 0 auto; }
+}
 </style>
 </head>
 <body>
@@ -608,34 +620,45 @@ button:hover { background-color: var(--cafe-green-hover); }
 </div>
 </section>
 <section id="adminView" class="hidden">
-<div class="box">
+<div class="admin-layout">
+<nav class="admin-sidebar" aria-label="관리자 메뉴">
+<button class="admin-sidebar-item active" data-admin-tab="stats" onclick="setAdminTab('stats')">📊 통계 대시보드</button>
+<button class="admin-sidebar-item" data-admin-tab="online" onclick="setAdminTab('online')">🟢 현재 접속자</button>
+<button class="admin-sidebar-item" data-admin-tab="reports" onclick="setAdminTab('reports')">🚨 신고 목록</button>
+<button class="admin-sidebar-item" data-admin-tab="users" onclick="setAdminTab('users')">👥 회원 관리</button>
+<button class="admin-sidebar-item" data-admin-tab="rooms" onclick="setAdminTab('rooms')">💬 채팅방 관리</button>
+</nav>
+<div class="admin-content">
+<div id="adminTab_stats" class="admin-tab-panel box">
 <div style="display: flex; justify-content: space-between; align-items: center;">
 <h2 style="margin-top: 0;">통계 대시보드</h2>
 <button onclick="loadAdminStats()" style="padding: 6px 10px; font-size: 12px;">새로고침</button>
 </div>
 <div id="adminStatsContainer">불러오는 중...</div>
 </div>
-<div class="box">
+<div id="adminTab_online" class="admin-tab-panel box hidden">
 <div style="display: flex; justify-content: space-between; align-items: center;">
 <h2 style="margin-top: 0;">현재 접속자</h2>
 <span id="adminOnlineCountBadge" style="font-size: 12px; color: var(--text-sub);"></span>
 </div>
 <div id="adminOnlineUsersContainer">불러오는 중...</div>
 </div>
-<div class="box">
+<div id="adminTab_reports" class="admin-tab-panel box hidden">
 <div style="display: flex; justify-content: space-between; align-items: center;">
 <h2 style="margin-top: 0;">관리자 - 신고 목록</h2>
 <button onclick="triggerSheetResync()" style="padding: 6px 10px; font-size: 12px;">구글 시트 재동기화</button>
 </div>
 <div id="adminReportsContainer">불러오는 중...</div>
 </div>
-<div class="box">
+<div id="adminTab_users" class="admin-tab-panel box hidden">
 <h2 style="margin-top: 0;">회원 관리</h2>
 <div id="adminUsersContainer">불러오는 중...</div>
 </div>
-<div class="box">
+<div id="adminTab_rooms" class="admin-tab-panel box hidden">
 <h2 style="margin-top: 0;">채팅방 관리 (전체)</h2>
 <div id="adminChatRoomsContainer">불러오는 중...</div>
+</div>
+</div>
 </div>
 </section>
 <section id="notificationsView" class="hidden">
@@ -758,6 +781,7 @@ let pushEnabled = false;
 let chatRoomSearchKeyword = '';
 let editingMessageId = null;
 let editingPostId = null; // 현재 수정 중인 게시글 id (게시글 상세 화면에서 인라인 수정)
+let adminActiveTab = 'stats'; // 관리자 탭 내 사이드바에서 선택된 하위 메뉴
 let pendingAvatarData = null;
 let presenceHeartbeatInterval = null; // 내 접속 상태를 주기적으로 서버에 알리는 타이머
 let unsubscribePresence = null; // 관리자 화면의 접속자 목록 실시간 구독 해제 함수
@@ -1721,7 +1745,7 @@ window.showAppSection = function(section) {
   if (isPopular) { loadPopularPosts(); loadHotRooms(); }
   if (isNotifications) openNotifications();
   if (isRanking) loadRankingView();
-  if (isAdmin) { loadAdminStats(); loadAdminPanel(); loadAdminUsers(); loadAdminChatRooms(); subscribeAdminPresence(); }
+  if (isAdmin) { setAdminTab(adminActiveTab); }
   else { unsubscribeAdminPresence(); }
 }
 
@@ -1899,6 +1923,25 @@ window.triggerSheetResync = function() {
 };
 
 // ===== 관리자 통계 대시보드 =====
+const ADMIN_TABS = ['stats', 'online', 'reports', 'users', 'rooms'];
+
+window.setAdminTab = function(tab) {
+  if (!ADMIN_TABS.includes(tab)) return;
+  adminActiveTab = tab;
+  ADMIN_TABS.forEach(t => {
+    const panel = document.getElementById(`adminTab_${t}`);
+    if (panel) panel.classList.toggle('hidden', t !== tab);
+  });
+  document.querySelectorAll('.admin-sidebar-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.adminTab === tab);
+  });
+  if (tab === 'online') { subscribeAdminPresence(); } else { unsubscribeAdminPresence(); }
+  if (tab === 'stats') loadAdminStats();
+  if (tab === 'reports') loadAdminPanel();
+  if (tab === 'users') loadAdminUsers();
+  if (tab === 'rooms') loadAdminChatRooms();
+};
+
 window.loadAdminStats = async function() {
   const container = document.getElementById('adminStatsContainer');
   if (!container) return;
