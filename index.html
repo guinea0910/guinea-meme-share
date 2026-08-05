@@ -440,7 +440,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <main class="app-content">
 <section id="cafeView">
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-<h2 style="margin: 0; cursor: pointer;" onclick="goToList()">🍀 기니 짤방 게시판</h2>
+<h2 style="margin: 0; cursor: pointer;" onclick="goToList()">🍀 기니 짤방 웹버전</h2>
 </div>
 <div id="settingsBox" class="box hidden">
 <h3>계정 및 테마 설정</h3>
@@ -610,6 +610,13 @@ button:hover { background-color: var(--cafe-green-hover); }
 <section id="adminView" class="hidden">
 <div class="box">
 <div style="display: flex; justify-content: space-between; align-items: center;">
+<h2 style="margin-top: 0;">현재 접속자</h2>
+<span id="adminOnlineCountBadge" style="font-size: 12px; color: var(--text-sub);"></span>
+</div>
+<div id="adminOnlineUsersContainer">불러오는 중...</div>
+</div>
+<div class="box">
+<div style="display: flex; justify-content: space-between; align-items: center;">
 <h2 style="margin-top: 0;">관리자 - 신고 목록</h2>
 <button onclick="triggerSheetResync()" style="padding: 6px 10px; font-size: 12px;">구글 시트 재동기화</button>
 </div>
@@ -744,6 +751,11 @@ let pushEnabled = false;
 let chatRoomSearchKeyword = '';
 let editingMessageId = null;
 let pendingAvatarData = null;
+let presenceHeartbeatInterval = null; // 내 접속 상태를 주기적으로 서버에 알리는 타이머
+let unsubscribePresence = null; // 관리자 화면의 접속자 목록 실시간 구독 해제 함수
+let presenceDocs = []; // 관리자 화면용 접속자 원본 데이터 캐시
+let presenceRenderInterval = null; // 시간 경과에 따라 접속자 목록을 주기적으로 다시 그리는 타이머
+const PRESENCE_ONLINE_THRESHOLD = 60000; // 이 시간(ms) 안에 하트비트가 없으면 오프라인으로 간주
 
 window.switchTab = function(type) {
   const loginForm = document.getElementById('loginForm');
@@ -810,6 +822,8 @@ window.handleLogin = async function() {
 };
 
 window.handleLogout = function() {
+  stopPresenceHeartbeat();
+  unsubscribeAdminPresence();
   currentUser = null;
   localStorage.removeItem('cafe_user');
   if (unsubscribeChat) { unsubscribeChat(); unsubscribeChat = null; }
@@ -864,6 +878,7 @@ async function checkAuthState() {
     subscribeNotifications();
     subscribeChatInvites();
     subscribeOwnerTransfers();
+    startPresenceHeartbeat();
     try {
       const userRef = doc(db, "users", currentUser);
       const userSnap = await getDoc(userRef);
@@ -1625,7 +1640,8 @@ window.showAppSection = function(section) {
   if (isPopular) { loadPopularPosts(); loadHotRooms(); }
   if (isNotifications) openNotifications();
   if (isRanking) loadRankingView();
-  if (isAdmin) { loadAdminPanel(); loadAdminUsers(); loadAdminChatRooms(); }
+  if (isAdmin) { loadAdminPanel(); loadAdminUsers(); loadAdminChatRooms(); subscribeAdminPresence(); }
+  else { unsubscribeAdminPresence(); }
 }
 
 window.setPopularSort = function(sort) {
@@ -2442,6 +2458,61 @@ window.filterChatRoomBar = function(keyword) {
   chatRoomSearchKeyword = (keyword || '').trim().toLowerCase();
   renderChatRooms();
 };
+
+// ===== 접속자(온라인) 현황 =====
+// 로그인한 회원은 일정 주기로 자신의 접속 시각을 서버에 기록(하트비트)하고,
+// 관리자 화면에서는 최근 하트비트가 있는 회원만 '접속 중'으로 집계해 보여줍니다.
+function updateMyPresence() {
+  if (!currentUser) return;
+  setDoc(doc(db, 'presence', currentUser), { user: currentUser, updatedAt: Date.now() }).catch(error => console.error(error));
+}
+
+function startPresenceHeartbeat() {
+  if (!currentUser || presenceHeartbeatInterval) return;
+  updateMyPresence();
+  presenceHeartbeatInterval = setInterval(updateMyPresence, 20000);
+}
+
+function stopPresenceHeartbeat() {
+  if (presenceHeartbeatInterval) { clearInterval(presenceHeartbeatInterval); presenceHeartbeatInterval = null; }
+  if (currentUser) {
+    deleteDoc(doc(db, 'presence', currentUser)).catch(error => console.error(error));
+  }
+}
+
+function subscribeAdminPresence() {
+  if (currentUserRole !== 'admin' || unsubscribePresence) return;
+  unsubscribePresence = onSnapshot(collection(db, 'presence'), snapshot => {
+    presenceDocs = snapshot.docs.map(item => item.data());
+    renderAdminOnlineUsers();
+  }, error => console.error(error));
+  if (!presenceRenderInterval) presenceRenderInterval = setInterval(renderAdminOnlineUsers, 15000);
+}
+
+function unsubscribeAdminPresence() {
+  if (unsubscribePresence) { unsubscribePresence(); unsubscribePresence = null; }
+  if (presenceRenderInterval) { clearInterval(presenceRenderInterval); presenceRenderInterval = null; }
+}
+
+function renderAdminOnlineUsers() {
+  const container = document.getElementById('adminOnlineUsersContainer');
+  const badge = document.getElementById('adminOnlineCountBadge');
+  if (!container) return;
+  if (currentUserRole !== 'admin') { container.innerHTML = '<div style="padding:14px; color:var(--text-sub);">관리자만 접근할 수 있습니다.</div>'; if (badge) badge.textContent = ''; return; }
+  const now = Date.now();
+  const onlineUsers = presenceDocs
+    .filter(item => (now - (item.updatedAt || 0)) < PRESENCE_ONLINE_THRESHOLD)
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  if (badge) badge.textContent = `총 ${onlineUsers.length}명 접속 중`;
+  container.innerHTML = onlineUsers.length
+    ? onlineUsers.map(item => `
+        <div class="comment-item" style="justify-content: flex-start; gap: 10px;">
+          ${getAvatarHtml(item.user, 28)}
+          <span>${escapeHtml(item.user)}</span>
+        </div>
+      `).join('')
+    : '<div style="padding:14px; color:var(--text-sub);">현재 접속 중인 회원이 없습니다.</div>';
+}
 
 window.startDirectMessage = async function(targetUser) {
   if (!currentUser || targetUser === currentUser) return;
