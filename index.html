@@ -483,10 +483,33 @@ button:hover { background-color: var(--cafe-green-hover); }
 .admin-sidebar-item.active { background: rgba(3, 199, 90, 0.14); color: var(--cafe-green); font-weight: bold; }
 .admin-content { flex: 1; min-width: 0; }
 .admin-tab-panel.box { margin-bottom: 0; }
+.admin-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.admin-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.admin-row-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.admin-row-actions button { white-space: nowrap; }
 @media (max-width: 700px) {
-  .admin-layout { flex-direction: column; }
-  .admin-sidebar { width: 100%; flex-direction: row; overflow-x: auto; position: static; }
-  .admin-sidebar-item { flex: 0 0 auto; }
+  .admin-layout { flex-direction: column; gap: 10px; }
+  .admin-sidebar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow-x: visible;
+    position: static;
+    gap: 6px;
+    padding: 6px;
+  }
+  .admin-sidebar-item {
+    flex: 1 1 calc(50% - 6px);
+    text-align: center;
+    padding: 12px 6px;
+    font-size: 13px;
+  }
+  .admin-tab-panel.box { padding: 14px 12px; }
+  .admin-tab-panel.box h2 { font-size: 16px; }
+  .admin-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .admin-row { flex-direction: column; align-items: stretch; }
+  .admin-row-actions { flex-direction: row; margin-top: 6px; }
+  .admin-row-actions button { flex: 1; padding: 9px 6px; font-size: 12px; }
 }
 </style>
 </head>
@@ -636,7 +659,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <select id="settingsViewTheme" onchange="previewSettingsViewTheme()"><option value="dark">다크 모드</option><option value="light">라이트 모드</option><option value="black">블랙 모드</option></select>
 </div>
 <div style="margin-bottom: 20px;">
-<label style="font-size: 13px; color: var(--text-sub);">사이드바 메뉴 순서</label>
+<label style="font-size: 13px; color: var(--text-sub);">사이드바 메뉴 순서 (항목을 꾹 눌러서 드래그로 이동)</label>
 <div id="sidebarOrderList" style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden; margin-top:6px;"></div>
 </div>
 <button onclick="saveSettingsView()" style="width: 100%; margin-bottom: 10px;">설정 저장</button>
@@ -738,7 +761,6 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="adminTab_reports" class="admin-tab-panel box hidden">
 <div style="display: flex; justify-content: space-between; align-items: center;">
 <h2 style="margin-top: 0;">관리자 - 신고 목록</h2>
-<button onclick="triggerSheetResync()" style="padding: 6px 10px; font-size: 12px;">구글 시트 재동기화</button>
 </div>
 <div id="adminReportsContainer">불러오는 중...</div>
 </div>
@@ -798,7 +820,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, query, orderBy, where } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, query, orderBy, where, increment } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCfcOH-oargpwPPSxJwIycKnx7o9OGWxwo",
@@ -893,6 +915,25 @@ let presenceDocs = []; // 관리자 화면용 접속자 원본 데이터 캐시
 let presenceRenderInterval = null; // 시간 경과에 따라 접속자 목록을 주기적으로 다시 그리는 타이머
 const PRESENCE_ONLINE_THRESHOLD = 60000; // 이 시간(ms) 안에 하트비트가 없으면 오프라인으로 간주
 
+// ===== 오늘 방문자 수 기록 =====
+function getTodayDateKey() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+async function recordDailyVisit() {
+  try {
+    const dateKey = getTodayDateKey();
+    const flagKey = `cafe_visit_logged_${dateKey}`;
+    if (localStorage.getItem(flagKey)) return;
+    await setDoc(doc(db, 'dailyVisits', dateKey), { date: dateKey, count: increment(1) }, { merge: true });
+    localStorage.setItem(flagKey, '1');
+  } catch (error) {
+    console.error('방문자 기록 실패:', error);
+  }
+}
+
 // ===== 사이드바 메뉴 순서 커스터마이징 =====
 const SIDEBAR_ITEMS = [
   { key: 'cafe', icon: '☕', label: '카페' },
@@ -955,26 +996,77 @@ function renderSidebarOrderEditor() {
   container.innerHTML = order.map((key, index) => {
     const item = SIDEBAR_ITEMS.find(sidebarItem => sidebarItem.key === key);
     if (!item) return '';
-    return `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; ${index !== order.length - 1 ? 'border-bottom:1px solid var(--border-color);' : ''}">
-      <span style="font-size:13px;">${item.icon} ${item.label}</span>
-      <span style="display:flex; gap:4px;">
-        <button onclick="moveSidebarItem('${key}', -1)" ${index === 0 ? 'disabled' : ''} style="padding:2px 8px; font-size:12px;">▲</button>
-        <button onclick="moveSidebarItem('${key}', 1)" ${index === order.length - 1 ? 'disabled' : ''} style="padding:2px 8px; font-size:12px;">▼</button>
-      </span>
+    return `<div class="sidebar-order-item" data-key="${key}" style="display:flex; align-items:center; gap:10px; padding:10px; box-sizing:border-box; background:var(--card-bg); touch-action:none; user-select:none; -webkit-user-select:none; ${index !== order.length - 1 ? 'border-bottom:1px solid var(--border-color);' : ''}">
+      <span class="sidebar-order-handle" style="font-size:16px; color:var(--text-sub); line-height:1; cursor:grab;">≡</span>
+      <span style="font-size:13px; flex:1;">${item.icon} ${item.label}</span>
     </div>`;
   }).join('');
+  container.querySelectorAll('.sidebar-order-item').forEach(row => {
+    row.addEventListener('pointerdown', handleSidebarOrderPointerDown);
+  });
 }
 
-window.moveSidebarItem = function(key, direction) {
-  const order = getSidebarOrder();
-  const index = order.indexOf(key);
-  const newIndex = index + direction;
-  if (index === -1 || newIndex < 0 || newIndex >= order.length) return;
-  [order[index], order[newIndex]] = [order[newIndex], order[index]];
-  saveSidebarOrder(order);
-  renderSidebarNav();
-  renderSidebarOrderEditor();
-};
+let sidebarOrderPressTimer = null;
+
+function handleSidebarOrderPointerDown(event) {
+  const row = event.currentTarget;
+  const container = document.getElementById('sidebarOrderList');
+  const pointerId = event.pointerId;
+  const startX = event.clientX;
+  const startY = event.clientY;
+
+  const cancelPress = () => {
+    clearTimeout(sidebarOrderPressTimer);
+    row.removeEventListener('pointermove', onPreMove);
+    row.removeEventListener('pointerup', cancelPress);
+    row.removeEventListener('pointercancel', cancelPress);
+  };
+  const onPreMove = (moveEvent) => {
+    if (Math.abs(moveEvent.clientX - startX) > 10 || Math.abs(moveEvent.clientY - startY) > 10) {
+      cancelPress();
+    }
+  };
+  row.addEventListener('pointermove', onPreMove);
+  row.addEventListener('pointerup', cancelPress);
+  row.addEventListener('pointercancel', cancelPress);
+
+  sidebarOrderPressTimer = setTimeout(() => {
+    cancelPress();
+    beginSidebarOrderDrag(row, container, pointerId);
+  }, 350);
+}
+
+function beginSidebarOrderDrag(row, container, pointerId) {
+  try { row.setPointerCapture(pointerId); } catch (error) { /* noop */ }
+  row.style.opacity = '0.55';
+  row.style.background = 'var(--input-bg)';
+  row.style.borderRadius = '8px';
+  if (navigator.vibrate) navigator.vibrate(12);
+
+  const onMove = (moveEvent) => {
+    moveEvent.preventDefault();
+    const target = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+    const targetRow = target ? target.closest('.sidebar-order-item') : null;
+    if (targetRow && targetRow !== row && container.contains(targetRow)) {
+      const rect = targetRow.getBoundingClientRect();
+      const insertBefore = moveEvent.clientY < rect.top + rect.height / 2;
+      container.insertBefore(row, insertBefore ? targetRow : targetRow.nextSibling);
+    }
+  };
+  const onUp = () => {
+    try { row.releasePointerCapture(pointerId); } catch (error) { /* noop */ }
+    row.removeEventListener('pointermove', onMove);
+    row.removeEventListener('pointerup', onUp);
+    row.removeEventListener('pointercancel', onUp);
+    const newOrder = Array.from(container.querySelectorAll('.sidebar-order-item')).map(el => el.dataset.key);
+    saveSidebarOrder(newOrder);
+    renderSidebarNav();
+    renderSidebarOrderEditor();
+  };
+  row.addEventListener('pointermove', onMove);
+  row.addEventListener('pointerup', onUp);
+  row.addEventListener('pointercancel', onUp);
+}
 
 window.switchTab = function(type) {
   const loginForm = document.getElementById('loginForm');
@@ -2484,13 +2576,6 @@ window.toggleFollowUser = async function(targetUser) {
   }
 };
 
-window.triggerSheetResync = function() {
-  if (currentUserRole !== 'admin') return;
-  if (!confirm('구글 시트 전체 재동기화를 요청하시겠습니까? (데이터 양에 따라 다소 시간이 걸릴 수 있습니다)')) return;
-  syncToSheet('resync', 'trigger', { requestedBy: currentUser, requestedAt: Date.now() });
-  alert('재동기화를 요청했습니다. 잠시 후 구글 시트를 확인해 주세요.');
-};
-
 // ===== 관리자 통계 대시보드 =====
 const ADMIN_TABS = ['stats', 'online', 'reports', 'users', 'rooms'];
 
@@ -2517,14 +2602,17 @@ window.loadAdminStats = async function() {
   if (currentUserRole !== 'admin') { container.innerHTML = '<div style="padding:14px; color:var(--text-sub);">관리자만 접근할 수 있습니다.</div>'; return; }
   container.innerHTML = '통계를 불러오는 중...';
   try {
-    const [usersSnap, postsSnap, globalChatSnap, roomsSnap] = await Promise.all([
+    const todayDateKey = getTodayDateKey();
+    const [usersSnap, postsSnap, globalChatSnap, roomsSnap, todayVisitSnap] = await Promise.all([
       getDocs(collection(db, 'users')),
       getDocs(collection(db, 'posts')),
       getDocs(collection(db, 'chatMessages')),
-      getDocs(collection(db, 'chatRooms'))
+      getDocs(collection(db, 'chatRooms')),
+      getDoc(doc(db, 'dailyVisits', todayDateKey))
     ]);
     const users = usersSnap.docs.map(item => item.data());
     const posts = postsSnap.docs.map(item => item.data());
+    const todayVisitors = todayVisitSnap.exists() ? (todayVisitSnap.data().count || 0) : 0;
 
     // 채팅 메시지 총합 (전체 채팅 + 모든 개별 채팅방)
     const roomMessageSnaps = await Promise.all(roomsSnap.docs.map(roomDoc => getDocs(collection(db, 'chatRooms', roomDoc.id, 'messages'))));
@@ -2555,7 +2643,8 @@ window.loadAdminStats = async function() {
     const maxPostCount = Math.max(1, ...days.map(day => day.postCount));
     const maxUserCount = Math.max(1, ...days.map(day => day.userCount));
 
-    const summaryHtml = `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(105px, 1fr)); gap:10px; margin-bottom:20px;">
+    const summaryHtml = `<div class="admin-stats-grid">
+      ${renderStatCard('오늘 방문자', todayVisitors)}
       ${renderStatCard('총 회원', totalUsers)}
       ${renderStatCard('총 게시글', totalPosts)}
       ${renderStatCard('총 댓글', totalComments)}
@@ -2616,12 +2705,12 @@ async function loadAdminPanel() {
       return;
     }
     container.innerHTML = pending.map(report => `
-      <div class="comment-item">
+      <div class="comment-item admin-row">
         <div class="comment-body">
           <div style="font-size:12px; color:var(--text-sub); margin-bottom:4px;">${report.targetType === 'post' ? '게시글' : '댓글'} 신고 · 신고자: ${escapeHtml(report.reportedBy || '')}</div>
           <div>${escapeHtml(report.reason || '')}</div>
         </div>
-        <div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">
+        <div class="admin-row-actions">
           <button class="danger-btn" onclick="adminDeleteReportedContent('${report.id}', '${report.targetType}', '${report.postId}', '${report.commentId || ''}')" style="padding:4px 8px; font-size:11px;">대상 삭제</button>
           <button onclick="adminResolveReport('${report.id}')" style="padding:4px 8px; font-size:11px;">처리완료</button>
         </div>
@@ -2675,8 +2764,8 @@ async function loadAdminUsers() {
     const users = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     if (!users.length) { container.innerHTML = '<div style="padding:14px; color:var(--text-sub);">회원이 없습니다.</div>'; return; }
     container.innerHTML = users.map(user => `
-      <div class="comment-item">
-        <div class="comment-body">${escapeHtml(user.id)}${user.role === 'admin' ? ' · <span style="color: var(--cafe-green);">관리자</span>' : ''}${user.banned ? ' · <span style="color: var(--danger-color);">정지됨</span>' : ''}</div>${user.id !== currentUser ? `<button class="danger-btn" onclick="adminDeleteUser('${escapeHtml(user.id)}')" style="padding:4px 8px; font-size:11px;">탈퇴시키기</button>` : ''}
+      <div class="comment-item admin-row">
+        <div class="comment-body">${escapeHtml(user.id)}${user.role === 'admin' ? ' · <span style="color: var(--cafe-green);">관리자</span>' : ''}${user.banned ? ' · <span style="color: var(--danger-color);">정지됨</span>' : ''}</div>${user.id !== currentUser ? `<div class="admin-row-actions"><button class="danger-btn" onclick="adminDeleteUser('${escapeHtml(user.id)}')" style="padding:4px 8px; font-size:11px;">탈퇴시키기</button></div>` : ''}
       </div>
     `).join('');
   } catch (error) {
@@ -2707,9 +2796,9 @@ async function loadAdminChatRooms() {
     const rooms = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     if (!rooms.length) { container.innerHTML = '<div style="padding:14px; color:var(--text-sub);">생성된 채팅방이 없습니다.</div>'; return; }
     container.innerHTML = rooms.map(room => `
-      <div class="comment-item">
+      <div class="comment-item admin-row">
         <div class="comment-body">${escapeHtml(room.name || '이름 없는 채팅방')} · ${escapeHtml(room.roomType || 'general')} · 멤버 ${(room.members || []).length}명</div>
-        <button class="danger-btn" onclick="adminDeleteChatRoomById('${room.id}')" style="padding:4px 8px; font-size:11px;">삭제</button>
+        <div class="admin-row-actions"><button class="danger-btn" onclick="adminDeleteChatRoomById('${room.id}')" style="padding:4px 8px; font-size:11px;">삭제</button></div>
       </div>
     `).join('');
   } catch (error) {
@@ -3786,6 +3875,7 @@ document.addEventListener('visibilitychange', () => {
 
 (async function initApp() {
   await checkAuthState();
+  recordDailyVisit();
   const savedSection = localStorage.getItem('cafe_last_section') || 'cafe';
   const savedRoomId = localStorage.getItem('cafe_last_chat_room');
   if (savedRoomId && savedRoomId !== 'global') {
