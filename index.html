@@ -444,6 +444,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button id="cafeNavBtn" class="sidebar-item active" onclick="showAppSection('cafe')">☕ 카페</button>
 <button id="popularNavBtn" class="sidebar-item" onclick="showAppSection('popular')">🔥 인기 짤</button>
 <button id="rankingNavBtn" class="sidebar-item" onclick="showAppSection('ranking')">🏆 랭킹</button>
+<button id="bookmarksNavBtn" class="sidebar-item" onclick="showAppSection('bookmarks')">⭐ 북마크</button>
 <button id="chatNavBtn" class="sidebar-item" onclick="showAppSection('chat')">💬 채팅<span id="unreadBadge" class="unread-badge hidden"></span></button>
 <button id="notificationsNavBtn" class="sidebar-item" onclick="showAppSection('notifications')">🔔 알림<span id="notificationBadge" class="unread-badge hidden"></span></button>
 <button id="settingsNavBtn" class="sidebar-item" onclick="openSettingsFromSidebar()">⚙️ 설정</button>
@@ -499,19 +500,23 @@ button:hover { background-color: var(--cafe-green-hover); }
 </div>
 <div class="box">
 <h3>글 작성하기</h3>
-<select id="postCategory">
+<div id="draftNotice" class="hidden" style="font-size:12px; color: var(--text-sub); background: var(--input-bg); border:1px solid var(--border-color); border-radius:8px; padding:8px 10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+<span>임시 저장된 글이 있어요.</span>
+<span style="display:flex; gap:6px;"><button onclick="loadDraft()" style="padding:3px 8px; font-size:11px;">불러오기</button><button class="danger-btn" onclick="clearDraft()" style="padding:3px 8px; font-size:11px;">삭제</button></span>
+</div>
+<select id="postCategory" onchange="scheduleDraftSave()">
 <option value="잡담">잡담</option>
 <option value="짤">짤</option>
 <option value="질문">질문</option>
 <option value="공지">공지</option>
 </select>
-<textarea id="postContent" rows="3" placeholder="내용을 입력해 주세요..."></textarea>
+<textarea id="postContent" rows="3" placeholder="내용을 입력해 주세요..." oninput="scheduleDraftSave()"></textarea>
 <div id="dropZone" class="drop-zone">
 사진 업로드 (여러 장 선택 가능)
 </div>
 <input type="file" id="fileInput" accept="image/*" multiple class="hidden">
 <div id="previewArea" class="hidden" style="margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
-<input type="text" id="youtubeUrlInput" placeholder="영상은 유튜브에 올리고 링크를 여기에 붙여넣으세요 (예: https://youtu.be/...)">
+<input type="text" id="youtubeUrlInput" placeholder="영상은 유튜브에 올리고 링크를 여기에 붙여넣으세요 (예: https://youtu.be/...)" oninput="scheduleDraftSave()">
 <button onclick="handleCreatePost()">등록</button>
 </div>
 </div>
@@ -519,7 +524,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="categoryFilterBar" style="display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;"></div>
 <div id="searchSection" class="search-container">
 <div class="search-row">
-<input type="text" id="searchInput" placeholder="작성자 이름 검색 또는 클릭하여 회원 목록 보기..." onfocus="showAuthorRanking()" oninput="filterAuthorRanking()" onkeyup="if(event.key==='Enter') { hideAuthorRanking(); handleSearch(); }">
+<input type="text" id="searchInput" placeholder="작성자/내용 검색 또는 클릭하여 회원 목록 보기..." onfocus="showAuthorRanking()" oninput="filterAuthorRanking()" onkeyup="if(event.key==='Enter') { hideAuthorRanking(); handleSearch(); }">
 <button onclick="hideAuthorRanking(); handleSearch();">검색</button>
 </div>
 <div id="authorRankingDropdown" class="author-ranking-dropdown hidden"></div>
@@ -532,10 +537,14 @@ button:hover { background-color: var(--cafe-green-hover); }
 <section id="chatView" class="chat-view hidden" aria-live="polite">
 <div class="chat-header">
 <div><h2 id="chatTitle">전체 채팅</h2><span id="chatStatus" class="chat-count">카페 회원들과 이야기해 보세요</span></div>
-<div class="chat-header-actions"><span id="chatMemberCount" class="chat-count"></span><button id="teamManageBtn" class="chat-create-btn hidden" onclick="openTeamManage()">관리</button><button id="inviteMemberBtn" class="chat-create-btn hidden" onclick="openInviteMember()">+ 초대</button><button id="leaveChatRoomBtn" class="chat-create-btn danger-btn hidden" onclick="leaveChatRoom()">나가기</button><button class="chat-create-btn" onclick="openCreateChatRoom()">+ 채팅방 만들기</button></div>
+<div class="chat-header-actions"><span id="chatMemberCount" class="chat-count"></span><button class="chat-create-btn" onclick="toggleChatMessageSearch()">🔍</button><button id="teamManageBtn" class="chat-create-btn hidden" onclick="openTeamManage()">관리</button><button id="inviteMemberBtn" class="chat-create-btn hidden" onclick="openInviteMember()">+ 초대</button><button id="leaveChatRoomBtn" class="chat-create-btn danger-btn hidden" onclick="leaveChatRoom()">나가기</button><button class="chat-create-btn" onclick="openCreateChatRoom()">+ 채팅방 만들기</button></div>
 </div>
 <input id="chatRoomSearchInput" type="text" placeholder="채팅방 검색..." oninput="filterChatRoomBar(this.value)" style="margin: 8px 12px 0; width: calc(100% - 24px);">
 <div id="chatRoomBar" class="chat-room-bar"></div>
+<div id="chatMessageSearchBar" class="hidden" style="display:flex; gap:6px; padding: 8px 12px 0;">
+<input id="chatMessageSearchInput" type="text" placeholder="이 채팅방의 메시지 검색..." oninput="handleChatMessageSearch(this.value)" style="margin:0;">
+<button class="chat-create-btn" onclick="closeChatMessageSearch()">닫기</button>
+</div>
 <div id="chatMessages" class="chat-messages"></div>
 <div id="typingIndicator" class="chat-count" style="padding: 0 16px; min-height: 16px;"></div>
 <div id="chatInputArea" class="chat-input-area">
@@ -619,6 +628,33 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="rankingContainer">불러오는 중...</div>
 </div>
 </section>
+<section id="bookmarksView" class="hidden">
+<div class="box">
+<h2 style="margin-top: 0;">⭐ 북마크</h2>
+<div id="bookmarksContainer">불러오는 중...</div>
+</div>
+</section>
+<section id="profileView" class="hidden">
+<div class="box">
+<button onclick="closeProfile()" style="margin-bottom: 15px; background-color: var(--border-color); font-size: 13px; padding: 6px 12px;">← 뒤로</button>
+<div style="display:flex; align-items:center; gap:14px; margin-bottom:14px; flex-wrap:wrap;">
+<img id="profileAvatarImg" src="" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:1px solid var(--border-color); display:none;" alt="프로필 사진">
+<div id="profileAvatarFallback" style="width:64px; height:64px; border-radius:50%; background:var(--input-bg); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; font-size:22px; color:var(--text-sub);"></div>
+<div style="flex:1; min-width:120px;">
+<h2 id="profileUsername" style="margin:0 0 4px;"></h2>
+<div id="profileBio" style="font-size:13px; color:var(--text-sub);"></div>
+</div>
+<div id="profileFollowBtnWrap"></div>
+</div>
+<div style="display:flex; gap:16px; margin-bottom:16px; font-size:13px; color:var(--text-sub); flex-wrap:wrap;">
+<span>게시글 <b id="profilePostCount" style="color:var(--text-main);">0</b></span>
+<span>팔로워 <b id="profileFollowerCount" style="color:var(--text-main);">0</b></span>
+<span>팔로잉 <b id="profileFollowingCount" style="color:var(--text-main);">0</b></span>
+</div>
+<h3 style="margin-top:0;">작성한 게시글</h3>
+<div id="profilePostsContainer">불러오는 중...</div>
+</div>
+</section>
 <section id="adminView" class="hidden">
 <div class="admin-layout">
 <nav class="admin-sidebar" aria-label="관리자 메뉴">
@@ -673,6 +709,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button onclick="setNotifFilter('invite')">초대</button>
 <button onclick="setNotifFilter('chat')">채팅</button>
 <button onclick="setNotifFilter('mention')">멘션</button>
+<button onclick="setNotifFilter('reply')">답글</button>
 </div>
 <div id="notificationsContainer">알림을 불러오는 중...</div>
 </div>
@@ -782,6 +819,14 @@ let chatRoomSearchKeyword = '';
 let editingMessageId = null;
 let editingPostId = null; // 현재 수정 중인 게시글 id (게시글 상세 화면에서 인라인 수정)
 let adminActiveTab = 'stats'; // 관리자 탭 내 사이드바에서 선택된 하위 메뉴
+const REACTION_EMOJIS = ['👍', '😂', '🔥', '😢', '😮'];
+let currentUserBookmarks = []; // 로그인한 회원이 북마크한 게시글 id 목록
+let currentUserFollowing = []; // 로그인한 회원이 팔로우 중인 아이디 목록
+let followingFeedOnly = false; // 목록에서 '팔로잉만 보기' 필터 활성화 여부
+let profileViewUser = null; // 현재 프로필 화면에서 보고 있는 대상 아이디
+let profileViewPreviousSection = 'cafe'; // 프로필 화면 진입 전 화면(뒤로가기용)
+let draftSaveTimeout = null; // 글쓰기 임시저장 디바운스 타이머
+let chatSearchKeyword = ''; // 채팅방 내 메시지 검색어
 let pendingAvatarData = null;
 let presenceHeartbeatInterval = null; // 내 접속 상태를 주기적으로 서버에 알리는 타이머
 let unsubscribePresence = null; // 관리자 화면의 접속자 목록 실시간 구독 해제 함수
@@ -881,6 +926,11 @@ window.handleLogout = function() {
   editingMessageId = null;
   editingPostId = null;
   pendingAvatarData = null;
+  currentUserBookmarks = [];
+  currentUserFollowing = [];
+  followingFeedOnly = false;
+  profileViewUser = null;
+  chatSearchKeyword = '';
   typingUsers = [];
   if (unsubscribeTyping) { unsubscribeTyping(); unsubscribeTyping = null; }
   currentView = 'list';
@@ -913,6 +963,7 @@ async function checkAuthState() {
     subscribeChatInvites();
     subscribeOwnerTransfers();
     startPresenceHeartbeat();
+    checkDraftNotice();
     try {
       const userRef = doc(db, "users", currentUser);
       const userSnap = await getDoc(userRef);
@@ -921,6 +972,8 @@ async function checkAuthState() {
         applyTheme(data.theme || 'dark');
         applyAccent(data.accentColor || '#03c75a');
         currentUserRole = data.role || null;
+        currentUserBookmarks = data.bookmarks || [];
+        currentUserFollowing = data.following || [];
         document.getElementById('adminNavBtn').classList.toggle('hidden', currentUserRole !== 'admin');
       }
     } catch(e) {
@@ -1148,11 +1201,68 @@ window.handleCreatePost = async function() {
     document.getElementById('youtubeUrlInput').value = '';
     compressedImages = [];
     renderImagePreviews();
+    clearDraft();
     goToList();
   } catch (error) {
     console.error(error);
     alert('게시글 등록 실패: ' + error.message);
   }
+};
+
+// ===== 글쓰기 임시저장 =====
+// 이미지는 용량 문제로 임시저장 대상에서 제외하고, 내용/카테고리/유튜브 링크만 저장합니다.
+function getDraftKey() {
+  return currentUser ? `cafe_draft_${currentUser}` : null;
+}
+
+window.scheduleDraftSave = function() {
+  if (!currentUser) return;
+  clearTimeout(draftSaveTimeout);
+  draftSaveTimeout = setTimeout(saveDraftNow, 800);
+};
+
+function saveDraftNow() {
+  const key = getDraftKey();
+  if (!key) return;
+  const content = document.getElementById('postContent')?.value || '';
+  const category = document.getElementById('postCategory')?.value || '잡담';
+  const youtubeUrl = document.getElementById('youtubeUrlInput')?.value || '';
+  if (!content.trim() && !youtubeUrl.trim()) {
+    localStorage.removeItem(key);
+    return;
+  }
+  localStorage.setItem(key, JSON.stringify({ content, category, youtubeUrl, savedAt: Date.now() }));
+}
+
+function checkDraftNotice() {
+  const notice = document.getElementById('draftNotice');
+  if (!notice) return;
+  const key = getDraftKey();
+  const hasDraft = key && !!localStorage.getItem(key);
+  notice.classList.toggle('hidden', !hasDraft);
+}
+
+window.loadDraft = function() {
+  const key = getDraftKey();
+  if (!key) return;
+  const raw = localStorage.getItem(key);
+  if (!raw) return;
+  try {
+    const draft = JSON.parse(raw);
+    document.getElementById('postContent').value = draft.content || '';
+    document.getElementById('postCategory').value = draft.category || '잡담';
+    document.getElementById('youtubeUrlInput').value = draft.youtubeUrl || '';
+  } catch (error) {
+    console.error(error);
+  }
+  document.getElementById('draftNotice').classList.add('hidden');
+};
+
+window.clearDraft = function() {
+  const key = getDraftKey();
+  if (key) localStorage.removeItem(key);
+  const notice = document.getElementById('draftNotice');
+  if (notice) notice.classList.add('hidden');
 };
 
 window.handleDeletePost = async function(postId, author) {
@@ -1233,11 +1343,56 @@ window.handleToggleLike = async function(postId) {
   }
 };
 
+// 이모지 반응: 사용자당 같은 이모지는 한 번만, 이모지별로는 여러 개 동시에 반응 가능
+window.handleToggleReaction = async function(postId, emoji) {
+  if (!currentUser) { alert('로그인 후 반응을 남길 수 있습니다.'); return; }
+  try {
+    const postRef = doc(db, 'posts', postId);
+    const postSnap = await getDoc(postRef);
+    if (!postSnap.exists()) return;
+    const reactions = postSnap.data().reactions || {};
+    const users = reactions[emoji] || [];
+    reactions[emoji] = users.includes(currentUser) ? users.filter(user => user !== currentUser) : [...users, currentUser];
+    await updateDoc(postRef, { reactions });
+    openDetail(postId);
+  } catch (error) {
+    console.error(error);
+    alert('반응 처리에 실패했습니다.');
+  }
+};
+
+// 북마크: 회원 문서에 게시글 id 배열로 저장
+window.handleToggleBookmark = async function(postId) {
+  if (!currentUser) { alert('로그인 후 북마크할 수 있습니다.'); return; }
+  try {
+    const isBookmarked = currentUserBookmarks.includes(postId);
+    await updateDoc(doc(db, 'users', currentUser), { bookmarks: isBookmarked ? arrayRemove(postId) : arrayUnion(postId) });
+    currentUserBookmarks = isBookmarked ? currentUserBookmarks.filter(id => id !== postId) : [...currentUserBookmarks, postId];
+    openDetail(postId);
+  } catch (error) {
+    console.error(error);
+    alert('북마크 처리에 실패했습니다.');
+  }
+};
+
+// 관리자 - 게시글 상단 고정 토글
+window.togglePinPost = async function(postId, pinned) {
+  if (currentUserRole !== 'admin') return;
+  try {
+    await updateDoc(doc(db, 'posts', postId), { pinned });
+    openDetail(postId);
+  } catch (error) {
+    console.error(error);
+    alert('고정 처리에 실패했습니다.');
+  }
+};
+
 window.handleAddComment = async function(postId) {
   const input = document.getElementById(`commentInput_${postId}`);
   const commentText = input.value.trim();
   if(!commentText || !currentUser) return;
-  const parentId = (replyContext && replyContext.postId === postId) ? replyContext.parentId : null;
+  const activeReply = (replyContext && replyContext.postId === postId) ? replyContext : null;
+  const parentId = activeReply ? activeReply.parentId : null;
   try {
     const postRef = doc(db, "posts", postId);
     const newComment = {
@@ -1251,6 +1406,16 @@ window.handleAddComment = async function(postId) {
       comments: arrayUnion(newComment)
     });
     await notifyMentions(commentText, { type: 'comment', postId });
+    if (activeReply && activeReply.authorName && activeReply.authorName !== currentUser) {
+      await addDoc(collection(db, 'notifications'), {
+        recipientId: activeReply.authorName,
+        sender: currentUser,
+        source: { type: 'reply', postId, commentId: newComment.id },
+        content: `${currentUser}님이 회원님의 댓글에 답글을 남겼습니다: ${commentText}`,
+        createdAt: Date.now(),
+        read: false
+      });
+    }
     syncToSheet('comment', 'create', {
       id: newComment.id,
       postId: postId,
@@ -1360,7 +1525,7 @@ function renderCommentTree(postId, comments, parentId, depth) {
       <div class="comment-item" style="margin-left: ${depth * 18}px;">
         <div class="comment-body">
           <div class="comment-header">
-            <span class="comment-author">${escapeHtml(c.author || '알 수 없음')}</span>
+            <span class="comment-author" style="cursor:pointer;" onclick="openProfile('${escapeHtml(c.author || '')}')">${escapeHtml(c.author || '알 수 없음')}</span>
             <span class="comment-time">${formatDate(c.createdAt)}</span>
           </div>
           <div>${escapeHtml(c.content)}</div>
@@ -1506,6 +1671,7 @@ window.openDetail = async function(postId) {
     const likes = post.likes || [];
     const likeCount = likes.length;
     const isLiked = currentUser && likes.includes(currentUser);
+    const isBookmarked = currentUser && currentUserBookmarks.includes(post.id);
     const comments = post.comments || [];
     let deleteBtnHtml = '';
     if(currentUser && (currentUser === post.author || currentUserRole === 'admin')) {
@@ -1514,6 +1680,10 @@ window.openDetail = async function(postId) {
     let editBtnHtml = '';
     if (currentUser && currentUser === post.author && editingPostId !== post.id) {
       editBtnHtml = `<button onclick="startPostEdit('${post.id}')" style="padding: 3px 8px; font-size: 11px;">수정</button>`;
+    }
+    let pinBtnHtml = '';
+    if (currentUserRole === 'admin') {
+      pinBtnHtml = `<button onclick="togglePinPost('${post.id}', ${!post.pinned})" style="padding: 3px 8px; font-size: 11px;">${post.pinned ? '📌 고정 해제' : '📌 상단 고정'}</button>`;
     }
     const images = getPostImages(post);
     let imgHtml = '';
@@ -1531,15 +1701,22 @@ window.openDetail = async function(postId) {
       videoHtml = `<div style="position:relative; padding-bottom:56.25%; margin-top:10px; border-radius:8px; overflow:hidden;"><iframe src="https://www.youtube.com/embed/${video.id}" style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen></iframe></div>`;
     }
     const categoryHtml = post.category ? `<span style="font-size:11px; color: var(--cafe-green); border:1px solid var(--cafe-green); padding:2px 8px; border-radius:10px; margin-right:8px;">${escapeHtml(post.category)}</span>` : '';
+    const pinnedHtml = post.pinned ? `<span style="font-size:11px; color:#eab308; margin-right:8px;">📌 고정됨</span>` : '';
     const commentsHtml = Array.isArray(comments)
       ? renderCommentTree(post.id, [...comments].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)), null, 0)
       : '';
+    const reactions = post.reactions || {};
+    const reactionBarHtml = REACTION_EMOJIS.map(emoji => {
+      const reactedUsers = reactions[emoji] || [];
+      const reacted = currentUser && reactedUsers.includes(currentUser);
+      return `<button class="like-btn ${reacted ? 'liked' : ''}" onclick="handleToggleReaction('${post.id}', '${emoji}')" style="padding:4px 10px;">${emoji}${reactedUsers.length ? ' ' + reactedUsers.length : ''}</button>`;
+    }).join('');
     postsContainer.innerHTML = `
       <button onclick="goToList()" style="margin-bottom: 15px; background-color: var(--border-color); font-size: 13px; padding: 6px 12px;">← 목록으로</button>
       <div class="post-card">
         <div class="post-header">
-          <span class="post-author">${categoryHtml}${escapeHtml(post.author)}</span>
-          <div style="display:flex; gap:6px;">${editBtnHtml}${deleteBtnHtml}</div>
+          <span class="post-author">${pinnedHtml}${categoryHtml}<span style="cursor:pointer;" onclick="openProfile('${post.author}')">${escapeHtml(post.author)}</span></span>
+          <div style="display:flex; gap:6px;">${pinBtnHtml}${editBtnHtml}${deleteBtnHtml}</div>
         </div>
         <div class="post-time">${formatDate(post.createdAt)}</div>
         ${editingPostId === post.id ? renderPostEditForm(post) : `<div class="post-content">${escapeHtml(post.content)}${post.editedAt ? ' <span style="font-size:11px; color:var(--text-sub);">(수정됨)</span>' : ''}</div>`}
@@ -1550,12 +1727,16 @@ window.openDetail = async function(postId) {
           <span>❤️ 좋아요 ${likeCount}개</span>
           <span>💬 댓글 ${comments.length}개</span>
         </div>
-        <div class="action-row">
+        <div class="action-row" style="flex-wrap: wrap;">
           <button class="like-btn ${isLiked ? 'liked' : ''}" onclick="handleToggleLike('${post.id}')">
             ${isLiked ? '❤️ 좋아요 취소' : '🤍 좋아요'}
           </button>
+          <button class="like-btn ${isBookmarked ? 'liked' : ''}" onclick="handleToggleBookmark('${post.id}')">
+            ${isBookmarked ? '⭐ 북마크 취소' : '☆ 북마크'}
+          </button>
           <button class="like-btn" onclick="reportPost('${post.id}')">🚨 신고</button>
         </div>
+        <div class="action-row" style="flex-wrap: wrap;">${reactionBarHtml}</div>
         <div class="comment-section">
           <div style="font-weight: bold; margin-bottom: 8px;">댓글</div>
           ${commentsHtml}
@@ -1610,12 +1791,23 @@ function renderCategoryFilterBar() {
   const bar = document.getElementById('categoryFilterBar');
   if (!bar) return;
   const cats = ['전체', '잡담', '짤', '질문', '공지'];
-  bar.innerHTML = cats.map(cat => {
+  let html = cats.map(cat => {
     const value = cat === '전체' ? '' : cat;
     const isActive = categoryFilter === value;
     return `<button class="page-btn ${isActive ? 'active' : ''}" onclick="setCategoryFilter('${value}')" style="padding: 6px 12px; font-size: 12px;">${cat}</button>`;
   }).join('');
+  if (currentUser) {
+    html += `<button class="page-btn ${followingFeedOnly ? 'active' : ''}" onclick="toggleFollowingFeed()" style="padding: 6px 12px; font-size: 12px;">👥 팔로잉만</button>`;
+  }
+  bar.innerHTML = html;
 }
+
+window.toggleFollowingFeed = function() {
+  followingFeedOnly = !followingFeedOnly;
+  currentPage = 1;
+  renderCategoryFilterBar();
+  applyFilterAndRender();
+};
 
 window.setCategoryFilter = function(cat) {
   categoryFilter = cat;
@@ -1627,9 +1819,17 @@ window.setCategoryFilter = function(cat) {
 function applyFilterAndRender() {
   filteredPosts = allPosts.filter(post => {
     const author = (post.author || '').toLowerCase();
-    const matchesSearch = !searchKeyword || author.includes(searchKeyword);
+    const content = (post.content || '').toLowerCase();
+    const matchesSearch = !searchKeyword || author.includes(searchKeyword) || content.includes(searchKeyword);
     const matchesCategory = !categoryFilter || post.category === categoryFilter;
-    return matchesSearch && matchesCategory;
+    const matchesFollowing = !followingFeedOnly || (currentUserFollowing.includes(post.author));
+    return matchesSearch && matchesCategory && matchesFollowing;
+  });
+  // 상단 고정 게시글을 맨 위로, 그 다음은 최신순
+  filteredPosts.sort((a, b) => {
+    const pinDiff = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+    if (pinDiff !== 0) return pinDiff;
+    return (b.createdAt || 0) - (a.createdAt || 0);
   });
   renderPostList();
 }
@@ -1668,15 +1868,16 @@ function renderPostList() {
     const commentCount = (post.comments || []).length;
     const displayTitle = post.content ? post.content : '(이미지 게시물)';
     const categoryTag = post.category ? `<span style="font-size:10px; color: var(--cafe-green); border:1px solid var(--cafe-green); padding:1px 6px; border-radius:8px; margin-right:4px;">${escapeHtml(post.category)}</span>` : '';
+    const pinnedTag = post.pinned ? `<span style="font-size:10px; color:#eab308; margin-right:4px;">📌 고정</span>` : '';
     item.innerHTML = `
       ${thumbHtml}
       <div class="list-info">
         <div class="list-meta">
           <span>${formatDate(post.createdAt)}</span>
           <span>/</span>
-          <span style="color: var(--cafe-green); font-weight: bold;">${escapeHtml(post.author)}</span>
+          <span style="color: var(--cafe-green); font-weight: bold; cursor:pointer;" onclick="event.stopPropagation(); openProfile('${escapeHtml(post.author)}');">${escapeHtml(post.author)}</span>
         </div>
-        <div class="list-title">${categoryTag}${escapeHtml(displayTitle)}</div>
+        <div class="list-title">${pinnedTag}${categoryTag}${escapeHtml(displayTitle)}</div>
       </div>
       <div class="list-stats-badge">
         <span>조회 ${viewsCount}</span>
@@ -1719,13 +1920,15 @@ function getChatAvatarHtml(username) {
 }
 
 window.showAppSection = function(section) {
-  localStorage.setItem('cafe_last_section', section);
+  if (section !== 'profile') localStorage.setItem('cafe_last_section', section);
   const isCafe = section === 'cafe';
   const isChat = section === 'chat';
   const isSettings = section === 'settings';
   const isPopular = section === 'popular';
   const isNotifications = section === 'notifications';
   const isRanking = section === 'ranking';
+  const isBookmarks = section === 'bookmarks';
+  const isProfile = section === 'profile';
   const isAdmin = section === 'admin';
   document.getElementById('cafeView').classList.toggle('hidden', !isCafe);
   document.getElementById('chatView').classList.toggle('hidden', !isChat);
@@ -1733,6 +1936,8 @@ window.showAppSection = function(section) {
   document.getElementById('popularView').classList.toggle('hidden', !isPopular);
   document.getElementById('notificationsView').classList.toggle('hidden', !isNotifications);
   document.getElementById('rankingView').classList.toggle('hidden', !isRanking);
+  document.getElementById('bookmarksView').classList.toggle('hidden', !isBookmarks);
+  document.getElementById('profileView').classList.toggle('hidden', !isProfile);
   document.getElementById('adminView').classList.toggle('hidden', !isAdmin);
   document.getElementById('cafeNavBtn').classList.toggle('active', isCafe);
   document.getElementById('chatNavBtn').classList.toggle('active', isChat);
@@ -1740,11 +1945,13 @@ window.showAppSection = function(section) {
   document.getElementById('popularNavBtn').classList.toggle('active', isPopular);
   document.getElementById('notificationsNavBtn').classList.toggle('active', isNotifications);
   document.getElementById('rankingNavBtn').classList.toggle('active', isRanking);
+  document.getElementById('bookmarksNavBtn').classList.toggle('active', isBookmarks);
   document.getElementById('adminNavBtn').classList.toggle('active', isAdmin);
   if (isChat) openChat();
   if (isPopular) { loadPopularPosts(); loadHotRooms(); }
   if (isNotifications) openNotifications();
   if (isRanking) loadRankingView();
+  if (isBookmarks) loadBookmarksView();
   if (isAdmin) { setAdminTab(adminActiveTab); }
   else { unsubscribeAdminPresence(); }
 }
@@ -1899,13 +2106,13 @@ async function loadRankingView() {
     });
     const sortedUsers = [...allUsers].sort((a, b) => (userViewTotals[b] || 0) - (userViewTotals[a] || 0));
     container.innerHTML = sortedUsers.map((user, index) => `
-      <div class="post-list-item" style="cursor:default;">
+      <div class="post-list-item" onclick="openProfile('${escapeHtml(user)}')">
         <div style="color: var(--cafe-green); font-weight: bold; width: 20px;">${index + 1}</div>
         ${getAvatarHtml(user, 36)}
         <div class="list-info"><div class="list-title">${escapeHtml(user)}</div></div>
         <div class="list-stats-badge">
           <span>총 조회수 ${userViewTotals[user] || 0}</span>
-          ${currentUser && user !== currentUser ? `<button onclick="startDirectMessage('${escapeHtml(user)}')" style="padding:3px 8px; font-size:11px; margin-top:4px;">1:1 대화</button>` : ''}
+          ${currentUser && user !== currentUser ? `<button onclick="event.stopPropagation(); startDirectMessage('${escapeHtml(user)}')" style="padding:3px 8px; font-size:11px; margin-top:4px;">1:1 대화</button>` : ''}
         </div>
       </div>
     `).join('');
@@ -1914,6 +2121,135 @@ async function loadRankingView() {
     container.innerHTML = '<div class="error-box">랭킹을 불러오지 못했습니다.</div>';
   }
 }
+
+// ===== 북마크 목록 =====
+async function loadBookmarksView() {
+  const container = document.getElementById('bookmarksContainer');
+  if (!currentUser) { container.innerHTML = '<div style="padding:14px; color:var(--text-sub);">로그인 후 이용할 수 있습니다.</div>'; return; }
+  container.innerHTML = '불러오는 중...';
+  try {
+    if (!currentUserBookmarks.length) {
+      container.innerHTML = '<div style="padding:14px; color:var(--text-sub);">북마크한 게시글이 없습니다.</div>';
+      return;
+    }
+    const snapshot = await getDocs(collection(db, 'posts'));
+    const posts = snapshot.docs
+      .map(item => ({ id: item.id, ...item.data() }))
+      .filter(post => currentUserBookmarks.includes(post.id))
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    if (!posts.length) { container.innerHTML = '<div style="padding:14px; color:var(--text-sub);">북마크한 게시글이 없습니다.</div>'; return; }
+    container.innerHTML = posts.map(post => {
+      const images = getPostImages(post);
+      const video = getPostVideo(post);
+      let thumbHtml = '<div class="list-thumb">No Img</div>';
+      if (video && video.type === 'youtube') {
+        thumbHtml = `<img class="list-thumb" src="https://img.youtube.com/vi/${video.id}/mqdefault.jpg" alt="유튜브 영상">`;
+      } else if (images.length) {
+        thumbHtml = `<img class="list-thumb" src="${images[0]}" alt="짤">`;
+      }
+      return `<div class="post-list-item" onclick="showAppSection('cafe'); openDetail('${post.id}');">
+        ${thumbHtml}
+        <div class="list-info">
+          <div class="list-meta"><span>${escapeHtml(post.author || '알 수 없음')}</span></div>
+          <div class="list-title">${escapeHtml(post.content || '(이미지 게시물)')}</div>
+        </div>
+        <div class="list-stats-badge"><span>조회 ${(post.viewedUsers || []).length}</span><span>좋아요 ${(post.likes || []).length}</span></div>
+      </div>`;
+    }).join('');
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = '<div class="error-box">북마크 목록을 불러오지 못했습니다.</div>';
+  }
+}
+
+// ===== 회원 프로필 페이지 =====
+window.openProfile = function(username) {
+  if (!username) return;
+  const current = ['cafe', 'popular', 'ranking', 'bookmarks', 'chat', 'notifications', 'settings', 'admin'].find(sec => !document.getElementById(`${sec}View`)?.classList.contains('hidden'));
+  if (current) profileViewPreviousSection = current;
+  profileViewUser = username;
+  showAppSection('profile');
+  loadProfileView(username);
+};
+
+window.closeProfile = function() {
+  showAppSection(profileViewPreviousSection || 'cafe');
+};
+
+async function loadProfileView(username) {
+  const postsContainer = document.getElementById('profilePostsContainer');
+  postsContainer.innerHTML = '불러오는 중...';
+  document.getElementById('profileUsername').textContent = username;
+  document.getElementById('profileFollowBtnWrap').innerHTML = '';
+  try {
+    const userSnap = await getDoc(doc(db, 'users', username));
+    const userData = userSnap.exists() ? userSnap.data() : {};
+    userProfiles[username] = userData;
+    const avatarImg = document.getElementById('profileAvatarImg');
+    const avatarFallback = document.getElementById('profileAvatarFallback');
+    if (userData.photoURL) {
+      avatarImg.src = userData.photoURL;
+      avatarImg.style.display = 'inline-block';
+      avatarFallback.style.display = 'none';
+    } else {
+      avatarImg.style.display = 'none';
+      avatarFallback.style.display = 'flex';
+      avatarFallback.textContent = String(username).slice(0, 2);
+    }
+    document.getElementById('profileBio').textContent = userData.bio || '';
+
+    const followingList = userData.following || [];
+    document.getElementById('profileFollowingCount').textContent = followingList.length;
+
+    const followersSnap = await getDocs(query(collection(db, 'users'), where('following', 'array-contains', username)));
+    document.getElementById('profileFollowerCount').textContent = followersSnap.size;
+
+    if (currentUser && currentUser !== username) {
+      const isFollowing = currentUserFollowing.includes(username);
+      document.getElementById('profileFollowBtnWrap').innerHTML = `<button onclick="toggleFollowUser('${username}')" style="padding:6px 14px; font-size:12px; ${isFollowing ? 'background: var(--border-color);' : ''}">${isFollowing ? '팔로잉 취소' : '+ 팔로우'}</button>`;
+    } else if (currentUser === username) {
+      document.getElementById('profileFollowBtnWrap').innerHTML = `<span style="font-size:12px; color:var(--text-sub);">내 프로필</span>`;
+    }
+
+    const postsSnap = await getDocs(query(collection(db, 'posts'), where('author', '==', username)));
+    const posts = postsSnap.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    document.getElementById('profilePostCount').textContent = posts.length;
+    postsContainer.innerHTML = posts.length ? posts.map(post => {
+      const images = getPostImages(post);
+      const video = getPostVideo(post);
+      let thumbHtml = '<div class="list-thumb">No Img</div>';
+      if (video && video.type === 'youtube') {
+        thumbHtml = `<img class="list-thumb" src="https://img.youtube.com/vi/${video.id}/mqdefault.jpg" alt="유튜브 영상">`;
+      } else if (images.length) {
+        thumbHtml = `<img class="list-thumb" src="${images[0]}" alt="짤">`;
+      }
+      return `<div class="post-list-item" onclick="showAppSection('cafe'); openDetail('${post.id}');">
+        ${thumbHtml}
+        <div class="list-info">
+          <div class="list-meta"><span>${formatDate(post.createdAt)}</span></div>
+          <div class="list-title">${escapeHtml(post.content || '(이미지 게시물)')}</div>
+        </div>
+        <div class="list-stats-badge"><span>조회 ${(post.viewedUsers || []).length}</span><span>좋아요 ${(post.likes || []).length}</span></div>
+      </div>`;
+    }).join('') : '<div style="padding:14px; color:var(--text-sub);">작성한 게시글이 없습니다.</div>';
+  } catch (error) {
+    console.error(error);
+    postsContainer.innerHTML = '<div class="error-box">프로필을 불러오지 못했습니다.</div>';
+  }
+}
+
+window.toggleFollowUser = async function(targetUser) {
+  if (!currentUser || currentUser === targetUser) return;
+  try {
+    const isFollowing = currentUserFollowing.includes(targetUser);
+    await updateDoc(doc(db, 'users', currentUser), { following: isFollowing ? arrayRemove(targetUser) : arrayUnion(targetUser) });
+    currentUserFollowing = isFollowing ? currentUserFollowing.filter(user => user !== targetUser) : [...currentUserFollowing, targetUser];
+    loadProfileView(targetUser);
+  } catch (error) {
+    console.error(error);
+    alert('팔로우 처리에 실패했습니다.');
+  }
+};
 
 window.triggerSheetResync = function() {
   if (currentUserRole !== 'admin') return;
@@ -2361,7 +2697,7 @@ window.setNotifFilter = function(filter) {
   notifFilter = filter;
   const bar = document.getElementById('notifFilterBar');
   if (bar) {
-    const order = ['all', 'transfer', 'invite', 'chat', 'mention'];
+    const order = ['all', 'transfer', 'invite', 'chat', 'mention', 'reply'];
     Array.from(bar.children).forEach((btn, index) => btn.classList.toggle('active', order[index] === filter));
   }
   openNotifications();
@@ -2393,6 +2729,8 @@ window.openNotifications = async function() {
   const pendingInvites = chatInvites.filter(item => item.status === 'pending');
   const unreadRoomsEntries = Object.entries(unreadByRoom).filter(([, count]) => count > 0);
   const sorted = [...mentionNotifications].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  const mentionItems = sorted.filter(item => !item.source || item.source.type !== 'reply');
+  const replyItems = sorted.filter(item => item.source && item.source.type === 'reply');
   let html = '';
   if (notifFilter === 'all' || notifFilter === 'transfer') {
     html += `<div style="font-weight:bold; margin:4px 0 8px; color: var(--text-sub); font-size: 13px;">방장 권한 위임 요청</div>`;
@@ -2429,12 +2767,21 @@ window.openNotifications = async function() {
   }
   if (notifFilter === 'all' || notifFilter === 'mention') {
     html += `<div style="font-weight:bold; margin:16px 0 8px; color: var(--text-sub); font-size: 13px;">멘션 알림</div>`;
-    html += sorted.length ? sorted.map(item => `
-      <div class="comment-item">
+    html += mentionItems.length ? mentionItems.map(item => `
+      <div class="comment-item" ${item.source && item.source.postId ? `style="cursor:pointer;" onclick="showAppSection('cafe'); openDetail('${item.source.postId}');"` : ''}>
         <div class="comment-body"><b>${escapeHtml(item.sender || '')}</b>님이 회원님을 언급했습니다.<br><span style="color:var(--text-sub); font-size:12px;">${escapeHtml(item.content || '')}</span></div>
-        <button class="danger-btn" onclick="deleteMentionNotification('${item.id}')" style="padding:4px 8px; font-size:11px; flex-shrink:0;">삭제</button>
+        <button class="danger-btn" onclick="event.stopPropagation(); deleteMentionNotification('${item.id}')" style="padding:4px 8px; font-size:11px; flex-shrink:0;">삭제</button>
       </div>
     `).join('') : '<div style="padding:10px 14px; color:var(--text-sub); font-size:13px;">멘션 알림이 없습니다.</div>';
+  }
+  if (notifFilter === 'all' || notifFilter === 'reply') {
+    html += `<div style="font-weight:bold; margin:16px 0 8px; color: var(--text-sub); font-size: 13px;">답글 알림</div>`;
+    html += replyItems.length ? replyItems.map(item => `
+      <div class="comment-item" style="cursor:pointer;" onclick="showAppSection('cafe'); openDetail('${item.source.postId}');">
+        <div class="comment-body"><b>${escapeHtml(item.sender || '')}</b>님이 답글을 남겼습니다.<br><span style="color:var(--text-sub); font-size:12px;">${escapeHtml(item.content || '')}</span></div>
+        <button class="danger-btn" onclick="event.stopPropagation(); deleteMentionNotification('${item.id}')" style="padding:4px 8px; font-size:11px; flex-shrink:0;">삭제</button>
+      </div>
+    `).join('') : '<div style="padding:10px 14px; color:var(--text-sub); font-size:13px;">답글 알림이 없습니다.</div>';
   }
   container.innerHTML = html;
   await Promise.all(mentionNotifications.filter(item => !item.read).map(item => updateDoc(doc(db, 'notifications', item.id), { read: true })));
@@ -2543,12 +2890,21 @@ function renderChatMessages() {
     return;
   }
   document.getElementById('chatInputArea').classList.remove('hidden');
-  if (chatMessages.length === 0) {
+  const keyword = chatSearchKeyword.trim().toLowerCase();
+  const visibleMessages = keyword ? chatMessages.filter(message => (message.content || '').toLowerCase().includes(keyword)) : chatMessages;
+  if (keyword) {
+    messagesBox.innerHTML = (visibleMessages.length ? `<div class="chat-notice">검색 결과 ${visibleMessages.length}개</div>` : `<div class="chat-notice">검색 결과가 없습니다.</div>`) + visibleMessages.map(message => renderChatMessageRow(message)).join('');
+  } else if (chatMessages.length === 0) {
     messagesBox.innerHTML = '<div class="chat-notice">아직 메시지가 없습니다. 먼저 인사를 건네 보세요!</div>';
   } else {
     const activeRoomForWelcome = activeChatRoomId === 'global' ? null : chatRooms.find(room => room.id === activeChatRoomId);
     const welcomeRoomName = activeChatRoomId === 'global' ? '전체 채팅' : (activeRoomForWelcome?.name || '채팅방');
-    messagesBox.innerHTML = `<div class="chat-notice">${escapeHtml(welcomeRoomName)}에 오신 것을 환영합니다</div>` + chatMessages.map(message => {
+    messagesBox.innerHTML = `<div class="chat-notice">${escapeHtml(welcomeRoomName)}에 오신 것을 환영합니다</div>` + chatMessages.map(message => renderChatMessageRow(message)).join('');
+  }
+  requestAnimationFrame(() => { messagesBox.scrollTop = messagesBox.scrollHeight; });
+}
+
+function renderChatMessageRow(message) {
       if (message.system) return `<div class="chat-notice">${escapeHtml(message.content)}</div>`;
       const mine = message.author === currentUser;
       let bodyHtml;
@@ -2576,10 +2932,32 @@ function renderChatMessages() {
         </div>
         <span class="chat-time">읽음 ${Math.max(0, (message.readBy || []).length - 1)}<br>${formatChatTime(message.createdAt)}</span>
       </div>`;
-    }).join('');
-  }
-  requestAnimationFrame(() => { messagesBox.scrollTop = messagesBox.scrollHeight; });
 }
+
+window.toggleChatMessageSearch = function() {
+  const bar = document.getElementById('chatMessageSearchBar');
+  if (!bar) return;
+  if (bar.classList.contains('hidden')) {
+    bar.classList.remove('hidden');
+    document.getElementById('chatMessageSearchInput').focus();
+  } else {
+    closeChatMessageSearch();
+  }
+};
+
+window.closeChatMessageSearch = function() {
+  const bar = document.getElementById('chatMessageSearchBar');
+  if (bar) bar.classList.add('hidden');
+  chatSearchKeyword = '';
+  const input = document.getElementById('chatMessageSearchInput');
+  if (input) input.value = '';
+  renderChatMessages();
+};
+
+window.handleChatMessageSearch = function(value) {
+  chatSearchKeyword = value || '';
+  renderChatMessages();
+};
 
 window.startMessageEdit = function(messageId) {
   editingMessageId = messageId;
@@ -2826,6 +3204,7 @@ window.selectChatRoom = function(roomId) {
   localStorage.setItem('cafe_last_chat_room', roomId);
   if (unsubscribeChat) { unsubscribeChat(); unsubscribeChat = null; }
   chatMessages = [];
+  closeChatMessageSearch();
   renderChatRooms();
   renderChatMessages();
   subscribeChat();
