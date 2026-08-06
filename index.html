@@ -141,7 +141,12 @@ body {
 .chat-room-time { flex: 0 0 auto; font-size: 11px; color: var(--text-sub); }
 .chat-room-info-bottom { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 3px; }
 .chat-room-preview { flex: 1; min-width: 0; font-size: 13px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-room-list-label { padding: 10px 14px 4px; font-size: 11px; font-weight: 700; color: var(--text-sub); }
 .chat-room-unread { flex: 0 0 auto; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 999px; background: #ff3b30; color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+.chat-room-row.pinned { background: rgba(3, 199, 90, 0.06); }
+.chat-room-pin-btn { flex: 0 0 auto; background: transparent; border: 0; padding: 6px; margin: -6px -6px -6px 0; font-size: 15px; opacity: .3; cursor: pointer; line-height: 1; }
+.chat-room-pin-btn.pinned { opacity: 1; }
+.chat-date-divider { align-self: center; margin: 4px 0 10px; padding: 6px 14px; border-radius: 14px; background: var(--card-bg); color: var(--text-sub); font-size: 12px; font-weight: 700; border: 1px solid var(--border-color); }
 .chat-back-btn { display: none; font-size: 16px; }
 .chat-view:not(.list-mode) .chat-back-btn { display: inline-flex; align-items: center; justify-content: center; }
 .chat-view:not(.list-mode) .mode-list-only { display: none !important; }
@@ -3078,6 +3083,33 @@ function subscribeUnreadChats() {
   });
 }
 
+function formatChatDateDivider(timestamp) {
+  const date = new Date(timestamp);
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 ${days[date.getDay()]}요일`;
+}
+
+function isSameChatDay(ts1, ts2) {
+  const d1 = new Date(ts1), d2 = new Date(ts2);
+  return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+}
+
+function renderMessagesWithDateDividers(messages) {
+  let lastDate = null;
+  let html = '';
+  messages.forEach(message => {
+    const ts = message.createdAt;
+    if (ts && (lastDate === null || !isSameChatDay(ts, lastDate))) {
+      html += `<div class="chat-notice chat-date-divider">${formatChatDateDivider(ts)}</div>`;
+      lastDate = ts;
+    } else if (ts) {
+      lastDate = ts;
+    }
+    html += renderChatMessageRow(message);
+  });
+  return html;
+}
+
 function renderChatMessages() {
   const messagesBox = document.getElementById('chatMessages');
   if (!currentUser) {
@@ -3089,13 +3121,13 @@ function renderChatMessages() {
   const keyword = chatSearchKeyword.trim().toLowerCase();
   const visibleMessages = keyword ? chatMessages.filter(message => (message.content || '').toLowerCase().includes(keyword)) : chatMessages;
   if (keyword) {
-    messagesBox.innerHTML = (visibleMessages.length ? `<div class="chat-notice">검색 결과 ${visibleMessages.length}개</div>` : `<div class="chat-notice">검색 결과가 없습니다.</div>`) + visibleMessages.map(message => renderChatMessageRow(message)).join('');
+    messagesBox.innerHTML = (visibleMessages.length ? `<div class="chat-notice">검색 결과 ${visibleMessages.length}개</div>` : `<div class="chat-notice">검색 결과가 없습니다.</div>`) + renderMessagesWithDateDividers(visibleMessages);
   } else if (chatMessages.length === 0) {
     messagesBox.innerHTML = '<div class="chat-notice">아직 메시지가 없습니다. 먼저 인사를 건네 보세요!</div>';
   } else {
     const activeRoomForWelcome = activeChatRoomId === 'global' ? null : chatRooms.find(room => room.id === activeChatRoomId);
     const welcomeRoomName = activeChatRoomId === 'global' ? '전체 채팅' : (activeRoomForWelcome?.name || '채팅방');
-    messagesBox.innerHTML = `<div class="chat-notice">${escapeHtml(welcomeRoomName)}에 오신 것을 환영합니다</div>` + chatMessages.map(message => renderChatMessageRow(message)).join('');
+    messagesBox.innerHTML = `<div class="chat-notice">${escapeHtml(welcomeRoomName)}에 오신 것을 환영합니다</div>` + renderMessagesWithDateDividers(chatMessages);
   }
   requestAnimationFrame(() => { messagesBox.scrollTop = messagesBox.scrollHeight; });
 }
@@ -3369,18 +3401,43 @@ function formatChatRoomPreview(message) {
   return `${prefix}${message.content || ''}`;
 }
 
-function buildChatRoomRow(id, name, isActive) {
+function getPinnedRoomsKey() {
+  return `cafe_pinned_chat_rooms_${currentUser || 'guest'}`;
+}
+
+function getPinnedRooms() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(getPinnedRoomsKey()) || '[]');
+    return Array.isArray(saved) ? saved : [];
+  } catch (error) { return []; }
+}
+
+function savePinnedRooms(list) {
+  localStorage.setItem(getPinnedRoomsKey(), JSON.stringify(list));
+}
+
+window.togglePinChatRoom = function(roomId) {
+  const pinned = getPinnedRooms();
+  const idx = pinned.indexOf(roomId);
+  if (idx >= 0) pinned.splice(idx, 1); else pinned.unshift(roomId);
+  savePinnedRooms(pinned);
+  renderChatRooms();
+}
+
+function buildChatRoomRow(id, name, isActive, isPinned) {
   const unread = unreadByRoom[id] || 0;
   const lastMessage = roomLastMessage[id] || null;
   const avatarChar = id === 'global' ? '🌐' : (name || '?').trim().charAt(0).toUpperCase();
   const timeLabel = lastMessage && !lastMessage.system ? formatChatTime(lastMessage.createdAt) : '';
-  return `<button class="chat-room-row ${isActive ? 'active' : ''}" onclick="openChatRoomFromList('${id}')">
+  const safeId = id.replace(/'/g, "\\'");
+  return `<div class="chat-room-row ${isActive ? 'active' : ''} ${isPinned ? 'pinned' : ''}" onclick="openChatRoomFromList('${safeId}')">
 <span class="chat-room-avatar">${avatarChar}</span>
 <span class="chat-room-info">
 <span class="chat-room-info-top"><span class="chat-room-name">${escapeHtml(name)}</span><span class="chat-room-time">${timeLabel}</span></span>
 <span class="chat-room-info-bottom"><span class="chat-room-preview">${escapeHtml(formatChatRoomPreview(lastMessage))}</span>${unread > 0 ? `<span class="chat-room-unread">${unread > 99 ? '99+' : unread}</span>` : ''}</span>
 </span>
-</button>`;
+<button class="chat-room-pin-btn ${isPinned ? 'pinned' : ''}" onclick="event.stopPropagation(); togglePinChatRoom('${safeId}')" title="${isPinned ? '고정 해제' : '채팅방 고정'}">📌</button>
+</div>`;
 }
 
 function renderChatRooms() {
@@ -3389,9 +3446,20 @@ function renderChatRooms() {
   if (activeChatRoomId !== 'global' && !activeRoom) activeChatRoomId = 'global';
   const visibleRooms = chatRoomSearchKeyword ? chatRooms.filter(room => (room.name || '').toLowerCase().includes(chatRoomSearchKeyword)) : chatRooms;
   const showGlobal = !chatRoomSearchKeyword || '전체 채팅'.includes(chatRoomSearchKeyword) || '전체'.includes(chatRoomSearchKeyword);
-  const roomsHtml = (showGlobal ? buildChatRoomRow('global', '전체 채팅', activeChatRoomId === 'global') : '')
-    + visibleRooms.map(room => buildChatRoomRow(room.id, room.name || '이름 없는 채팅방', room.id === activeChatRoomId)).join('');
-  roomBar.innerHTML = roomsHtml || '<div class="chat-room-list-empty">참여 중인 채팅방이 없습니다.</div>';
+  const allEntries = [
+    ...(showGlobal ? [{ id: 'global', name: '전체 채팅' }] : []),
+    ...visibleRooms.map(room => ({ id: room.id, name: room.name || '이름 없는 채팅방' }))
+  ];
+  const pinnedIds = getPinnedRooms();
+  const pinnedEntries = allEntries.filter(entry => pinnedIds.includes(entry.id)).sort((a, b) => pinnedIds.indexOf(a.id) - pinnedIds.indexOf(b.id));
+  const normalEntries = allEntries.filter(entry => !pinnedIds.includes(entry.id));
+  const pinnedHtml = pinnedEntries.length
+    ? `<div class="chat-room-list-label">📌 고정된 채팅방</div>` + pinnedEntries.map(entry => buildChatRoomRow(entry.id, entry.name, entry.id === activeChatRoomId, true)).join('')
+    : '';
+  const normalHtml = normalEntries.length && pinnedEntries.length
+    ? `<div class="chat-room-list-label">전체 채팅방</div>` + normalEntries.map(entry => buildChatRoomRow(entry.id, entry.name, entry.id === activeChatRoomId, false)).join('')
+    : normalEntries.map(entry => buildChatRoomRow(entry.id, entry.name, entry.id === activeChatRoomId, false)).join('');
+  roomBar.innerHTML = (pinnedHtml + normalHtml) || '<div class="chat-room-list-empty">참여 중인 채팅방이 없습니다.</div>';
 
   document.getElementById('chatView').classList.toggle('list-mode', chatShowingList);
   if (chatShowingList) {
