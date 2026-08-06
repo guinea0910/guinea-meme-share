@@ -101,6 +101,8 @@ body {
   border-radius: 0 4px 4px 0;
   background: var(--cafe-green);
 }
+.sidebar-item-icon { display: inline-block; margin-right: 6px; }
+.sidebar-item-label { display: inline-block; white-space: nowrap; }
 .sidebar-bottom { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-color); }
 .app-content { width: min(600px, calc(100% - 40px)); margin: 40px auto; }
 .chat-view { height: min(720px, calc(100vh - 80px)); min-height: 500px; overflow: hidden; border: 1px solid var(--border-color); border-radius: 14px; background: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; }
@@ -126,9 +128,24 @@ body {
 .unread-badge { display: inline-grid; place-items: center; min-width: 17px; height: 17px; margin-left: 6px; padding: 0 4px; border: 2px solid var(--card-bg); border-radius: 999px; background: #ff3b30; color: #fff; font-size: 10px; font-weight: 700; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,.3); vertical-align: middle; }
 .chat-header-actions { display: flex; gap: 6px; align-items: center; }
 .chat-create-btn { padding: 7px 9px; font-size: 12px; }
-.chat-room-bar { display: flex; gap: 7px; overflow-x: auto; padding: 9px 12px; background: var(--input-bg); border-bottom: 1px solid var(--border-color); }
-.chat-room-btn { flex: 0 0 auto; padding: 6px 10px; border-radius: 15px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-sub); font-size: 12px; }
-.chat-room-btn.active { background: var(--cafe-green); border-color: var(--cafe-green); color: var(--accent-text); }
+.chat-room-list { display: flex; flex-direction: column; overflow-y: auto; max-height: min(60vh, 460px); background: var(--bg-color); }
+.chat-room-list-empty { padding: 30px 16px; text-align: center; color: var(--text-sub); font-size: 13px; }
+.chat-room-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; box-sizing: border-box; background: transparent; border: 0; border-bottom: 1px solid var(--border-color); text-align: left; cursor: pointer; color: var(--text-main); }
+.chat-room-row:last-child { border-bottom: 0; }
+.chat-room-row:hover, .chat-room-row:active { background: var(--card-bg); }
+.chat-room-avatar { flex: 0 0 auto; width: 46px; height: 46px; border-radius: 14px; background: var(--card-bg); display: grid; place-items: center; font-size: 19px; font-weight: 700; color: var(--cafe-green); }
+.chat-room-row.active .chat-room-avatar { background: rgba(3, 199, 90, 0.18); }
+.chat-room-info { flex: 1; min-width: 0; }
+.chat-room-info-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.chat-room-name { font-size: 15px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-room-time { flex: 0 0 auto; font-size: 11px; color: var(--text-sub); }
+.chat-room-info-bottom { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 3px; }
+.chat-room-preview { flex: 1; min-width: 0; font-size: 13px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-room-unread { flex: 0 0 auto; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 999px; background: #ff3b30; color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+.chat-back-btn { display: none; font-size: 16px; }
+.chat-view:not(.list-mode) .chat-back-btn { display: inline-flex; align-items: center; justify-content: center; }
+.chat-view:not(.list-mode) .mode-list-only { display: none !important; }
+.chat-view.list-mode .mode-conv-only { display: none !important; }
 .chat-modal { position: fixed; inset: 0; z-index: 1000; padding: 20px; background: rgba(0, 0, 0, .55); display: grid; place-items: center; box-sizing: border-box; }
 .chat-modal-card { width: min(420px, 100%); max-height: min(620px, 90vh); overflow: auto; padding: 22px; border-radius: 14px; background: var(--card-bg); border: 1px solid var(--border-color); }
 .chat-modal-card h3 { margin-top: 0; }
@@ -142,11 +159,23 @@ body {
 .popular-sort button { flex: 1; padding: 8px; background: var(--card-bg); color: var(--text-sub); border: 1px solid var(--border-color); }
 .popular-sort button.active { background: var(--cafe-green); border-color: var(--cafe-green); color: var(--accent-text); }
 @media (max-width: 700px) {
-  .sidebar { width: 76px; padding: 18px 8px; }
+  .sidebar { width: 62px; padding: 14px 4px; gap: 2px; }
   .sidebar-title { display: none; }
-  .sidebar-item { padding: 12px 6px; text-align: center; font-size: 12px; }
-  .sidebar-item.active { padding-left: 6px; }
+  .sidebar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 9px 2px;
+    text-align: center;
+    font-size: 10px;
+  }
+  .sidebar-item.active { padding-left: 2px; }
   .sidebar-item.active::before { display: none; }
+  .sidebar-item-icon { margin-right: 0; font-size: 18px; line-height: 1; }
+  .sidebar-item-label { font-size: 10px; line-height: 1.15; }
+  .sidebar-item .unread-badge { position: absolute; top: 4px; right: 6px; min-width: 15px; height: 15px; font-size: 9px; margin-left: 0; border-width: 1px; }
   .app-content { width: calc(100% - 28px); margin: 24px auto; }
 }
 @media (max-width: 480px) {
@@ -461,7 +490,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <aside class="sidebar" aria-label="주 메뉴">
 <h1 class="sidebar-title">기니 짤방 웹버전</h1>
 <div id="sidebarNavItems"></div>
-<button id="adminNavBtn" class="sidebar-item hidden" onclick="showAppSection('admin')">🛠 관리자</button>
+<button id="adminNavBtn" class="sidebar-item hidden" onclick="showAppSection('admin')"><span class="sidebar-item-icon">🛠</span><span class="sidebar-item-label">관리자</span></button>
 </aside>
 <main class="app-content">
 <section id="cafeView">
@@ -548,20 +577,20 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="paginationContainer" class="pagination"></div>
 </div>
 </section>
-<section id="chatView" class="chat-view hidden" aria-live="polite">
+<section id="chatView" class="chat-view list-mode hidden" aria-live="polite">
 <div class="chat-header">
-<div><h2 id="chatTitle">전체 채팅</h2><span id="chatStatus" class="chat-count">카페 회원들과 이야기해 보세요</span></div>
-<div class="chat-header-actions"><span id="chatMemberCount" class="chat-count"></span><button class="chat-create-btn" onclick="toggleChatMessageSearch()">🔍</button><button id="teamManageBtn" class="chat-create-btn hidden" onclick="openTeamManage()">관리</button><button id="inviteMemberBtn" class="chat-create-btn hidden" onclick="openInviteMember()">+ 초대</button><button id="leaveChatRoomBtn" class="chat-create-btn danger-btn hidden" onclick="leaveChatRoom()">나가기</button><button class="chat-create-btn" onclick="openCreateChatRoom()">+ 채팅방 만들기</button></div>
+<div style="display:flex; align-items:center; gap:8px;"><button id="chatBackBtn" class="chat-create-btn chat-back-btn" onclick="showChatRoomList()">←</button><div><h2 id="chatTitle">채팅</h2><span id="chatStatus" class="chat-count">카페 회원들과 이야기해 보세요</span></div></div>
+<div class="chat-header-actions"><span id="chatMemberCount" class="chat-count mode-conv-only"></span><button class="chat-create-btn mode-conv-only" onclick="toggleChatMessageSearch()">🔍</button><button id="teamManageBtn" class="chat-create-btn hidden mode-conv-only" onclick="openTeamManage()">관리</button><button id="inviteMemberBtn" class="chat-create-btn hidden mode-conv-only" onclick="openInviteMember()">+ 초대</button><button id="leaveChatRoomBtn" class="chat-create-btn danger-btn hidden mode-conv-only" onclick="leaveChatRoom()">나가기</button><button class="chat-create-btn mode-list-only" onclick="openCreateChatRoom()">+ 채팅방 만들기</button></div>
 </div>
-<input id="chatRoomSearchInput" type="text" placeholder="채팅방 검색..." oninput="filterChatRoomBar(this.value)" style="margin: 8px 12px 0; width: calc(100% - 24px);">
-<div id="chatRoomBar" class="chat-room-bar"></div>
-<div id="chatMessageSearchBar" class="hidden" style="display:flex; gap:6px; padding: 8px 12px 0;">
+<input id="chatRoomSearchInput" class="mode-list-only" type="text" placeholder="채팅방 검색..." oninput="filterChatRoomBar(this.value)" style="margin: 8px 12px 0; width: calc(100% - 24px);">
+<div id="chatRoomBar" class="chat-room-list mode-list-only"></div>
+<div id="chatMessageSearchBar" class="hidden mode-conv-only" style="display:flex; gap:6px; padding: 8px 12px 0;">
 <input id="chatMessageSearchInput" type="text" placeholder="이 채팅방의 메시지 검색..." oninput="handleChatMessageSearch(this.value)" style="margin:0;">
 <button class="chat-create-btn" onclick="closeChatMessageSearch()">닫기</button>
 </div>
-<div id="chatMessages" class="chat-messages"></div>
-<div id="typingIndicator" class="chat-count" style="padding: 0 16px; min-height: 16px;"></div>
-<div id="chatInputArea" class="chat-input-area">
+<div id="chatMessages" class="chat-messages mode-conv-only"></div>
+<div id="typingIndicator" class="chat-count mode-conv-only" style="padding: 0 16px; min-height: 16px;"></div>
+<div id="chatInputArea" class="chat-input-area mode-conv-only">
 <button class="chat-create-btn" onclick="document.getElementById('chatImageInput').click()">🖼</button>
 <input type="file" id="chatImageInput" accept="image/*" class="hidden" onchange="handleChatImageSelected(event)">
 <textarea id="chatInput" placeholder="메시지를 입력하세요" onkeydown="handleChatKeydown(event)" oninput="handleChatTyping()"></textarea>
@@ -822,6 +851,8 @@ let popularExpanded = false;
 let hotRoomsFull = [];
 let hotRoomsExpanded = false;
 let activeChatRoomId = 'global';
+let chatShowingList = true;
+let roomLastMessage = {};
 let pendingChatRoomId = null;
 let isSendingChatMessage = false;
 let isCreatingChatRoom = false;
@@ -903,7 +934,7 @@ function renderSidebarNav() {
     let badge = '';
     if (key === 'chat') badge = '<span id="unreadBadge" class="unread-badge hidden"></span>';
     if (key === 'notifications') badge = '<span id="notificationBadge" class="unread-badge hidden"></span>';
-    return `<button id="${id}" class="sidebar-item" onclick="${onclick}">${item.icon} ${item.label}${badge}</button>`;
+    return `<button id="${id}" class="sidebar-item" onclick="${onclick}"><span class="sidebar-item-icon">${item.icon}</span><span class="sidebar-item-label">${item.label}</span>${badge}</button>`;
   }).join('');
   // 재렌더링 후에도 현재 보고 있는 화면의 활성 표시를 유지
   const activeSection = ['cafe', 'popular', 'ranking', 'bookmarks', 'chat', 'notifications', 'settings', 'admin'].find(sec => !document.getElementById(`${sec}View`)?.classList.contains('hidden'));
@@ -1020,6 +1051,8 @@ window.handleLogout = function() {
   chatMessages = [];
   chatRooms = [];
   unreadByRoom = {};
+  roomLastMessage = {};
+  chatShowingList = true;
   mentionNotifications = [];
   chatInvites = [];
   ownerTransferRequests = [];
@@ -3025,10 +3058,13 @@ function subscribeUnreadChats() {
   trackedRooms.forEach(room => {
     unreadChatUnsubscribers.push(onSnapshot(query(room.ref, orderBy('createdAt', 'asc')), snapshot => {
       const seenKey = getChatSeenKey(room.id);
+      const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+      roomLastMessage[room.id] = lastDoc ? lastDoc.data() : null;
       if (!localStorage.getItem(seenKey)) {
         localStorage.setItem(seenKey, String(Date.now()));
         unreadByRoom[room.id] = 0;
         updateUnreadBadge();
+        renderChatRooms();
         return;
       }
       const lastSeen = Number(localStorage.getItem(seenKey));
@@ -3037,6 +3073,7 @@ function subscribeUnreadChats() {
         return message.author !== currentUser && message.createdAt > lastSeen;
       }).length;
       updateUnreadBadge();
+      renderChatRooms();
     }, error => console.error(error)));
   });
 }
@@ -3324,21 +3361,63 @@ function subscribeChat() {
   });
 }
 
+function formatChatRoomPreview(message) {
+  if (!message) return '대화를 시작해보세요';
+  if (message.system) return message.content || '';
+  const prefix = message.author ? `${message.author}: ` : '';
+  if (message.imageData) return `${prefix}[사진]`;
+  return `${prefix}${message.content || ''}`;
+}
+
+function buildChatRoomRow(id, name, isActive) {
+  const unread = unreadByRoom[id] || 0;
+  const lastMessage = roomLastMessage[id] || null;
+  const avatarChar = id === 'global' ? '🌐' : (name || '?').trim().charAt(0).toUpperCase();
+  const timeLabel = lastMessage && !lastMessage.system ? formatChatTime(lastMessage.createdAt) : '';
+  return `<button class="chat-room-row ${isActive ? 'active' : ''}" onclick="openChatRoomFromList('${id}')">
+<span class="chat-room-avatar">${avatarChar}</span>
+<span class="chat-room-info">
+<span class="chat-room-info-top"><span class="chat-room-name">${escapeHtml(name)}</span><span class="chat-room-time">${timeLabel}</span></span>
+<span class="chat-room-info-bottom"><span class="chat-room-preview">${escapeHtml(formatChatRoomPreview(lastMessage))}</span>${unread > 0 ? `<span class="chat-room-unread">${unread > 99 ? '99+' : unread}</span>` : ''}</span>
+</span>
+</button>`;
+}
+
 function renderChatRooms() {
   const roomBar = document.getElementById('chatRoomBar');
   const activeRoom = activeChatRoomId === 'global' ? null : chatRooms.find(room => room.id === activeChatRoomId);
   if (activeChatRoomId !== 'global' && !activeRoom) activeChatRoomId = 'global';
   const visibleRooms = chatRoomSearchKeyword ? chatRooms.filter(room => (room.name || '').toLowerCase().includes(chatRoomSearchKeyword)) : chatRooms;
-  const roomsHtml = visibleRooms.map(room => `<button class="chat-room-btn ${room.id === activeChatRoomId ? 'active' : ''}" onclick="selectChatRoom('${room.id}')">${escapeHtml(room.name || '이름 없는 채팅방')}</button>`).join('');
   const showGlobal = !chatRoomSearchKeyword || '전체 채팅'.includes(chatRoomSearchKeyword) || '전체'.includes(chatRoomSearchKeyword);
-  roomBar.innerHTML = (showGlobal ? `<button class="chat-room-btn ${activeChatRoomId === 'global' ? 'active' : ''}" onclick="selectChatRoom('global')">전체 채팅</button>` : '') + roomsHtml;
-  const title = activeChatRoomId === 'global' ? '전체 채팅' : (activeRoom?.name || '채팅방');
-  document.getElementById('chatTitle').textContent = title;
+  const roomsHtml = (showGlobal ? buildChatRoomRow('global', '전체 채팅', activeChatRoomId === 'global') : '')
+    + visibleRooms.map(room => buildChatRoomRow(room.id, room.name || '이름 없는 채팅방', room.id === activeChatRoomId)).join('');
+  roomBar.innerHTML = roomsHtml || '<div class="chat-room-list-empty">참여 중인 채팅방이 없습니다.</div>';
+
+  document.getElementById('chatView').classList.toggle('list-mode', chatShowingList);
+  if (chatShowingList) {
+    document.getElementById('chatTitle').textContent = '채팅';
+    document.getElementById('chatStatus').textContent = currentUser ? '대화하고 싶은 채팅방을 선택하세요' : '로그인 후 참여할 수 있습니다';
+  } else {
+    const title = activeChatRoomId === 'global' ? '전체 채팅' : (activeRoom?.name || '채팅방');
+    document.getElementById('chatTitle').textContent = title;
+    document.getElementById('chatStatus').textContent = currentUser ? `${currentUser}님으로 참여 중` : '로그인 후 참여할 수 있습니다';
+  }
   document.getElementById('leaveChatRoomBtn').classList.toggle('hidden', activeChatRoomId === 'global');
   const canManage = activeRoom && activeRoom.roomType === 'team' && (activeRoom.owner === currentUser || (activeRoom.admins || []).includes(currentUser));
   document.getElementById('teamManageBtn').classList.toggle('hidden', !canManage);
   const canInvite = activeRoom && (activeRoom.members || []).includes(currentUser);
   document.getElementById('inviteMemberBtn').classList.toggle('hidden', !canInvite);
+}
+
+window.openChatRoomFromList = function(roomId) {
+  chatShowingList = false;
+  selectChatRoom(roomId);
+  renderChatRooms();
+}
+
+window.showChatRoomList = function() {
+  chatShowingList = true;
+  renderChatRooms();
 }
 
 function subscribeChatRooms() {
@@ -3581,6 +3660,7 @@ window.sendInviteMemberRequests = async function() {
 };
 
 window.openChat = function() {
+  chatShowingList = true;
   document.getElementById('chatStatus').textContent = currentUser ? `${currentUser}님으로 참여 중` : '로그인 후 참여할 수 있습니다';
   document.getElementById('chatMemberCount').textContent = currentUser ? '실시간 채팅' : '';
   renderChatRooms();
