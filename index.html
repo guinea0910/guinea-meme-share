@@ -8,6 +8,7 @@
 :root {
   --cafe-green: #03c75a;
   --cafe-green-hover: #02b350;
+  --accent-text: #ffffff;
   --bg-color: #0f172a;
   --card-bg: #1e293b;
   --text-main: #f8fafc;
@@ -23,6 +24,14 @@ body.light-mode {
   --text-sub: #64748b;
   --border-color: #cbd5e1;
   --input-bg: #f8fafc;
+}
+body.black-mode {
+  --bg-color: #000000;
+  --card-bg: #111111;
+  --text-main: #f5f5f5;
+  --text-sub: #9ca3af;
+  --border-color: #262626;
+  --input-bg: #0a0a0a;
 }
 body {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
@@ -119,7 +128,7 @@ body {
 .chat-create-btn { padding: 7px 9px; font-size: 12px; }
 .chat-room-bar { display: flex; gap: 7px; overflow-x: auto; padding: 9px 12px; background: var(--input-bg); border-bottom: 1px solid var(--border-color); }
 .chat-room-btn { flex: 0 0 auto; padding: 6px 10px; border-radius: 15px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-sub); font-size: 12px; }
-.chat-room-btn.active { background: var(--cafe-green); border-color: var(--cafe-green); color: #fff; }
+.chat-room-btn.active { background: var(--cafe-green); border-color: var(--cafe-green); color: var(--accent-text); }
 .chat-modal { position: fixed; inset: 0; z-index: 1000; padding: 20px; background: rgba(0, 0, 0, .55); display: grid; place-items: center; box-sizing: border-box; }
 .chat-modal-card { width: min(420px, 100%); max-height: min(620px, 90vh); overflow: auto; padding: 22px; border-radius: 14px; background: var(--card-bg); border: 1px solid var(--border-color); }
 .chat-modal-card h3 { margin-top: 0; }
@@ -131,7 +140,7 @@ body {
 .chat-modal-actions button { flex: 1; }
 .popular-sort { display: flex; gap: 7px; margin-bottom: 16px; }
 .popular-sort button { flex: 1; padding: 8px; background: var(--card-bg); color: var(--text-sub); border: 1px solid var(--border-color); }
-.popular-sort button.active { background: var(--cafe-green); border-color: var(--cafe-green); color: #fff; }
+.popular-sort button.active { background: var(--cafe-green); border-color: var(--cafe-green); color: var(--accent-text); }
 @media (max-width: 700px) {
   .sidebar { width: 76px; padding: 18px 8px; }
   .sidebar-title { display: none; }
@@ -139,6 +148,16 @@ body {
   .sidebar-item.active { padding-left: 6px; }
   .sidebar-item.active::before { display: none; }
   .app-content { width: calc(100% - 28px); margin: 24px auto; }
+}
+@media (max-width: 480px) {
+  .profile-header-row { flex-direction: column; align-items: flex-start; }
+  .profile-info-block { min-width: 0; width: 100%; }
+  .profile-header-row #profileFollowBtnWrap { width: 100%; }
+  .profile-header-row #profileFollowBtnWrap button { width: 100%; }
+  .profile-stats-row { gap: 12px; font-size: 12px; }
+  .profile-top-row button { font-size: 12px; padding: 6px 10px; }
+  .post-list-item { flex-wrap: wrap; }
+  .list-stats-badge { flex-direction: row; gap: 8px; text-align: left; }
 }
 h2, h3 { color: var(--cafe-green); }
 .box {
@@ -162,7 +181,7 @@ input, textarea, select {
 button {
   padding: 10px 15px;
   background-color: var(--cafe-green);
-  color: white;
+  color: var(--accent-text);
   border: none;
   border-radius: 6px;
   font-weight: bold;
@@ -180,7 +199,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 }
 .tab-btn.active {
   background-color: var(--cafe-green);
-  color: white;
+  color: var(--accent-text);
   border-color: var(--cafe-green);
 }
 .drop-zone {
@@ -344,7 +363,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 .page-btn.active {
   background-color: var(--cafe-green);
   border-color: var(--cafe-green);
-  color: white;
+  color: var(--accent-text);
   font-weight: bold;
 }
 .page-btn:disabled {
@@ -441,14 +460,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div class="app-shell">
 <aside class="sidebar" aria-label="주 메뉴">
 <h1 class="sidebar-title">기니 짤방 웹버전</h1>
-<button id="cafeNavBtn" class="sidebar-item active" onclick="showAppSection('cafe')">☕ 카페</button>
-<button id="popularNavBtn" class="sidebar-item" onclick="showAppSection('popular')">🔥 인기 짤</button>
-<button id="rankingNavBtn" class="sidebar-item" onclick="showAppSection('ranking')">🏆 랭킹</button>
-<button id="bookmarksNavBtn" class="sidebar-item" onclick="showAppSection('bookmarks')">⭐ 북마크</button>
-<button id="profileNavBtn" class="sidebar-item" onclick="openMyProfile()">👤 프로필</button>
-<button id="chatNavBtn" class="sidebar-item" onclick="showAppSection('chat')">💬 채팅<span id="unreadBadge" class="unread-badge hidden"></span></button>
-<button id="notificationsNavBtn" class="sidebar-item" onclick="showAppSection('notifications')">🔔 알림<span id="notificationBadge" class="unread-badge hidden"></span></button>
-<button id="settingsNavBtn" class="sidebar-item" onclick="openSettingsFromSidebar()">⚙️ 설정</button>
+<div id="sidebarNavItems"></div>
 <button id="adminNavBtn" class="sidebar-item hidden" onclick="showAppSection('admin')">🛠 관리자</button>
 </aside>
 <main class="app-content">
@@ -471,6 +483,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <select id="settingsTheme" onchange="previewTheme()">
 <option value="dark">다크 모드</option>
 <option value="light">라이트 모드</option>
+<option value="black">블랙 모드</option>
 </select>
 </div>
 <div style="display: flex; gap: 10px;">
@@ -581,11 +594,16 @@ button:hover { background-color: var(--cafe-green-hover); }
 <option value="#a855f7">퍼플</option>
 <option value="#ec4899">핑크</option>
 <option value="#f97316">오렌지</option>
+<option value="#ffffff">화이트</option>
 </select>
 </div>
 <div style="margin-bottom: 20px;">
 <label style="font-size: 13px; color: var(--text-sub);">화면 테마</label>
-<select id="settingsViewTheme" onchange="previewSettingsViewTheme()"><option value="dark">다크 모드</option><option value="light">라이트 모드</option></select>
+<select id="settingsViewTheme" onchange="previewSettingsViewTheme()"><option value="dark">다크 모드</option><option value="light">라이트 모드</option><option value="black">블랙 모드</option></select>
+</div>
+<div style="margin-bottom: 20px;">
+<label style="font-size: 13px; color: var(--text-sub);">사이드바 메뉴 순서</label>
+<div id="sidebarOrderList" style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden; margin-top:6px;"></div>
 </div>
 <button onclick="saveSettingsView()" style="width: 100%; margin-bottom: 10px;">설정 저장</button>
 <button onclick="requestPushPermission()" style="width: 100%; margin-bottom: 10px; background: var(--border-color);">브라우저 알림 켜기</button>
@@ -629,18 +647,18 @@ button:hover { background-color: var(--cafe-green-hover); }
 </section>
 <section id="profileView" class="hidden">
 <div class="box">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+<div class="profile-top-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
 <button onclick="closeProfile()" style="background-color: var(--border-color); font-size: 13px; padding: 6px 12px;">← 뒤로</button>
 <button id="profileEditToggleBtn" class="hidden" onclick="toggleProfileEditMode()" style="font-size: 13px; padding: 6px 12px;">✏️ 편집</button>
 </div>
-<div style="display:flex; align-items:center; gap:14px; margin-bottom:14px; flex-wrap:wrap;">
-<div style="position:relative; flex-shrink:0;">
+<div class="profile-header-row" style="display:flex; align-items:center; gap:14px; margin-bottom:14px; flex-wrap:wrap;">
+<div class="profile-avatar-wrap" style="position:relative; flex-shrink:0;">
 <img id="profileAvatarImg" src="" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:1px solid var(--border-color); display:none;" alt="프로필 사진">
 <div id="profileAvatarFallback" style="width:64px; height:64px; border-radius:50%; background:var(--input-bg); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; font-size:22px; color:var(--text-sub);"></div>
 <button id="profileAvatarEditBtn" class="hidden" onclick="document.getElementById('profileAvatarInput').click()" style="position:absolute; bottom:-4px; right:-4px; padding:3px 6px; font-size:11px; border-radius:50%; line-height:1;">✏️</button>
 <input type="file" id="profileAvatarInput" accept="image/*" class="hidden" onchange="handleProfileAvatarSelected(event)">
 </div>
-<div style="flex:1; min-width:150px;">
+<div class="profile-info-block" style="flex:1; min-width:150px;">
 <h2 style="margin:0 0 4px; display:flex; align-items:baseline; gap:6px; flex-wrap:wrap;"><span id="profileUsername"></span><span id="profileAdminBadge" class="hidden" style="font-size:11px; font-weight:normal; color:var(--cafe-green);">(관리자)</span></h2>
 <div id="profileBioDisplay" style="font-size:13px; color:var(--text-sub);"></div>
 <div id="profileBioEditWrap" class="hidden" style="display:flex; gap:6px; margin-top:6px;">
@@ -650,7 +668,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 </div>
 <div id="profileFollowBtnWrap"></div>
 </div>
-<div style="display:flex; gap:16px; margin-bottom:16px; font-size:13px; color:var(--text-sub); flex-wrap:wrap;">
+<div class="profile-stats-row" style="display:flex; gap:16px; margin-bottom:16px; font-size:13px; color:var(--text-sub); flex-wrap:wrap;">
 <span>게시글 <b id="profilePostCount" style="color:var(--text-main);">0</b></span>
 <span>팔로워 <b id="profileFollowerCount" style="color:var(--text-main);">0</b></span>
 <span>팔로잉 <b id="profileFollowingCount" style="color:var(--text-main);">0</b></span>
@@ -839,6 +857,89 @@ let presenceDocs = []; // 관리자 화면용 접속자 원본 데이터 캐시
 let presenceRenderInterval = null; // 시간 경과에 따라 접속자 목록을 주기적으로 다시 그리는 타이머
 const PRESENCE_ONLINE_THRESHOLD = 60000; // 이 시간(ms) 안에 하트비트가 없으면 오프라인으로 간주
 
+// ===== 사이드바 메뉴 순서 커스터마이징 =====
+const SIDEBAR_ITEMS = [
+  { key: 'cafe', icon: '☕', label: '카페' },
+  { key: 'popular', icon: '🔥', label: '인기 짤' },
+  { key: 'ranking', icon: '🏆', label: '랭킹' },
+  { key: 'bookmarks', icon: '⭐', label: '북마크' },
+  { key: 'profile', icon: '👤', label: '프로필' },
+  { key: 'chat', icon: '💬', label: '채팅' },
+  { key: 'notifications', icon: '🔔', label: '알림' },
+  { key: 'settings', icon: '⚙️', label: '설정' }
+];
+const SIDEBAR_ITEM_IDS = { cafe: 'cafeNavBtn', popular: 'popularNavBtn', ranking: 'rankingNavBtn', bookmarks: 'bookmarksNavBtn', profile: 'profileNavBtn', chat: 'chatNavBtn', notifications: 'notificationsNavBtn', settings: 'settingsNavBtn' };
+
+function getSidebarOrderKey() {
+  return `cafe_sidebar_order_${currentUser || 'guest'}`;
+}
+
+function getSidebarOrder() {
+  const validKeys = SIDEBAR_ITEMS.map(item => item.key);
+  try {
+    const saved = JSON.parse(localStorage.getItem(getSidebarOrderKey()) || 'null');
+    if (Array.isArray(saved)) {
+      const filtered = saved.filter(key => validKeys.includes(key));
+      const missing = validKeys.filter(key => !filtered.includes(key));
+      return [...filtered, ...missing];
+    }
+  } catch (error) { console.error(error); }
+  return validKeys;
+}
+
+function saveSidebarOrder(order) {
+  localStorage.setItem(getSidebarOrderKey(), JSON.stringify(order));
+}
+
+function renderSidebarNav() {
+  const container = document.getElementById('sidebarNavItems');
+  if (!container) return;
+  const order = getSidebarOrder();
+  container.innerHTML = order.map(key => {
+    const item = SIDEBAR_ITEMS.find(sidebarItem => sidebarItem.key === key);
+    if (!item) return '';
+    const id = SIDEBAR_ITEM_IDS[key];
+    const onclick = key === 'profile' ? 'openMyProfile()' : (key === 'settings' ? 'openSettingsFromSidebar()' : `showAppSection('${key}')`);
+    let badge = '';
+    if (key === 'chat') badge = '<span id="unreadBadge" class="unread-badge hidden"></span>';
+    if (key === 'notifications') badge = '<span id="notificationBadge" class="unread-badge hidden"></span>';
+    return `<button id="${id}" class="sidebar-item" onclick="${onclick}">${item.icon} ${item.label}${badge}</button>`;
+  }).join('');
+  // 재렌더링 후에도 현재 보고 있는 화면의 활성 표시를 유지
+  const activeSection = ['cafe', 'popular', 'ranking', 'bookmarks', 'chat', 'notifications', 'settings', 'admin'].find(sec => !document.getElementById(`${sec}View`)?.classList.contains('hidden'));
+  if (activeSection && SIDEBAR_ITEM_IDS[activeSection]) {
+    document.getElementById(SIDEBAR_ITEM_IDS[activeSection])?.classList.add('active');
+  }
+}
+
+function renderSidebarOrderEditor() {
+  const container = document.getElementById('sidebarOrderList');
+  if (!container) return;
+  const order = getSidebarOrder();
+  container.innerHTML = order.map((key, index) => {
+    const item = SIDEBAR_ITEMS.find(sidebarItem => sidebarItem.key === key);
+    if (!item) return '';
+    return `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; ${index !== order.length - 1 ? 'border-bottom:1px solid var(--border-color);' : ''}">
+      <span style="font-size:13px;">${item.icon} ${item.label}</span>
+      <span style="display:flex; gap:4px;">
+        <button onclick="moveSidebarItem('${key}', -1)" ${index === 0 ? 'disabled' : ''} style="padding:2px 8px; font-size:12px;">▲</button>
+        <button onclick="moveSidebarItem('${key}', 1)" ${index === order.length - 1 ? 'disabled' : ''} style="padding:2px 8px; font-size:12px;">▼</button>
+      </span>
+    </div>`;
+  }).join('');
+}
+
+window.moveSidebarItem = function(key, direction) {
+  const order = getSidebarOrder();
+  const index = order.indexOf(key);
+  const newIndex = index + direction;
+  if (index === -1 || newIndex < 0 || newIndex >= order.length) return;
+  [order[index], order[newIndex]] = [order[newIndex], order[index]];
+  saveSidebarOrder(order);
+  renderSidebarNav();
+  renderSidebarOrderEditor();
+};
+
 window.switchTab = function(type) {
   const loginForm = document.getElementById('loginForm');
   const signupForm = document.getElementById('signupForm');
@@ -953,6 +1054,7 @@ window.handleLogout = function() {
 };
 
 async function checkAuthState() {
+  renderSidebarNav();
   const authBox = document.getElementById('authBox');
   const mainBox = document.getElementById('mainBox');
   const contentArea = document.getElementById('contentArea');
@@ -1021,16 +1123,30 @@ window.previewTheme = function() {
 };
 
 function applyTheme(theme) {
-  if(theme === 'light') {
+  document.body.classList.remove('light-mode', 'black-mode');
+  if (theme === 'light') {
     document.body.classList.add('light-mode');
-  } else {
-    document.body.classList.remove('light-mode');
+  } else if (theme === 'black') {
+    document.body.classList.add('black-mode');
   }
 }
 
 function applyAccent(color) {
-  document.documentElement.style.setProperty('--cafe-green', color || '#03c75a');
-  document.documentElement.style.setProperty('--cafe-green-hover', color || '#03c75a');
+  const accent = color || '#03c75a';
+  document.documentElement.style.setProperty('--cafe-green', accent);
+  document.documentElement.style.setProperty('--cafe-green-hover', accent);
+  // 밝은 색(화이트 등) 위에는 흰 글씨가 안 보이므로 어두운 글씨로 자동 전환
+  document.documentElement.style.setProperty('--accent-text', isLightColor(accent) ? '#111827' : '#ffffff');
+}
+
+function isLightColor(hex) {
+  const value = (hex || '').replace('#', '');
+  if (value.length !== 6) return false;
+  const r = parseInt(value.substring(0, 2), 16);
+  const g = parseInt(value.substring(2, 4), 16);
+  const b = parseInt(value.substring(4, 6), 16);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 180;
 }
 
 window.previewAccentColor = function() {
@@ -2595,6 +2711,7 @@ window.openSettingsFromSidebar = async function() {
   if (!currentUser) return;
   document.getElementById('settingsViewId').value = currentUser;
   document.getElementById('settingsViewPw').value = '';
+  renderSidebarOrderEditor();
   try {
     const userSnap = await getDoc(doc(db, 'users', currentUser));
     if (userSnap.exists()) {
