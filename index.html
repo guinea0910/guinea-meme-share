@@ -445,6 +445,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button id="popularNavBtn" class="sidebar-item" onclick="showAppSection('popular')">🔥 인기 짤</button>
 <button id="rankingNavBtn" class="sidebar-item" onclick="showAppSection('ranking')">🏆 랭킹</button>
 <button id="bookmarksNavBtn" class="sidebar-item" onclick="showAppSection('bookmarks')">⭐ 북마크</button>
+<button id="profileNavBtn" class="sidebar-item" onclick="openMyProfile()">👤 프로필</button>
 <button id="chatNavBtn" class="sidebar-item" onclick="showAppSection('chat')">💬 채팅<span id="unreadBadge" class="unread-badge hidden"></span></button>
 <button id="notificationsNavBtn" class="sidebar-item" onclick="showAppSection('notifications')">🔔 알림<span id="notificationBadge" class="unread-badge hidden"></span></button>
 <button id="settingsNavBtn" class="sidebar-item" onclick="openSettingsFromSidebar()">⚙️ 설정</button>
@@ -569,16 +570,8 @@ button:hover { background-color: var(--cafe-green-hover); }
 <label style="font-size: 13px; color: var(--text-sub);">새 비밀번호</label>
 <input type="password" id="settingsViewPw" placeholder="변경할 비밀번호 입력 (공백이면 유지)">
 </div>
-<div style="margin-bottom: 10px;">
-<label style="font-size: 13px; color: var(--text-sub);">프로필 사진</label>
-<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-<img id="settingsAvatarPreview" src="" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-color); display: none;" alt="프로필 사진">
-<input type="file" id="settingsAvatarInput" accept="image/*" onchange="handleAvatarSelected(event)">
-</div>
-</div>
-<div style="margin-bottom: 10px;">
-<label style="font-size: 13px; color: var(--text-sub);">한줄소개</label>
-<input type="text" id="settingsBio" placeholder="자신을 소개해 보세요">
+<div style="margin-bottom: 15px;">
+<button onclick="openMyProfile()" style="width: 100%; background: var(--border-color);">👤 내 프로필 (사진·소개글 관리)</button>
 </div>
 <div style="margin-bottom: 10px;">
 <label style="font-size: 13px; color: var(--text-sub);">포인트 컬러</label>
@@ -638,11 +631,19 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div class="box">
 <button onclick="closeProfile()" style="margin-bottom: 15px; background-color: var(--border-color); font-size: 13px; padding: 6px 12px;">← 뒤로</button>
 <div style="display:flex; align-items:center; gap:14px; margin-bottom:14px; flex-wrap:wrap;">
+<div style="position:relative; flex-shrink:0;">
 <img id="profileAvatarImg" src="" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:1px solid var(--border-color); display:none;" alt="프로필 사진">
 <div id="profileAvatarFallback" style="width:64px; height:64px; border-radius:50%; background:var(--input-bg); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; font-size:22px; color:var(--text-sub);"></div>
-<div style="flex:1; min-width:120px;">
+<button id="profileAvatarEditBtn" class="hidden" onclick="document.getElementById('profileAvatarInput').click()" style="position:absolute; bottom:-4px; right:-4px; padding:3px 6px; font-size:11px; border-radius:50%; line-height:1;">✏️</button>
+<input type="file" id="profileAvatarInput" accept="image/*" class="hidden" onchange="handleProfileAvatarSelected(event)">
+</div>
+<div style="flex:1; min-width:150px;">
 <h2 id="profileUsername" style="margin:0 0 4px;"></h2>
-<div id="profileBio" style="font-size:13px; color:var(--text-sub);"></div>
+<div id="profileBioDisplay" style="font-size:13px; color:var(--text-sub);"></div>
+<div id="profileBioEditWrap" class="hidden" style="display:flex; gap:6px; margin-top:6px;">
+<input type="text" id="profileBioInput" placeholder="자신을 소개해 보세요" style="margin:0; flex:1;">
+<button onclick="saveProfileBio()" style="padding:6px 10px; font-size:12px; white-space:nowrap;">저장</button>
+</div>
 </div>
 <div id="profileFollowBtnWrap"></div>
 </div>
@@ -1946,6 +1947,7 @@ window.showAppSection = function(section) {
   document.getElementById('notificationsNavBtn').classList.toggle('active', isNotifications);
   document.getElementById('rankingNavBtn').classList.toggle('active', isRanking);
   document.getElementById('bookmarksNavBtn').classList.toggle('active', isBookmarks);
+  document.getElementById('profileNavBtn').classList.toggle('active', isProfile && profileViewUser === currentUser);
   document.getElementById('adminNavBtn').classList.toggle('active', isAdmin);
   if (isChat) openChat();
   if (isPopular) { loadPopularPosts(); loadHotRooms(); }
@@ -2181,6 +2183,7 @@ async function loadProfileView(username) {
   postsContainer.innerHTML = '불러오는 중...';
   document.getElementById('profileUsername').textContent = username;
   document.getElementById('profileFollowBtnWrap').innerHTML = '';
+  const isOwnProfile = currentUser === username;
   try {
     const userSnap = await getDoc(doc(db, 'users', username));
     const userData = userSnap.exists() ? userSnap.data() : {};
@@ -2196,7 +2199,19 @@ async function loadProfileView(username) {
       avatarFallback.style.display = 'flex';
       avatarFallback.textContent = String(username).slice(0, 2);
     }
-    document.getElementById('profileBio').textContent = userData.bio || '';
+    document.getElementById('profileAvatarEditBtn').classList.toggle('hidden', !isOwnProfile);
+
+    const bioDisplay = document.getElementById('profileBioDisplay');
+    const bioEditWrap = document.getElementById('profileBioEditWrap');
+    if (isOwnProfile) {
+      bioDisplay.classList.add('hidden');
+      bioEditWrap.classList.remove('hidden');
+      document.getElementById('profileBioInput').value = userData.bio || '';
+    } else {
+      bioDisplay.classList.remove('hidden');
+      bioEditWrap.classList.add('hidden');
+      bioDisplay.textContent = userData.bio || '';
+    }
 
     const followingList = userData.following || [];
     document.getElementById('profileFollowingCount').textContent = followingList.length;
@@ -2204,11 +2219,9 @@ async function loadProfileView(username) {
     const followersSnap = await getDocs(query(collection(db, 'users'), where('following', 'array-contains', username)));
     document.getElementById('profileFollowerCount').textContent = followersSnap.size;
 
-    if (currentUser && currentUser !== username) {
+    if (currentUser && !isOwnProfile) {
       const isFollowing = currentUserFollowing.includes(username);
       document.getElementById('profileFollowBtnWrap').innerHTML = `<button onclick="toggleFollowUser('${username}')" style="padding:6px 14px; font-size:12px; ${isFollowing ? 'background: var(--border-color);' : ''}">${isFollowing ? '팔로잉 취소' : '+ 팔로우'}</button>`;
-    } else if (currentUser === username) {
-      document.getElementById('profileFollowBtnWrap').innerHTML = `<span style="font-size:12px; color:var(--text-sub);">내 프로필</span>`;
     }
 
     const postsSnap = await getDocs(query(collection(db, 'posts'), where('author', '==', username)));
@@ -2237,6 +2250,56 @@ async function loadProfileView(username) {
     postsContainer.innerHTML = '<div class="error-box">프로필을 불러오지 못했습니다.</div>';
   }
 }
+
+window.openMyProfile = function() {
+  if (!currentUser) { alert('로그인 후 이용할 수 있습니다.'); return; }
+  openProfile(currentUser);
+};
+
+// 프로필 사진: 파일 선택 즉시 정사각형으로 압축해 바로 저장
+window.handleProfileAvatarSelected = function(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file || !currentUser) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const img = new Image();
+    img.onload = async function() {
+      const size = 160;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const scale = Math.max(size / img.width, size / img.height);
+      const sw = size / scale, sh = size / scale;
+      ctx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, 0, 0, size, size);
+      const photoURL = canvas.toDataURL('image/jpeg', 0.85);
+      try {
+        await updateDoc(doc(db, 'users', currentUser), { photoURL });
+        userProfiles[currentUser] = { ...(userProfiles[currentUser] || {}), photoURL };
+        loadProfileView(currentUser);
+      } catch (error) {
+        console.error(error);
+        alert('프로필 사진 저장에 실패했습니다.');
+      }
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+};
+
+window.saveProfileBio = async function() {
+  if (!currentUser) return;
+  const bio = document.getElementById('profileBioInput').value.trim();
+  try {
+    await updateDoc(doc(db, 'users', currentUser), { bio });
+    userProfiles[currentUser] = { ...(userProfiles[currentUser] || {}), bio };
+    alert('소개글이 저장되었습니다!');
+  } catch (error) {
+    console.error(error);
+    alert('소개글 저장에 실패했습니다.');
+  }
+};
 
 window.toggleFollowUser = async function(targetUser) {
   if (!currentUser || currentUser === targetUser) return;
@@ -2516,21 +2579,12 @@ window.openSettingsFromSidebar = async function() {
   if (!currentUser) return;
   document.getElementById('settingsViewId').value = currentUser;
   document.getElementById('settingsViewPw').value = '';
-  pendingAvatarData = null;
   try {
     const userSnap = await getDoc(doc(db, 'users', currentUser));
     if (userSnap.exists()) {
       const data = userSnap.data();
       document.getElementById('settingsViewTheme').value = data.theme || 'dark';
-      document.getElementById('settingsBio').value = data.bio || '';
       document.getElementById('settingsAccentColor').value = data.accentColor || '#03c75a';
-      const preview = document.getElementById('settingsAvatarPreview');
-      if (data.photoURL) {
-        preview.src = data.photoURL;
-        preview.style.display = 'inline-block';
-      } else {
-        preview.style.display = 'none';
-      }
     }
   } catch (error) {
     console.error(error);
@@ -2541,43 +2595,15 @@ window.previewSettingsViewTheme = function() {
   applyTheme(document.getElementById('settingsViewTheme').value);
 }
 
-window.handleAvatarSelected = function(event) {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(ev) {
-    const img = new Image();
-    img.onload = function() {
-      const size = 160;
-      const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      const scale = Math.max(size / img.width, size / img.height);
-      const sw = size / scale, sh = size / scale;
-      ctx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, 0, 0, size, size);
-      pendingAvatarData = canvas.toDataURL('image/jpeg', 0.85);
-      const preview = document.getElementById('settingsAvatarPreview');
-      preview.src = pendingAvatarData;
-      preview.style.display = 'inline-block';
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
 window.saveSettingsView = async function() {
   const newPw = document.getElementById('settingsViewPw').value.trim();
   const newTheme = document.getElementById('settingsViewTheme').value;
-  const newBio = document.getElementById('settingsBio').value.trim();
   const newAccent = document.getElementById('settingsAccentColor').value;
   try {
-    const updateData = { theme: newTheme, bio: newBio, accentColor: newAccent };
+    const updateData = { theme: newTheme, accentColor: newAccent };
     if (newPw) updateData.password = newPw;
-    if (pendingAvatarData) updateData.photoURL = pendingAvatarData;
     await updateDoc(doc(db, 'users', currentUser), updateData);
     userProfiles[currentUser] = { ...(userProfiles[currentUser] || {}), ...updateData };
-    pendingAvatarData = null;
     alert('설정이 성공적으로 저장되었습니다!');
     document.getElementById('settingsViewPw').value = '';
   } catch (error) {
