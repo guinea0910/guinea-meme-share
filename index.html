@@ -629,7 +629,10 @@ button:hover { background-color: var(--cafe-green-hover); }
 </section>
 <section id="profileView" class="hidden">
 <div class="box">
-<button onclick="closeProfile()" style="margin-bottom: 15px; background-color: var(--border-color); font-size: 13px; padding: 6px 12px;">← 뒤로</button>
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+<button onclick="closeProfile()" style="background-color: var(--border-color); font-size: 13px; padding: 6px 12px;">← 뒤로</button>
+<button id="profileEditToggleBtn" class="hidden" onclick="toggleProfileEditMode()" style="font-size: 13px; padding: 6px 12px;">✏️ 편집</button>
+</div>
 <div style="display:flex; align-items:center; gap:14px; margin-bottom:14px; flex-wrap:wrap;">
 <div style="position:relative; flex-shrink:0;">
 <img id="profileAvatarImg" src="" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:1px solid var(--border-color); display:none;" alt="프로필 사진">
@@ -638,7 +641,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <input type="file" id="profileAvatarInput" accept="image/*" class="hidden" onchange="handleProfileAvatarSelected(event)">
 </div>
 <div style="flex:1; min-width:150px;">
-<h2 id="profileUsername" style="margin:0 0 4px;"></h2>
+<h2 style="margin:0 0 4px; display:flex; align-items:baseline; gap:6px; flex-wrap:wrap;"><span id="profileUsername"></span><span id="profileAdminBadge" class="hidden" style="font-size:11px; font-weight:normal; color:var(--cafe-green);">(관리자)</span></h2>
 <div id="profileBioDisplay" style="font-size:13px; color:var(--text-sub);"></div>
 <div id="profileBioEditWrap" class="hidden" style="display:flex; gap:6px; margin-top:6px;">
 <input type="text" id="profileBioInput" placeholder="자신을 소개해 보세요" style="margin:0; flex:1;">
@@ -826,6 +829,7 @@ let currentUserFollowing = []; // 로그인한 회원이 팔로우 중인 아이
 let followingFeedOnly = false; // 목록에서 '팔로잉만 보기' 필터 활성화 여부
 let profileViewUser = null; // 현재 프로필 화면에서 보고 있는 대상 아이디
 let profileViewPreviousSection = 'cafe'; // 프로필 화면 진입 전 화면(뒤로가기용)
+let profileEditMode = false; // 내 프로필 화면에서 사진/소개글 편집 모드 여부
 let draftSaveTimeout = null; // 글쓰기 임시저장 디바운스 타이머
 let chatSearchKeyword = ''; // 채팅방 내 메시지 검색어
 let pendingAvatarData = null;
@@ -2169,13 +2173,20 @@ window.openProfile = function(username) {
   if (!username) return;
   const current = ['cafe', 'popular', 'ranking', 'bookmarks', 'chat', 'notifications', 'settings', 'admin'].find(sec => !document.getElementById(`${sec}View`)?.classList.contains('hidden'));
   if (current) profileViewPreviousSection = current;
+  if (profileViewUser !== username) profileEditMode = false;
   profileViewUser = username;
   showAppSection('profile');
   loadProfileView(username);
 };
 
 window.closeProfile = function() {
+  profileEditMode = false;
   showAppSection(profileViewPreviousSection || 'cafe');
+};
+
+window.toggleProfileEditMode = function() {
+  profileEditMode = !profileEditMode;
+  if (profileViewUser) loadProfileView(profileViewUser);
 };
 
 async function loadProfileView(username) {
@@ -2184,10 +2195,15 @@ async function loadProfileView(username) {
   document.getElementById('profileUsername').textContent = username;
   document.getElementById('profileFollowBtnWrap').innerHTML = '';
   const isOwnProfile = currentUser === username;
+  const editToggleBtn = document.getElementById('profileEditToggleBtn');
+  editToggleBtn.classList.toggle('hidden', !isOwnProfile);
+  editToggleBtn.textContent = profileEditMode ? '완료' : '✏️ 편집';
+  const editable = isOwnProfile && profileEditMode;
   try {
     const userSnap = await getDoc(doc(db, 'users', username));
     const userData = userSnap.exists() ? userSnap.data() : {};
     userProfiles[username] = userData;
+    document.getElementById('profileAdminBadge').classList.toggle('hidden', userData.role !== 'admin');
     const avatarImg = document.getElementById('profileAvatarImg');
     const avatarFallback = document.getElementById('profileAvatarFallback');
     if (userData.photoURL) {
@@ -2199,11 +2215,11 @@ async function loadProfileView(username) {
       avatarFallback.style.display = 'flex';
       avatarFallback.textContent = String(username).slice(0, 2);
     }
-    document.getElementById('profileAvatarEditBtn').classList.toggle('hidden', !isOwnProfile);
+    document.getElementById('profileAvatarEditBtn').classList.toggle('hidden', !editable);
 
     const bioDisplay = document.getElementById('profileBioDisplay');
     const bioEditWrap = document.getElementById('profileBioEditWrap');
-    if (isOwnProfile) {
+    if (editable) {
       bioDisplay.classList.add('hidden');
       bioEditWrap.classList.remove('hidden');
       document.getElementById('profileBioInput').value = userData.bio || '';
