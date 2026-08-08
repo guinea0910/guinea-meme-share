@@ -680,7 +680,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <select id="settingsViewTheme" onchange="previewSettingsViewTheme()"><option value="dark">다크 모드</option><option value="light">라이트 모드</option><option value="black">블랙 모드</option></select>
 </div>
 <div style="margin-bottom: 20px;">
-<label style="font-size: 13px; color: var(--text-sub);">사이드바 메뉴 순서 (항목을 꾹 눌러서 드래그로 이동)</label>
+<label style="font-size: 13px; color: var(--text-sub);">사이드바 메뉴 순서 (화살표 버튼으로 순서 변경)</label>
 <div id="sidebarOrderList" style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden; margin-top:6px;"></div>
 </div>
 <button onclick="saveSettingsView()" style="width: 100%; margin-bottom: 10px;">설정 저장</button>
@@ -1076,77 +1076,26 @@ function renderSidebarOrderEditor() {
   container.innerHTML = order.map((key, index) => {
     const item = SIDEBAR_ITEMS.find(sidebarItem => sidebarItem.key === key);
     if (!item) return '';
-    return `<div class="sidebar-order-item" data-key="${key}" style="display:flex; align-items:center; gap:10px; padding:10px; box-sizing:border-box; background:var(--card-bg); touch-action:none; user-select:none; -webkit-user-select:none; ${index !== order.length - 1 ? 'border-bottom:1px solid var(--border-color);' : ''}">
-      <span class="sidebar-order-handle" style="font-size:16px; color:var(--text-sub); line-height:1; cursor:grab;">≡</span>
+    const isFirst = index === 0;
+    const isLast = index === order.length - 1;
+    return `<div class="sidebar-order-item" data-key="${key}" style="display:flex; align-items:center; gap:10px; padding:10px; box-sizing:border-box; background:var(--card-bg); ${index !== order.length - 1 ? 'border-bottom:1px solid var(--border-color);' : ''}">
       <span style="font-size:13px; flex:1;">${item.icon} ${item.label}</span>
+      <button onclick="moveSidebarItem('${key}', -1)" ${isFirst ? 'disabled' : ''} style="padding:5px 9px; font-size:13px; line-height:1; ${isFirst ? 'opacity:0.35; cursor:not-allowed;' : ''}" aria-label="위로 이동">▲</button>
+      <button onclick="moveSidebarItem('${key}', 1)" ${isLast ? 'disabled' : ''} style="padding:5px 9px; font-size:13px; line-height:1; ${isLast ? 'opacity:0.35; cursor:not-allowed;' : ''}" aria-label="아래로 이동">▼</button>
     </div>`;
   }).join('');
-  container.querySelectorAll('.sidebar-order-item').forEach(row => {
-    row.addEventListener('pointerdown', handleSidebarOrderPointerDown);
-  });
 }
 
-let sidebarOrderPressTimer = null;
-
-function handleSidebarOrderPointerDown(event) {
-  const row = event.currentTarget;
-  const container = document.getElementById('sidebarOrderList');
-  const pointerId = event.pointerId;
-  const startX = event.clientX;
-  const startY = event.clientY;
-
-  const cancelPress = () => {
-    clearTimeout(sidebarOrderPressTimer);
-    row.removeEventListener('pointermove', onPreMove);
-    row.removeEventListener('pointerup', cancelPress);
-    row.removeEventListener('pointercancel', cancelPress);
-  };
-  const onPreMove = (moveEvent) => {
-    if (Math.abs(moveEvent.clientX - startX) > 10 || Math.abs(moveEvent.clientY - startY) > 10) {
-      cancelPress();
-    }
-  };
-  row.addEventListener('pointermove', onPreMove);
-  row.addEventListener('pointerup', cancelPress);
-  row.addEventListener('pointercancel', cancelPress);
-
-  sidebarOrderPressTimer = setTimeout(() => {
-    cancelPress();
-    beginSidebarOrderDrag(row, container, pointerId);
-  }, 350);
-}
-
-function beginSidebarOrderDrag(row, container, pointerId) {
-  try { row.setPointerCapture(pointerId); } catch (error) { /* noop */ }
-  row.style.opacity = '0.55';
-  row.style.background = 'var(--input-bg)';
-  row.style.borderRadius = '8px';
-  if (navigator.vibrate) navigator.vibrate(12);
-
-  const onMove = (moveEvent) => {
-    moveEvent.preventDefault();
-    const target = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
-    const targetRow = target ? target.closest('.sidebar-order-item') : null;
-    if (targetRow && targetRow !== row && container.contains(targetRow)) {
-      const rect = targetRow.getBoundingClientRect();
-      const insertBefore = moveEvent.clientY < rect.top + rect.height / 2;
-      container.insertBefore(row, insertBefore ? targetRow : targetRow.nextSibling);
-    }
-  };
-  const onUp = () => {
-    try { row.releasePointerCapture(pointerId); } catch (error) { /* noop */ }
-    row.removeEventListener('pointermove', onMove);
-    row.removeEventListener('pointerup', onUp);
-    row.removeEventListener('pointercancel', onUp);
-    const newOrder = Array.from(container.querySelectorAll('.sidebar-order-item')).map(el => el.dataset.key);
-    saveSidebarOrder(newOrder);
-    renderSidebarNav();
-    renderSidebarOrderEditor();
-  };
-  row.addEventListener('pointermove', onMove);
-  row.addEventListener('pointerup', onUp);
-  row.addEventListener('pointercancel', onUp);
-}
+window.moveSidebarItem = function(key, direction) {
+  const order = getSidebarOrder();
+  const index = order.indexOf(key);
+  const targetIndex = index + direction;
+  if (index === -1 || targetIndex < 0 || targetIndex >= order.length) return;
+  [order[index], order[targetIndex]] = [order[targetIndex], order[index]];
+  saveSidebarOrder(order);
+  renderSidebarNav();
+  renderSidebarOrderEditor();
+};
 
 window.switchTab = function(type) {
   const loginForm = document.getElementById('loginForm');
