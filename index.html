@@ -163,6 +163,26 @@ body {
 .popular-sort { display: flex; gap: 7px; margin-bottom: 16px; }
 .popular-sort button { flex: 1; padding: 8px; background: var(--card-bg); color: var(--text-sub); border: 1px solid var(--border-color); }
 .popular-sort button.active { background: var(--cafe-green); border-color: var(--cafe-green); color: var(--accent-text); }
+.chat-notice-bar { display: flex; align-items: center; gap: 8px; padding: 8px 14px; margin: 8px 12px 0; border-radius: 10px; background: rgba(3, 199, 90, 0.10); border: 1px solid var(--border-color); font-size: 13px; color: var(--text-main); cursor: pointer; }
+.chat-notice-bar-icon { flex: 0 0 auto; }
+.chat-notice-bar-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.poll-card { border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; margin-bottom: 12px; background: var(--input-bg); }
+.poll-question { font-weight: 700; margin-bottom: 8px; font-size: 14px; }
+.poll-option { position: relative; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; cursor: pointer; overflow: hidden; background: var(--card-bg); }
+.poll-option-fill { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(3, 199, 90, 0.18); z-index: 0; transition: width 0.2s ease; }
+.poll-option-label { position: relative; z-index: 1; display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.poll-option.voted { border-color: var(--cafe-green); }
+.poll-meta { font-size: 11px; color: var(--text-sub); margin-top: 6px; display: flex; justify-content: space-between; gap: 8px; }
+.poll-option-input { margin-bottom: 6px; }
+.board-post { border-bottom: 1px solid var(--border-color); padding: 12px 2px; }
+.board-post:last-child { border-bottom: 0; }
+.board-post-title { font-weight: 700; cursor: pointer; font-size: 14px; }
+.board-post-meta { font-size: 11px; color: var(--text-sub); margin-top: 3px; }
+.board-post-meta a { color: var(--text-sub); }
+.board-post-content { margin-top: 8px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+.intro-row { display: flex; align-items: center; gap: 9px; padding: 10px; border-bottom: 1px solid var(--border-color); }
+.intro-row:last-child { border-bottom: 0; }
+.intro-row input { margin: 0; flex: 1; }
 @media (max-width: 700px) {
   .sidebar { width: 62px; padding: 14px 4px; gap: 2px; }
   .sidebar-title { display: none; }
@@ -608,8 +628,9 @@ button:hover { background-color: var(--cafe-green-hover); }
 <section id="chatView" class="chat-view list-mode hidden" aria-live="polite">
 <div class="chat-header">
 <div style="display:flex; align-items:center; gap:8px;"><button id="chatBackBtn" class="chat-create-btn chat-back-btn" onclick="showChatRoomList()">←</button><div><h2 id="chatTitle">채팅</h2><span id="chatStatus" class="chat-count">카페 회원들과 이야기해 보세요</span></div></div>
-<div class="chat-header-actions"><span id="chatMemberCount" class="chat-count mode-conv-only"></span><button class="chat-create-btn mode-conv-only" onclick="toggleChatMessageSearch()">🔍</button><button id="teamManageBtn" class="chat-create-btn hidden mode-conv-only" onclick="openTeamManage()">관리</button><button id="inviteMemberBtn" class="chat-create-btn hidden mode-conv-only" onclick="openInviteMember()">+ 초대</button><button id="leaveChatRoomBtn" class="chat-create-btn danger-btn hidden mode-conv-only" onclick="leaveChatRoom()">나가기</button><button class="chat-create-btn mode-list-only" onclick="openCreateChatRoom()">+ 채팅방 만들기</button></div>
+<div class="chat-header-actions"><span id="chatMemberCount" class="chat-count mode-conv-only"></span><button class="chat-create-btn mode-conv-only" onclick="toggleChatMessageSearch()">🔍</button><button class="chat-create-btn mode-conv-only" onclick="openChatNotice()" title="공지">📌</button><button class="chat-create-btn mode-conv-only" onclick="openChatPoll()" title="투표">📊</button><button class="chat-create-btn mode-conv-only" onclick="openChatBoard()" title="게시판">📋</button><button id="teamIntroBtn" class="chat-create-btn hidden mode-conv-only" onclick="openTeamIntro()" title="팀 한줄소개">👤</button><button id="teamManageBtn" class="chat-create-btn hidden mode-conv-only" onclick="openTeamManage()">관리</button><button id="inviteMemberBtn" class="chat-create-btn hidden mode-conv-only" onclick="openInviteMember()">+ 초대</button><button id="leaveChatRoomBtn" class="chat-create-btn danger-btn hidden mode-conv-only" onclick="leaveChatRoom()">나가기</button><button class="chat-create-btn mode-list-only" onclick="openCreateChatRoom()">+ 채팅방 만들기</button></div>
 </div>
+<div id="chatNoticeBar" class="chat-notice-bar hidden mode-conv-only" onclick="openChatNotice()"><span class="chat-notice-bar-icon">📌</span><span id="chatNoticeBarText" class="chat-notice-bar-text"></span></div>
 <input id="chatRoomSearchInput" class="mode-list-only" type="text" placeholder="채팅방 검색..." oninput="filterChatRoomBar(this.value)" style="margin: 8px 12px 0; width: calc(100% - 24px);">
 <div id="chatRoomBar" class="chat-room-list mode-list-only"></div>
 <div id="chatMessageSearchBar" class="hidden mode-conv-only" style="display:flex; gap:6px; padding: 8px 12px 0;">
@@ -815,6 +836,58 @@ button:hover { background-color: var(--cafe-green-hover); }
 </div>
 </div>
 </div>
+<div id="chatNoticeModal" class="chat-modal hidden" role="dialog" aria-modal="true" aria-labelledby="chatNoticeModalTitle">
+<div class="chat-modal-card">
+<h3 id="chatNoticeModalTitle">📌 공지사항</h3>
+<div id="chatNoticeCurrentWrap" style="margin-bottom:14px;"></div>
+<textarea id="chatNoticeInput" placeholder="공지 내용을 입력하세요" style="width:100%; min-height:80px; box-sizing:border-box;"></textarea>
+<div class="chat-modal-actions">
+<button class="danger-btn" onclick="closeChatNotice()">닫기</button>
+<button onclick="saveChatNotice()">공지 등록</button>
+</div>
+</div>
+</div>
+<div id="chatPollModal" class="chat-modal hidden" role="dialog" aria-modal="true" aria-labelledby="chatPollModalTitle">
+<div class="chat-modal-card">
+<h3 id="chatPollModalTitle">📊 투표</h3>
+<div id="chatPollList">불러오는 중...</div>
+<hr style="border-color: var(--border-color); margin:16px 0;">
+<h4 style="margin:0 0 8px;">새 투표 만들기</h4>
+<input id="pollQuestionInput" type="text" placeholder="투표 질문">
+<div id="pollOptionInputs">
+<input type="text" class="poll-option-input" placeholder="옵션 1">
+<input type="text" class="poll-option-input" placeholder="옵션 2">
+</div>
+<button onclick="addPollOptionInput()" style="width:100%; margin-bottom:10px; background: var(--border-color);">+ 옵션 추가</button>
+<div class="chat-modal-actions">
+<button class="danger-btn" onclick="closeChatPoll()">닫기</button>
+<button onclick="createChatPoll()">투표 만들기</button>
+</div>
+</div>
+</div>
+<div id="chatBoardModal" class="chat-modal hidden" role="dialog" aria-modal="true" aria-labelledby="chatBoardModalTitle">
+<div class="chat-modal-card">
+<h3 id="chatBoardModalTitle">📋 게시판</h3>
+<div id="chatBoardList">불러오는 중...</div>
+<hr style="border-color: var(--border-color); margin:16px 0;">
+<h4 style="margin:0 0 8px;">새 글쓰기</h4>
+<input id="boardTitleInput" type="text" placeholder="제목">
+<textarea id="boardContentInput" placeholder="내용을 입력하세요" style="width:100%; min-height:70px; box-sizing:border-box;"></textarea>
+<div class="chat-modal-actions">
+<button class="danger-btn" onclick="closeChatBoard()">닫기</button>
+<button onclick="createBoardPost()">등록</button>
+</div>
+</div>
+</div>
+<div id="teamIntroModal" class="chat-modal hidden" role="dialog" aria-modal="true" aria-labelledby="teamIntroModalTitle">
+<div class="chat-modal-card">
+<h3 id="teamIntroModalTitle">👤 팀 한줄소개</h3>
+<div id="teamIntroList" class="member-picker">불러오는 중...</div>
+<div class="chat-modal-actions">
+<button onclick="closeTeamIntro()" style="width:100%;">닫기</button>
+</div>
+</div>
+</div>
 </main>
 </div>
 <!-- Firebase SDK -->
@@ -885,6 +958,13 @@ let isSendingChatMessage = false;
 let isCreatingChatRoom = false;
 let userProfiles = {};
 let currentUserRole = null;
+let chatRoomExtra = null;
+let unsubscribeNoticeExtra = null;
+let chatPolls = [];
+let unsubscribeChatPolls = null;
+let chatBoardPosts = [];
+let unsubscribeChatBoard = null;
+let expandedBoardPostId = null;
 let popularPeriod = 'all';
 let notifFilter = 'all';
 let replyContext = null;
@@ -3482,6 +3562,322 @@ function subscribeChat() {
   });
 }
 
+// ===== 공지 / 투표 / 게시판 / 팀 한줄소개 =====
+function getExtraDocRef(roomId) {
+  return doc(db, 'chatRoomExtras', roomId);
+}
+
+function subscribeRoomNotice() {
+  if (unsubscribeNoticeExtra) { unsubscribeNoticeExtra(); unsubscribeNoticeExtra = null; }
+  chatRoomExtra = null;
+  renderNoticeBar();
+  unsubscribeNoticeExtra = onSnapshot(getExtraDocRef(activeChatRoomId), snap => {
+    chatRoomExtra = snap.exists() ? snap.data() : null;
+    renderNoticeBar();
+  }, error => console.error(error));
+}
+
+function renderNoticeBar() {
+  const bar = document.getElementById('chatNoticeBar');
+  const textEl = document.getElementById('chatNoticeBarText');
+  if (!bar || !textEl) return;
+  const notice = chatRoomExtra && chatRoomExtra.notice;
+  if (notice && notice.text) {
+    textEl.textContent = notice.text;
+    bar.classList.remove('hidden');
+  } else {
+    bar.classList.add('hidden');
+  }
+}
+
+function canEditNotice() {
+  if (!currentUser) return false;
+  const room = chatRooms.find(r => r.id === activeChatRoomId);
+  if (room && room.roomType === 'team') {
+    return room.owner === currentUser || (room.admins || []).includes(currentUser);
+  }
+  return true;
+}
+
+window.openChatNotice = function() {
+  if (!currentUser) { alert('로그인 후 이용할 수 있습니다.'); return; }
+  const notice = chatRoomExtra && chatRoomExtra.notice;
+  const canEdit = canEditNotice();
+  const currentWrap = document.getElementById('chatNoticeCurrentWrap');
+  currentWrap.innerHTML = notice && notice.text
+    ? `<div style="padding:10px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:10px;">
+        <div style="white-space:pre-wrap; font-size:13px;">${escapeHtml(notice.text)}</div>
+        <div style="font-size:11px; color:var(--text-sub); margin-top:6px;">${escapeHtml(notice.author || '')} · ${formatChatTime(notice.updatedAt)}</div>
+        ${canEdit ? `<button class="danger-btn" onclick="clearChatNotice()" style="margin-top:8px; padding:4px 8px; font-size:11px;">공지 삭제</button>` : ''}
+      </div>`
+    : `<div style="color:var(--text-sub); font-size:13px; margin-bottom:10px;">등록된 공지가 없습니다.</div>`;
+  const input = document.getElementById('chatNoticeInput');
+  input.value = '';
+  input.disabled = !canEdit;
+  input.placeholder = canEdit ? '공지 내용을 입력하세요' : '공지 수정 권한이 없습니다 (방장/부방장만 가능)';
+  document.getElementById('chatNoticeModal').classList.remove('hidden');
+};
+
+window.closeChatNotice = function() {
+  document.getElementById('chatNoticeModal').classList.add('hidden');
+};
+
+window.saveChatNotice = async function() {
+  if (!canEditNotice()) { alert('공지를 등록할 권한이 없습니다.'); return; }
+  const text = document.getElementById('chatNoticeInput').value.trim();
+  if (!text) { alert('공지 내용을 입력해 주세요.'); return; }
+  try {
+    await setDoc(getExtraDocRef(activeChatRoomId), { notice: { text, author: currentUser, updatedAt: Date.now() } }, { merge: true });
+    closeChatNotice();
+  } catch (error) {
+    console.error(error);
+    alert('공지를 등록하지 못했습니다.');
+  }
+};
+
+window.clearChatNotice = async function() {
+  if (!canEditNotice()) return;
+  if (!confirm('공지를 삭제할까요?')) return;
+  try {
+    await setDoc(getExtraDocRef(activeChatRoomId), { notice: null }, { merge: true });
+    closeChatNotice();
+  } catch (error) {
+    console.error(error);
+    alert('공지를 삭제하지 못했습니다.');
+  }
+};
+
+function getPollsCollection(roomId) {
+  return collection(db, 'chatRoomExtras', roomId, 'polls');
+}
+
+window.openChatPoll = function() {
+  if (!currentUser) { alert('로그인 후 이용할 수 있습니다.'); return; }
+  document.getElementById('pollQuestionInput').value = '';
+  document.getElementById('pollOptionInputs').innerHTML = `<input type="text" class="poll-option-input" placeholder="옵션 1"><input type="text" class="poll-option-input" placeholder="옵션 2">`;
+  document.getElementById('chatPollList').innerHTML = '불러오는 중...';
+  document.getElementById('chatPollModal').classList.remove('hidden');
+  subscribeChatPolls();
+};
+
+window.closeChatPoll = function() {
+  document.getElementById('chatPollModal').classList.add('hidden');
+  if (unsubscribeChatPolls) { unsubscribeChatPolls(); unsubscribeChatPolls = null; }
+};
+
+function subscribeChatPolls() {
+  if (unsubscribeChatPolls) return;
+  unsubscribeChatPolls = onSnapshot(query(getPollsCollection(activeChatRoomId), orderBy('createdAt', 'desc')), snapshot => {
+    chatPolls = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    renderChatPolls();
+  }, error => {
+    console.error(error);
+    document.getElementById('chatPollList').innerHTML = '<div style="color:var(--danger-color); font-size:13px;">투표를 불러오지 못했습니다.</div>';
+  });
+}
+
+function renderChatPolls() {
+  const list = document.getElementById('chatPollList');
+  if (!list) return;
+  if (!chatPolls.length) { list.innerHTML = '<div style="color:var(--text-sub); font-size:13px;">진행 중인 투표가 없습니다.</div>'; return; }
+  list.innerHTML = chatPolls.map(renderPollCard).join('');
+}
+
+function renderPollCard(poll) {
+  const votes = poll.votes || {};
+  const total = Object.keys(votes).length;
+  const myVote = votes[currentUser];
+  const options = (poll.options || []).map((opt, idx) => {
+    const count = Object.values(votes).filter(v => v === idx).length;
+    const pct = total ? Math.round((count / total) * 100) : 0;
+    const voted = myVote === idx;
+    const clickable = poll.closed ? '' : ` onclick="voteChatPoll('${poll.id}', ${idx})"`;
+    return `<div class="poll-option ${voted ? 'voted' : ''}"${clickable}>
+      <div class="poll-option-fill" style="width:${pct}%;"></div>
+      <div class="poll-option-label"><span>${escapeHtml(opt.text)}${voted ? ' ✓' : ''}</span><span>${count}표 (${pct}%)</span></div>
+    </div>`;
+  }).join('');
+  const closeBtn = poll.author === currentUser && !poll.closed
+    ? `<button class="danger-btn" onclick="closeChatPollVoting('${poll.id}')" style="padding:4px 8px; font-size:11px; margin-top:4px;">투표 마감</button>` : '';
+  return `<div class="poll-card">
+    <div class="poll-question">${escapeHtml(poll.question)}${poll.closed ? ' (마감됨)' : ''}</div>
+    ${options}
+    <div class="poll-meta"><span>${escapeHtml(poll.author || '')} · ${formatChatTime(poll.createdAt)}</span><span>${total}명 참여</span></div>
+    ${closeBtn}
+  </div>`;
+}
+
+window.voteChatPoll = async function(pollId, optionIdx) {
+  if (!currentUser) return;
+  const poll = chatPolls.find(p => p.id === pollId);
+  if (!poll || poll.closed) return;
+  try {
+    await updateDoc(doc(getPollsCollection(activeChatRoomId), pollId), { [`votes.${currentUser}`]: optionIdx });
+  } catch (error) {
+    console.error(error);
+    alert('투표에 실패했습니다.');
+  }
+};
+
+window.closeChatPollVoting = async function(pollId) {
+  const poll = chatPolls.find(p => p.id === pollId);
+  if (!poll || poll.author !== currentUser) return;
+  try {
+    await updateDoc(doc(getPollsCollection(activeChatRoomId), pollId), { closed: true });
+  } catch (error) {
+    console.error(error);
+    alert('투표를 마감하지 못했습니다.');
+  }
+};
+
+window.addPollOptionInput = function() {
+  const wrap = document.getElementById('pollOptionInputs');
+  const count = wrap.querySelectorAll('.poll-option-input').length;
+  if (count >= 6) { alert('옵션은 최대 6개까지 만들 수 있습니다.'); return; }
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'poll-option-input';
+  input.placeholder = `옵션 ${count + 1}`;
+  wrap.appendChild(input);
+};
+
+window.createChatPoll = async function() {
+  if (!currentUser) return;
+  const question = document.getElementById('pollQuestionInput').value.trim();
+  const options = Array.from(document.querySelectorAll('.poll-option-input')).map(i => i.value.trim()).filter(Boolean);
+  if (!question) { alert('투표 질문을 입력해 주세요.'); return; }
+  if (options.length < 2) { alert('옵션을 2개 이상 입력해 주세요.'); return; }
+  try {
+    await addDoc(getPollsCollection(activeChatRoomId), {
+      question, options: options.map(text => ({ text })), votes: {}, author: currentUser, createdAt: Date.now(), closed: false
+    });
+    document.getElementById('pollQuestionInput').value = '';
+    document.getElementById('pollOptionInputs').innerHTML = `<input type="text" class="poll-option-input" placeholder="옵션 1"><input type="text" class="poll-option-input" placeholder="옵션 2">`;
+  } catch (error) {
+    console.error(error);
+    alert('투표를 만들지 못했습니다.');
+  }
+};
+
+function getBoardCollection(roomId) {
+  return collection(db, 'chatRoomExtras', roomId, 'board');
+}
+
+window.openChatBoard = function() {
+  if (!currentUser) { alert('로그인 후 이용할 수 있습니다.'); return; }
+  document.getElementById('boardTitleInput').value = '';
+  document.getElementById('boardContentInput').value = '';
+  document.getElementById('chatBoardList').innerHTML = '불러오는 중...';
+  expandedBoardPostId = null;
+  document.getElementById('chatBoardModal').classList.remove('hidden');
+  subscribeChatBoard();
+};
+
+window.closeChatBoard = function() {
+  document.getElementById('chatBoardModal').classList.add('hidden');
+  if (unsubscribeChatBoard) { unsubscribeChatBoard(); unsubscribeChatBoard = null; }
+};
+
+function subscribeChatBoard() {
+  if (unsubscribeChatBoard) return;
+  unsubscribeChatBoard = onSnapshot(query(getBoardCollection(activeChatRoomId), orderBy('createdAt', 'desc')), snapshot => {
+    chatBoardPosts = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    renderChatBoard();
+  }, error => {
+    console.error(error);
+    document.getElementById('chatBoardList').innerHTML = '<div style="color:var(--danger-color); font-size:13px;">게시글을 불러오지 못했습니다.</div>';
+  });
+}
+
+window.toggleBoardPost = function(postId) {
+  expandedBoardPostId = expandedBoardPostId === postId ? null : postId;
+  renderChatBoard();
+};
+
+function renderChatBoard() {
+  const list = document.getElementById('chatBoardList');
+  if (!list) return;
+  if (!chatBoardPosts.length) { list.innerHTML = '<div style="color:var(--text-sub); font-size:13px;">게시글이 없습니다.</div>'; return; }
+  list.innerHTML = chatBoardPosts.map(post => {
+    const expanded = expandedBoardPostId === post.id;
+    const canDelete = post.author === currentUser || currentUserRole === 'admin';
+    return `<div class="board-post">
+      <div class="board-post-title" onclick="toggleBoardPost('${post.id}')">${expanded ? '▾' : '▸'} ${escapeHtml(post.title)}</div>
+      <div class="board-post-meta">${escapeHtml(post.author || '')} · ${formatChatTime(post.createdAt)}${canDelete ? ` · <a href="#" onclick="deleteBoardPost('${post.id}'); return false;">삭제</a>` : ''}</div>
+      ${expanded ? `<div class="board-post-content">${escapeHtml(post.content)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+window.createBoardPost = async function() {
+  if (!currentUser) return;
+  const title = document.getElementById('boardTitleInput').value.trim();
+  const content = document.getElementById('boardContentInput').value.trim();
+  if (!title || !content) { alert('제목과 내용을 모두 입력해 주세요.'); return; }
+  try {
+    await addDoc(getBoardCollection(activeChatRoomId), { title, content, author: currentUser, createdAt: Date.now() });
+    document.getElementById('boardTitleInput').value = '';
+    document.getElementById('boardContentInput').value = '';
+  } catch (error) {
+    console.error(error);
+    alert('글을 등록하지 못했습니다.');
+  }
+};
+
+window.deleteBoardPost = async function(postId) {
+  const post = chatBoardPosts.find(p => p.id === postId);
+  if (!post || !(post.author === currentUser || currentUserRole === 'admin')) return;
+  if (!confirm('이 글을 삭제하시겠습니까?')) return;
+  try {
+    await deleteDoc(doc(getBoardCollection(activeChatRoomId), postId));
+  } catch (error) {
+    console.error(error);
+    alert('삭제하지 못했습니다.');
+  }
+};
+
+window.openTeamIntro = async function() {
+  const room = getActiveTeamRoom();
+  if (!room) return;
+  const list = document.getElementById('teamIntroList');
+  list.innerHTML = '불러오는 중...';
+  document.getElementById('teamIntroModal').classList.remove('hidden');
+  const intros = room.intros || {};
+  list.innerHTML = (room.members || []).map(member => {
+    const isMe = member === currentUser;
+    const value = intros[member] || '';
+    const safeMember = escapeHtml(member);
+    return `<div class="intro-row">
+      ${getChatAvatarHtml(member)}
+      <div style="flex:1; min-width:0;">
+        <div style="font-size:13px; font-weight:600; margin-bottom:4px;">${safeMember}</div>
+        ${isMe
+          ? `<div style="display:flex; gap:6px;"><input type="text" id="introInput" value="${escapeHtml(value)}" placeholder="한줄소개를 입력하세요" maxlength="60"><button onclick="saveTeamIntro()" style="padding:6px 10px; font-size:12px;">저장</button></div>`
+          : `<div style="font-size:13px; color:var(--text-sub);">${value ? escapeHtml(value) : '한줄소개가 없습니다.'}</div>`}
+      </div>
+    </div>`;
+  }).join('');
+};
+
+window.closeTeamIntro = function() {
+  document.getElementById('teamIntroModal').classList.add('hidden');
+};
+
+window.saveTeamIntro = async function() {
+  const room = getActiveTeamRoom();
+  if (!room || !currentUser) return;
+  const input = document.getElementById('introInput');
+  if (!input) return;
+  const text = input.value.trim().slice(0, 60);
+  try {
+    await updateDoc(doc(db, 'chatRooms', room.id), { [`intros.${currentUser}`]: text });
+    closeTeamIntro();
+  } catch (error) {
+    console.error(error);
+    alert('저장하지 못했습니다.');
+  }
+};
+
 function formatChatRoomPreview(message) {
   if (!message) return '대화를 시작해보세요';
   if (message.system) return message.content || '';
@@ -3562,6 +3958,7 @@ function renderChatRooms() {
   document.getElementById('leaveChatRoomBtn').classList.toggle('hidden', activeChatRoomId === 'global');
   const canManage = activeRoom && activeRoom.roomType === 'team' && (activeRoom.owner === currentUser || (activeRoom.admins || []).includes(currentUser));
   document.getElementById('teamManageBtn').classList.toggle('hidden', !canManage);
+  document.getElementById('teamIntroBtn').classList.toggle('hidden', !(activeRoom && activeRoom.roomType === 'team'));
   const canInvite = activeRoom && (activeRoom.members || []).includes(currentUser);
   document.getElementById('inviteMemberBtn').classList.toggle('hidden', !canInvite);
 }
@@ -3604,6 +4001,7 @@ window.selectChatRoom = function(roomId) {
   renderChatMessages();
   subscribeChat();
   subscribeTyping();
+  subscribeRoomNotice();
   markChatRoomRead();
 }
 
@@ -3719,6 +4117,7 @@ window.leaveChatRoom = async function() {
     renderChatRooms();
     renderChatMessages();
     subscribeChat();
+    subscribeRoomNotice();
     subscribeUnreadChats();
   } catch (error) {
     console.error(error);
@@ -3824,6 +4223,7 @@ window.openChat = function() {
   subscribeChatRooms();
   subscribeChat();
   subscribeTyping();
+  subscribeRoomNotice();
   renderChatMessages();
   if (currentUser) {
     markChatRoomRead();
