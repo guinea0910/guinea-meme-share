@@ -575,7 +575,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button onclick="toggleSettings()" class="danger-btn" style="flex: 1;">닫기</button>
 </div>
 </div>
-<button id="installAppBtnLoggedOut" onclick="handleInstallApp()" class="hidden" style="width:100%; margin-bottom:10px;">📲 홈 화면에 앱으로 설치</button>
+<button id="installAppBtnLoggedOut" onclick="handleInstallApp()" style="width:100%; margin-bottom:10px;">📲 홈 화면에 앱으로 설치</button>
 <div id="authBox" class="box">
 <div>
 <button id="loginTabBtn" class="tab-btn active" onclick="switchTab('login')">로그인</button>
@@ -596,7 +596,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div class="box top-bar">
 <div>환영합니다, <span id="currentUserSpan" style="color: var(--cafe-green); font-weight: bold;"></span>님!</div>
 <div style="display:flex; gap:6px;">
-<button id="installAppBtn" onclick="handleInstallApp()" class="hidden" style="padding: 5px 10px; font-size: 12px;">📲 앱 설치</button>
+<button id="installAppBtn" onclick="handleInstallApp()" style="padding: 5px 10px; font-size: 12px;">📲 앱 설치</button>
 <button class="danger-btn" onclick="handleLogout()" style="padding: 5px 10px; font-size: 12px;">로그아웃</button>
 </div>
 </div>
@@ -4623,38 +4623,60 @@ function setupPwaManifest() {
 
 let deferredInstallPrompt = null;
 
+function isRunningInstalled() {
+  const isStandaloneDisplay = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+  const isIosStandalone = window.navigator.standalone === true;
+  return isStandaloneDisplay || isIosStandalone;
+}
+
+function hideInstallButtons() {
+  document.getElementById('installAppBtn').classList.add('hidden');
+  document.getElementById('installAppBtnLoggedOut').classList.add('hidden');
+}
+
+function showInstallButtons() {
+  document.getElementById('installAppBtn').classList.remove('hidden');
+  document.getElementById('installAppBtnLoggedOut').classList.remove('hidden');
+}
+
+function refreshInstallButtonVisibility() {
+  if (isRunningInstalled()) {
+    hideInstallButtons();
+  } else {
+    showInstallButtons();
+  }
+}
+
 window.addEventListener('beforeinstallprompt', event => {
   event.preventDefault();
   deferredInstallPrompt = event;
-  document.getElementById('installAppBtn').classList.remove('hidden');
-  document.getElementById('installAppBtnLoggedOut').classList.remove('hidden');
+  refreshInstallButtonVisibility();
 });
 
 window.handleInstallApp = async function() {
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
   if (!deferredInstallPrompt) {
     if (isIOS) {
-      alert('iOS(사파리)에서는 하단의 공유 버튼 → "홈 화면에 추가"를 눌러 설치할 수 있어요.');
+      alert('iOS(사파리)에서는 하단의 공유 버튼 → "홈 화면에 추가"를 눌러 설치할 수 있어요.\n\n카카오톡, 인스타그램 등 인앱 브라우저에서 열었다면 우측 상단 메뉴에서 "다른 브라우저로 열기"를 먼저 눌러주세요.');
     } else {
-      alert('이 브라우저에서는 자동 설치를 지원하지 않아요. 브라우저 메뉴에서 "앱 설치" 또는 "홈 화면에 추가"를 찾아보세요.');
+      alert('이 브라우저에서는 자동 설치를 지원하지 않아요. 브라우저 메뉴(⋮)에서 "앱 설치" 또는 "홈 화면에 추가"를 찾아보세요.\n\n카카오톡, 인스타그램 등 인앱 브라우저라면 우측 상단 메뉴에서 "다른 브라우저로 열기"를 먼저 눌러주세요.');
     }
     return;
   }
   deferredInstallPrompt.prompt();
   await deferredInstallPrompt.userChoice;
   deferredInstallPrompt = null;
-  document.getElementById('installAppBtn').classList.add('hidden');
-  document.getElementById('installAppBtnLoggedOut').classList.add('hidden');
+  refreshInstallButtonVisibility();
 };
 
 window.addEventListener('appinstalled', () => {
   deferredInstallPrompt = null;
-  document.getElementById('installAppBtn').classList.add('hidden');
-  document.getElementById('installAppBtnLoggedOut').classList.add('hidden');
+  hideInstallButtons();
 });
 
 (async function initApp() {
   setupPwaManifest();
+  refreshInstallButtonVisibility();
   await checkAuthState();
   recordDailyVisit();
   setupMentionAutocomplete(document.getElementById('postContent'));
