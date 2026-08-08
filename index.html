@@ -590,7 +590,11 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button class="danger-btn" onclick="handleLogout()" style="padding: 5px 10px; font-size: 12px;">로그아웃</button>
 </div>
 <div class="box">
-<h3>글 작성하기</h3>
+<div style="display:flex; justify-content:space-between; align-items:center;">
+<h3 style="margin:0;">글 작성하기</h3>
+<button id="writeToggleBtn" onclick="toggleWriteForm()" style="width:38px; height:38px; border-radius:50%; padding:0; font-size:20px; line-height:1; flex:0 0 auto;">+</button>
+</div>
+<div id="writeFormPanel" class="hidden" style="margin-top:12px;">
 <div id="draftNotice" class="hidden" style="font-size:12px; color: var(--text-sub); background: var(--input-bg); border:1px solid var(--border-color); border-radius:8px; padding:8px 10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
 <span>임시 저장된 글이 있어요.</span>
 <span style="display:flex; gap:6px;"><button onclick="loadDraft()" style="padding:3px 8px; font-size:11px;">불러오기</button><button class="danger-btn" onclick="clearDraft()" style="padding:3px 8px; font-size:11px;">삭제</button></span>
@@ -994,6 +998,54 @@ let editingMessageId = null;
 let editingPostId = null; // 현재 수정 중인 게시글 id (게시글 상세 화면에서 인라인 수정)
 let adminActiveTab = 'stats'; // 관리자 탭 내 사이드바에서 선택된 하위 메뉴
 const REACTION_EMOJIS = ['👍', '😂', '🔥', '😢', '😮'];
+
+let emojiPickerTarget = null;
+
+function ensureEmojiPicker() {
+  let picker = document.getElementById('emojiReactionPicker');
+  if (!picker) {
+    picker = document.createElement('div');
+    picker.id = 'emojiReactionPicker';
+    picker.className = 'hidden';
+    picker.style.cssText = 'position:fixed; z-index:999; background:var(--card-bg); border:1px solid var(--border-color); border-radius:22px; padding:6px 10px; display:flex; gap:8px; box-shadow:0 4px 14px rgba(0,0,0,0.35);';
+    picker.innerHTML = REACTION_EMOJIS.map(emoji => `<span onclick="selectEmojiReaction('${emoji}')" style="font-size:20px; cursor:pointer; line-height:1;">${emoji}</span>`).join('');
+    document.body.appendChild(picker);
+    document.addEventListener('click', event => {
+      if (!picker.classList.contains('hidden') && !picker.contains(event.target) && !event.target.classList.contains('emoji-picker-trigger')) {
+        picker.classList.add('hidden');
+      }
+    });
+  }
+  return picker;
+}
+
+window.openEmojiPicker = function(event, type, id) {
+  event.stopPropagation();
+  if (!currentUser) { alert('로그인 후 반응을 남길 수 있습니다.'); return; }
+  const picker = ensureEmojiPicker();
+  const isSameTarget = emojiPickerTarget && emojiPickerTarget.type === type && emojiPickerTarget.id === id;
+  if (isSameTarget && !picker.classList.contains('hidden')) {
+    picker.classList.add('hidden');
+    return;
+  }
+  emojiPickerTarget = { type, id };
+  const rect = event.currentTarget.getBoundingClientRect();
+  const pickerWidth = 190;
+  const left = Math.min(Math.max(8, rect.left), window.innerWidth - pickerWidth - 8);
+  const top = rect.top - 46 >= 0 ? rect.top - 46 : rect.bottom + 6;
+  picker.style.left = left + 'px';
+  picker.style.top = top + 'px';
+  picker.classList.remove('hidden');
+};
+
+window.selectEmojiReaction = function(emoji) {
+  if (!emojiPickerTarget) return;
+  const { type, id } = emojiPickerTarget;
+  const picker = document.getElementById('emojiReactionPicker');
+  if (picker) picker.classList.add('hidden');
+  if (type === 'post') handleToggleReaction(id, emoji);
+  else if (type === 'chat') handleToggleChatReaction(id, emoji);
+};
 let currentUserBookmarks = []; // 로그인한 회원이 북마크한 게시글 id 목록
 let currentUserFollowing = []; // 로그인한 회원이 팔로우 중인 아이디 목록
 let followingFeedOnly = false; // 목록에서 '팔로잉만 보기' 필터 활성화 여부
@@ -1550,6 +1602,7 @@ window.handleCreatePost = async function() {
     compressedImages = [];
     renderImagePreviews();
     clearDraft();
+    closeWriteForm();
     goToList();
   } catch (error) {
     console.error(error);
@@ -1588,6 +1641,31 @@ function checkDraftNotice() {
   const key = getDraftKey();
   const hasDraft = key && !!localStorage.getItem(key);
   notice.classList.toggle('hidden', !hasDraft);
+  if (hasDraft) openWriteForm();
+}
+
+window.toggleWriteForm = function() {
+  const panel = document.getElementById('writeFormPanel');
+  const btn = document.getElementById('writeToggleBtn');
+  if (!panel) return;
+  const willOpen = panel.classList.contains('hidden');
+  panel.classList.toggle('hidden', !willOpen);
+  if (btn) btn.textContent = willOpen ? '✕' : '+';
+  if (willOpen) document.getElementById('postContent').focus();
+};
+
+function openWriteForm() {
+  const panel = document.getElementById('writeFormPanel');
+  const btn = document.getElementById('writeToggleBtn');
+  if (panel) panel.classList.remove('hidden');
+  if (btn) btn.textContent = '✕';
+}
+
+function closeWriteForm() {
+  const panel = document.getElementById('writeFormPanel');
+  const btn = document.getElementById('writeToggleBtn');
+  if (panel) panel.classList.add('hidden');
+  if (btn) btn.textContent = '+';
 }
 
 window.loadDraft = function() {
@@ -2091,11 +2169,12 @@ window.openDetail = async function(postId) {
       ? renderCommentTree(post.id, [...comments].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)), null, 0)
       : '';
     const reactions = post.reactions || {};
-    const reactionBarHtml = REACTION_EMOJIS.map(emoji => {
+    const activePostEmojis = REACTION_EMOJIS.filter(emoji => (reactions[emoji] || []).length > 0);
+    const reactionBarHtml = activePostEmojis.map(emoji => {
       const reactedUsers = reactions[emoji] || [];
       const reacted = currentUser && reactedUsers.includes(currentUser);
-      return `<button class="like-btn ${reacted ? 'liked' : ''}" onclick="handleToggleReaction('${post.id}', '${emoji}')" style="padding:4px 10px;">${emoji}${reactedUsers.length ? ' ' + reactedUsers.length : ''}</button>`;
-    }).join('');
+      return `<button class="like-btn ${reacted ? 'liked' : ''}" onclick="handleToggleReaction('${post.id}', '${emoji}')" style="padding:4px 10px;">${emoji} ${reactedUsers.length}</button>`;
+    }).join('') + `<button class="like-btn emoji-picker-trigger" onclick="openEmojiPicker(event, 'post', '${post.id}')" style="padding:4px 10px;">😊 반응 남기기</button>`;
     postsContainer.innerHTML = `
       <button onclick="goToList()" style="margin-bottom: 15px; background-color: var(--border-color); font-size: 13px; padding: 6px 12px;">← 목록으로</button>
       <div class="post-card">
@@ -3489,12 +3568,12 @@ function renderChatMessageRow(message) {
         bodyHtml = `<div class="chat-bubble">${escapeHtml(message.content)}${message.editedAt ? ' <span style="font-size:10px; opacity:.7;">(수정됨)</span>' : ''}</div>`;
       }
       const chatReactions = message.reactions || {};
-      const visibleChatEmojis = currentUser ? REACTION_EMOJIS : REACTION_EMOJIS.filter(emoji => (chatReactions[emoji] || []).length > 0);
-      const reactionBarHtml = (!message.deleted && !message.system && visibleChatEmojis.length) ? `<div style="display:flex; gap:3px; flex-wrap:wrap; margin-top:3px;">${visibleChatEmojis.map(emoji => {
+      const activeChatEmojis = REACTION_EMOJIS.filter(emoji => (chatReactions[emoji] || []).length > 0);
+      const reactionBarHtml = (!message.deleted && !message.system) ? `<div style="display:flex; gap:3px; flex-wrap:wrap; align-items:center; margin-top:3px;">${activeChatEmojis.map(emoji => {
         const reactedUsers = chatReactions[emoji] || [];
         const reacted = currentUser && reactedUsers.includes(currentUser);
         return `<button onclick="handleToggleChatReaction('${message.id}', '${emoji}')" style="padding:1px 6px; font-size:11px; border-radius:10px; border:1px solid var(--border-color); background:${reacted ? 'rgba(3,199,90,0.18)' : 'var(--card-bg)'}; color:${reacted ? 'var(--cafe-green)' : 'var(--text-sub)'}; cursor:pointer;">${emoji}${reactedUsers.length ? ' ' + reactedUsers.length : ''}</button>`;
-      }).join('')}</div>` : '';
+      }).join('')}<span class="emoji-picker-trigger" onclick="openEmojiPicker(event, 'chat', '${message.id}')" style="font-size:13px; cursor:pointer; padding:0 3px; color:var(--text-sub);">😊</span></div>` : '';
       const actionsHtml = (mine && !message.deleted && message.type !== 'image' && editingMessageId !== message.id)
         ? `<div style="display:flex; gap:6px; margin-top:2px;"><a href="#" onclick="startMessageEdit('${message.id}'); return false;" style="font-size:10px; color:var(--text-sub);">수정</a><a href="#" onclick="deleteMessage('${message.id}'); return false;" style="font-size:10px; color:var(--text-sub);">삭제</a></div>`
         : '';
@@ -4493,4 +4572,4 @@ document.addEventListener('visibilitychange', () => {
 })();
 </script>
 </body>
-</html>
+  </html>
