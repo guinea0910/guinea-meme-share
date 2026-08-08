@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>기니 짤방 웹버전</title>
+<meta name="theme-color" content="#03c75a">
+<meta name="description" content="기니 짤방 웹버전 - 카페형 커뮤니티">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="기니 짤방">
+<link id="manifestLink" rel="manifest" href="">
+<link id="appleTouchIcon" rel="apple-touch-icon" href="">
 <style>
 :root {
   --cafe-green: #03c75a;
@@ -568,6 +575,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button onclick="toggleSettings()" class="danger-btn" style="flex: 1;">닫기</button>
 </div>
 </div>
+<button id="installAppBtnLoggedOut" onclick="handleInstallApp()" class="hidden" style="width:100%; margin-bottom:10px;">📲 홈 화면에 앱으로 설치</button>
 <div id="authBox" class="box">
 <div>
 <button id="loginTabBtn" class="tab-btn active" onclick="switchTab('login')">로그인</button>
@@ -587,7 +595,10 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="mainBox" class="hidden">
 <div class="box top-bar">
 <div>환영합니다, <span id="currentUserSpan" style="color: var(--cafe-green); font-weight: bold;"></span>님!</div>
+<div style="display:flex; gap:6px;">
+<button id="installAppBtn" onclick="handleInstallApp()" class="hidden" style="padding: 5px 10px; font-size: 12px;">📲 앱 설치</button>
 <button class="danger-btn" onclick="handleLogout()" style="padding: 5px 10px; font-size: 12px;">로그아웃</button>
+</div>
 </div>
 <div class="box">
 <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -4558,7 +4569,92 @@ document.addEventListener('visibilitychange', () => {
   subscribeTyping();
 });
 
+// ===== PWA 설치 지원 =====
+function generateAppIconDataUrl(size) {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const radius = size * 0.2;
+  ctx.fillStyle = '#03c75a';
+  ctx.beginPath();
+  ctx.moveTo(radius, 0);
+  ctx.arcTo(size, 0, size, size, radius);
+  ctx.arcTo(size, size, 0, size, radius);
+  ctx.arcTo(0, size, 0, 0, radius);
+  ctx.arcTo(0, 0, size, 0, radius);
+  ctx.closePath();
+  ctx.fill();
+  ctx.font = `${Math.round(size * 0.58)}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🍀', size / 2, size / 2 + size * 0.04);
+  return canvas.toDataURL('image/png');
+}
+
+function setupPwaManifest() {
+  try {
+    const icon192 = generateAppIconDataUrl(192);
+    const icon512 = generateAppIconDataUrl(512);
+    const manifest = {
+      name: '기니 짤방 웹버전',
+      short_name: '기니짤방',
+      description: '기니 짤방 웹버전 - 카페형 커뮤니티',
+      start_url: './',
+      scope: './',
+      display: 'standalone',
+      background_color: '#0f172a',
+      theme_color: '#03c75a',
+      icons: [
+        { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+        { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+      ]
+    };
+    const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    const manifestUrl = URL.createObjectURL(manifestBlob);
+    document.getElementById('manifestLink').setAttribute('href', manifestUrl);
+    document.getElementById('appleTouchIcon').setAttribute('href', icon192);
+  } catch (error) {
+    console.error('PWA manifest 설정 실패:', error);
+  }
+}
+
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', event => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  document.getElementById('installAppBtn').classList.remove('hidden');
+  document.getElementById('installAppBtnLoggedOut').classList.remove('hidden');
+});
+
+window.handleInstallApp = async function() {
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  if (!deferredInstallPrompt) {
+    if (isIOS) {
+      alert('iOS(사파리)에서는 하단의 공유 버튼 → "홈 화면에 추가"를 눌러 설치할 수 있어요.');
+    } else {
+      alert('이 브라우저에서는 자동 설치를 지원하지 않아요. 브라우저 메뉴에서 "앱 설치" 또는 "홈 화면에 추가"를 찾아보세요.');
+    }
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  document.getElementById('installAppBtn').classList.add('hidden');
+  document.getElementById('installAppBtnLoggedOut').classList.add('hidden');
+};
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  document.getElementById('installAppBtn').classList.add('hidden');
+  document.getElementById('installAppBtnLoggedOut').classList.add('hidden');
+});
+
 (async function initApp() {
+  setupPwaManifest();
   await checkAuthState();
   recordDailyVisit();
   setupMentionAutocomplete(document.getElementById('postContent'));
@@ -4572,4 +4668,4 @@ document.addEventListener('visibilitychange', () => {
 })();
 </script>
 </body>
-  </html>
+</html>
