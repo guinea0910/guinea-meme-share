@@ -759,6 +759,20 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="rankingContainer">불러오는 중...</div>
 </div>
 </section>
+<section id="gameView" class="hidden">
+<div class="box">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+<h2 style="margin:0;">🎮 미니게임</h2>
+<div id="myGamePointsBadge" style="font-size:13px; color: var(--cafe-green); font-weight:bold;"></div>
+</div>
+<div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;">
+<button id="gameTabHubBtn" class="page-btn active" onclick="setGameTab('hub')" style="padding:6px 12px; font-size:12px;">게임 목록</button>
+<button id="gameTabRankBtn" class="page-btn" onclick="setGameTab('rank')" style="padding:6px 12px; font-size:12px;">🏆 게임 랭킹</button>
+</div>
+<div id="gameHubTab"></div>
+<div id="gameRankTab" class="hidden"></div>
+</div>
+</section>
 <section id="bookmarksView" class="hidden">
 <div class="box">
 <h2 style="margin-top: 0;">⭐ 북마크</h2>
@@ -1113,13 +1127,14 @@ const SIDEBAR_ITEMS = [
   { key: 'cafe', icon: '☕', label: '카페' },
   { key: 'popular', icon: '🔥', label: '인기 짤' },
   { key: 'ranking', icon: '🏆', label: '랭킹' },
+  { key: 'game', icon: '🎮', label: '미니게임' },
   { key: 'bookmarks', icon: '⭐', label: '북마크' },
   { key: 'profile', icon: '👤', label: '프로필' },
   { key: 'chat', icon: '💬', label: '채팅' },
   { key: 'notifications', icon: '🔔', label: '알림' },
   { key: 'settings', icon: '⚙️', label: '설정' }
 ];
-const SIDEBAR_ITEM_IDS = { cafe: 'cafeNavBtn', popular: 'popularNavBtn', ranking: 'rankingNavBtn', bookmarks: 'bookmarksNavBtn', profile: 'profileNavBtn', chat: 'chatNavBtn', notifications: 'notificationsNavBtn', settings: 'settingsNavBtn' };
+const SIDEBAR_ITEM_IDS = { cafe: 'cafeNavBtn', popular: 'popularNavBtn', ranking: 'rankingNavBtn', game: 'gameNavBtn', bookmarks: 'bookmarksNavBtn', profile: 'profileNavBtn', chat: 'chatNavBtn', notifications: 'notificationsNavBtn', settings: 'settingsNavBtn' };
 
 function getSidebarOrderKey() {
   return `cafe_sidebar_order_${currentUser || 'guest'}`;
@@ -1157,7 +1172,7 @@ function renderSidebarNav() {
     return `<button id="${id}" class="sidebar-item" onclick="${onclick}"><span class="sidebar-item-icon">${item.icon}</span><span class="sidebar-item-label">${item.label}</span>${badge}</button>`;
   }).join('');
   // 재렌더링 후에도 현재 보고 있는 화면의 활성 표시를 유지
-  const activeSection = ['cafe', 'popular', 'ranking', 'bookmarks', 'chat', 'notifications', 'settings', 'admin'].find(sec => !document.getElementById(`${sec}View`)?.classList.contains('hidden'));
+  const activeSection = ['cafe', 'popular', 'ranking', 'game', 'bookmarks', 'chat', 'notifications', 'settings', 'admin'].find(sec => !document.getElementById(`${sec}View`)?.classList.contains('hidden'));
   if (activeSection && SIDEBAR_ITEM_IDS[activeSection]) {
     document.getElementById(SIDEBAR_ITEM_IDS[activeSection])?.classList.add('active');
   }
@@ -2710,6 +2725,7 @@ window.showAppSection = function(section) {
   const isPopular = section === 'popular';
   const isNotifications = section === 'notifications';
   const isRanking = section === 'ranking';
+  const isGame = section === 'game';
   const isBookmarks = section === 'bookmarks';
   const isProfile = section === 'profile';
   const isAdmin = section === 'admin';
@@ -2719,6 +2735,7 @@ window.showAppSection = function(section) {
   document.getElementById('popularView').classList.toggle('hidden', !isPopular);
   document.getElementById('notificationsView').classList.toggle('hidden', !isNotifications);
   document.getElementById('rankingView').classList.toggle('hidden', !isRanking);
+  document.getElementById('gameView').classList.toggle('hidden', !isGame);
   document.getElementById('bookmarksView').classList.toggle('hidden', !isBookmarks);
   document.getElementById('profileView').classList.toggle('hidden', !isProfile);
   document.getElementById('adminView').classList.toggle('hidden', !isAdmin);
@@ -2728,6 +2745,7 @@ window.showAppSection = function(section) {
   document.getElementById('popularNavBtn').classList.toggle('active', isPopular);
   document.getElementById('notificationsNavBtn').classList.toggle('active', isNotifications);
   document.getElementById('rankingNavBtn').classList.toggle('active', isRanking);
+  document.getElementById('gameNavBtn').classList.toggle('active', isGame);
   document.getElementById('bookmarksNavBtn').classList.toggle('active', isBookmarks);
   document.getElementById('profileNavBtn').classList.toggle('active', isProfile && profileViewUser === currentUser);
   document.getElementById('adminNavBtn').classList.toggle('active', isAdmin);
@@ -2735,6 +2753,7 @@ window.showAppSection = function(section) {
   if (isPopular) { loadPopularPosts(); loadHotRooms(); }
   if (isNotifications) openNotifications();
   if (isRanking) loadRankingView();
+  if (isGame) loadGameView();
   if (isBookmarks) loadBookmarksView();
   if (isAdmin) { setAdminTab(adminActiveTab); }
   else { unsubscribeAdminPresence(); }
@@ -4717,6 +4736,276 @@ window.openChat = function() {
   renderChatMessages();
   if (currentUser) {
     markChatRoomRead();
+  }
+}
+
+// ===== 미니게임 =====
+let gameActiveTab = 'hub';
+let clickChallengeState = null;
+
+async function loadGameView() {
+  if (!currentUser) {
+    document.getElementById('gameHubTab').innerHTML = '<div style="color:var(--text-sub); padding:20px 0; text-align:center;">로그인 후 미니게임을 즐길 수 있어요.</div>';
+    document.getElementById('myGamePointsBadge').textContent = '';
+    return;
+  }
+  await refreshMyGamePointsBadge();
+  setGameTab(gameActiveTab);
+}
+
+async function refreshMyGamePointsBadge() {
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser));
+    const points = snap.exists() ? (snap.data().gamePoints || 0) : 0;
+    document.getElementById('myGamePointsBadge').textContent = `내 게임 포인트: ${points}P`;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+window.setGameTab = function(tab) {
+  gameActiveTab = tab;
+  document.getElementById('gameTabHubBtn').classList.toggle('active', tab === 'hub');
+  document.getElementById('gameTabRankBtn').classList.toggle('active', tab === 'rank');
+  document.getElementById('gameHubTab').classList.toggle('hidden', tab !== 'hub');
+  document.getElementById('gameRankTab').classList.toggle('hidden', tab !== 'rank');
+  if (tab === 'hub') renderGameHub();
+  else renderGameRankTab();
+};
+
+function renderGameHub() {
+  const container = document.getElementById('gameHubTab');
+  container.innerHTML = `
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px;">
+      <div class="box" style="margin:0; padding:14px;">
+        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🎰 럭키 룰렛</div>
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">하루 한 번, 랜덤 포인트에 도전해 보세요</div>
+        <button onclick="openRouletteGame()" style="width:100%;">돌리러 가기</button>
+      </div>
+      <div class="box" style="margin:0; padding:14px;">
+        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⚡ 반응속도 챌린지</div>
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">5초 동안 최대한 많이 클릭하기</div>
+        <button onclick="openClickChallenge()" style="width:100%;">도전하기</button>
+      </div>
+      <div class="box" style="margin:0; padding:14px;">
+        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">✊✌️✋ 가위바위보</div>
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">컴퓨터와 한 판! 이기면 포인트 획득</div>
+        <button onclick="openRpsGame()" style="width:100%;">한 판 하기</button>
+      </div>
+    </div>
+    <div id="gamePlayArea" style="margin-top:14px;"></div>
+  `;
+}
+
+async function awardGamePoints(gameKey, gameLabel, points, detailText) {
+  try {
+    await updateDoc(doc(db, 'users', currentUser), { gamePoints: increment(points) });
+    await addDoc(collection(db, 'gameScores'), {
+      user: currentUser,
+      game: gameKey,
+      points: points,
+      detail: detailText || '',
+      createdAt: Date.now()
+    });
+    await refreshMyGamePointsBadge();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function renderGameResultActions(resultText) {
+  const safeText = resultText.replace(/'/g, "\\'");
+  return `<div style="display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;">
+    <button onclick="shareGameResultToChat('${safeText}')" style="padding:6px 10px; font-size:12px; background: var(--border-color); color: var(--text-main);">💬 채팅에 공유</button>
+    <button onclick="shareGameResultToBoard('${safeText}')" style="padding:6px 10px; font-size:12px; background: var(--border-color); color: var(--text-main);">📝 카페에 글로 공유</button>
+  </div>`;
+}
+
+window.shareGameResultToChat = async function(text) {
+  if (!currentUser) return;
+  try {
+    await addDoc(collection(db, 'chatMessages'), { author: currentUser, content: `[미니게임] ${text}`, createdAt: Date.now(), readBy: [currentUser] });
+    alert('전체 채팅방에 결과를 공유했어요!');
+  } catch (error) {
+    console.error(error);
+    alert('공유에 실패했습니다.');
+  }
+};
+
+window.shareGameResultToBoard = function(text) {
+  showAppSection('cafe');
+  goToList();
+  openWriteForm();
+  document.getElementById('postCategory').value = '잡담';
+  document.getElementById('postContent').value = `[미니게임] ${text}`;
+  document.getElementById('postContent').focus();
+};
+
+// --- 🎰 럭키 룰렛 ---
+window.openRouletteGame = async function() {
+  const area = document.getElementById('gamePlayArea');
+  const key = `cafe_roulette_${currentUser}`;
+  const lastPlayed = localStorage.getItem(key);
+  const today = getTodayDateKey();
+  if (lastPlayed === today) {
+    area.innerHTML = `<div class="box" style="margin:0;">🎰 오늘은 이미 룰렛을 돌렸어요. 내일 다시 도전해 주세요!</div>`;
+    return;
+  }
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="font-size:40px; margin-bottom:10px;" id="rouletteWheel">🎰</div>
+    <button onclick="spinRoulette()">룰렛 돌리기</button>
+    <div id="rouletteResult" style="margin-top:10px;"></div>
+  </div>`;
+};
+
+window.spinRoulette = async function() {
+  const key = `cafe_roulette_${currentUser}`;
+  const today = getTodayDateKey();
+  const wheel = document.getElementById('rouletteWheel');
+  const resultBox = document.getElementById('rouletteResult');
+  const spinBtn = document.querySelector('#gamePlayArea button');
+  if (spinBtn) spinBtn.disabled = true;
+  let ticks = 0;
+  const faces = ['🎰', '🍀', '⭐', '🍒', '💎'];
+  const spinTimer = setInterval(() => {
+    wheel.textContent = faces[ticks % faces.length];
+    ticks++;
+  }, 90);
+  setTimeout(async () => {
+    clearInterval(spinTimer);
+    wheel.textContent = '🎉';
+    const points = [10, 20, 30, 50, 77, 100][Math.floor(Math.random() * 6)];
+    localStorage.setItem(key, today);
+    await awardGamePoints('roulette', '럭키 룰렛', points, `럭키 룰렛에서 ${points}P 획득!`);
+    const resultText = `럭키 룰렛에서 ${points}P를 획득했어요!`;
+    resultBox.innerHTML = `<div style="font-size:14px; margin-bottom:6px;">🎉 <b>${points}P</b> 획득!</div>${renderGameResultActions(resultText)}`;
+  }, 1400);
+};
+
+// --- ⚡ 반응속도 클릭 챌린지 ---
+window.openClickChallenge = function() {
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:8px;">시작을 누르면 3초 카운트다운 후 클릭 타이밍이 시작돼요</div>
+    <div id="clickChallengeStatus" style="font-size:16px; font-weight:bold; margin-bottom:10px;">준비됐나요?</div>
+    <button id="clickChallengeMainBtn" onclick="startClickChallenge()">시작하기</button>
+    <div id="clickChallengeResult" style="margin-top:10px;"></div>
+  </div>`;
+};
+
+window.startClickChallenge = function() {
+  const statusEl = document.getElementById('clickChallengeStatus');
+  const mainBtn = document.getElementById('clickChallengeMainBtn');
+  clickChallengeState = { count: 0, active: false };
+  mainBtn.textContent = '준비 중...';
+  mainBtn.disabled = true;
+  let countdown = 3;
+  statusEl.textContent = `${countdown}`;
+  const countdownTimer = setInterval(() => {
+    countdown--;
+    if (countdown > 0) {
+      statusEl.textContent = `${countdown}`;
+    } else {
+      clearInterval(countdownTimer);
+      statusEl.textContent = '지금 클릭하세요! (5초)';
+      clickChallengeState.active = true;
+      mainBtn.textContent = `클릭! (0)`;
+      mainBtn.disabled = false;
+      mainBtn.onclick = registerClickChallengeTap;
+      let secondsLeft = 5;
+      const runTimer = setInterval(() => {
+        secondsLeft--;
+        if (secondsLeft <= 0) {
+          clearInterval(runTimer);
+          finishClickChallenge();
+        }
+      }, 1000);
+    }
+  }, 1000);
+};
+
+function registerClickChallengeTap() {
+  if (!clickChallengeState || !clickChallengeState.active) return;
+  clickChallengeState.count++;
+  document.getElementById('clickChallengeMainBtn').textContent = `클릭! (${clickChallengeState.count})`;
+}
+
+async function finishClickChallenge() {
+  if (!clickChallengeState) return;
+  clickChallengeState.active = false;
+  const count = clickChallengeState.count;
+  const points = count * 2;
+  const mainBtn = document.getElementById('clickChallengeMainBtn');
+  const statusEl = document.getElementById('clickChallengeStatus');
+  mainBtn.disabled = true;
+  mainBtn.onclick = null;
+  statusEl.textContent = '종료!';
+  await awardGamePoints('click', '반응속도 챌린지', points, `5초 동안 ${count}번 클릭해서 ${points}P 획득!`);
+  const resultText = `반응속도 챌린지에서 ${count}번 클릭! (${points}P 획득)`;
+  document.getElementById('clickChallengeResult').innerHTML = `<div style="font-size:14px; margin-bottom:6px;">⚡ <b>${count}번</b> 클릭 → <b>${points}P</b> 획득!</div>${renderGameResultActions(resultText)}`;
+}
+
+// --- ✊✌️✋ 가위바위보 ---
+window.openRpsGame = function() {
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">이기면 15P, 비기면 5P, 지면 0P!</div>
+    <div style="display:flex; gap:8px; justify-content:center;">
+      <button onclick="playRps('rock')" style="font-size:24px; padding:12px 16px;">✊</button>
+      <button onclick="playRps('scissors')" style="font-size:24px; padding:12px 16px;">✌️</button>
+      <button onclick="playRps('paper')" style="font-size:24px; padding:12px 16px;">✋</button>
+    </div>
+    <div id="rpsResult" style="margin-top:12px;"></div>
+  </div>`;
+};
+
+window.playRps = async function(myChoice) {
+  const choices = ['rock', 'scissors', 'paper'];
+  const labels = { rock: '✊ 바위', scissors: '✌️ 가위', paper: '✋ 보' };
+  const computerChoice = choices[Math.floor(Math.random() * 3)];
+  let outcome, points;
+  if (myChoice === computerChoice) {
+    outcome = '무승부'; points = 5;
+  } else if (
+    (myChoice === 'rock' && computerChoice === 'scissors') ||
+    (myChoice === 'scissors' && computerChoice === 'paper') ||
+    (myChoice === 'paper' && computerChoice === 'rock')
+  ) {
+    outcome = '승리'; points = 15;
+  } else {
+    outcome = '패배'; points = 0;
+  }
+  await awardGamePoints('rps', '가위바위보', points, `가위바위보 ${outcome}! (${points}P)`);
+  const resultText = `가위바위보에서 ${labels[myChoice]} vs ${labels[computerChoice]} → ${outcome}! (${points}P 획득)`;
+  document.getElementById('rpsResult').innerHTML = `<div style="font-size:14px; margin-bottom:6px;">나: ${labels[myChoice]} · 상대: ${labels[computerChoice]}<br><b>${outcome}!</b> (+${points}P)</div>${renderGameResultActions(resultText)}`;
+};
+
+// --- 🏆 게임 랭킹 ---
+async function renderGameRankTab() {
+  const container = document.getElementById('gameRankTab');
+  container.innerHTML = '불러오는 중...';
+  try {
+    const querySnapshot = await getDocs(collection(db, 'users'));
+    const ranked = querySnapshot.docs
+      .map(docSnap => ({ user: docSnap.id, points: docSnap.data().gamePoints || 0 }))
+      .filter(entry => entry.points > 0)
+      .sort((a, b) => b.points - a.points)
+      .slice(0, 30);
+    if (!ranked.length) {
+      container.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">아직 게임에 참여한 회원이 없어요. 첫 번째 도전자가 되어보세요!</div>`;
+      return;
+    }
+    container.innerHTML = ranked.map((entry, idx) => `
+      <div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-color);">
+        <span style="width:24px; font-weight:bold; color:${idx < 3 ? 'var(--cafe-green)' : 'var(--text-sub)'};">${idx + 1}</span>
+        ${getAvatarHtml(entry.user, 26)}
+        <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
+        <span style="font-weight:bold; color:var(--cafe-green);">${entry.points}P</span>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = `<div class="error-box">랭킹을 불러오지 못했습니다.</div>`;
   }
 }
 
