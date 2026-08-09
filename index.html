@@ -538,6 +538,9 @@ button:hover { background-color: var(--cafe-green-hover); }
   .admin-row-actions { flex-direction: row; margin-top: 6px; }
   .admin-row-actions button { flex: 1; padding: 9px 6px; font-size: 12px; }
 }
+.standalone-game-mode .sidebar { display: none; }
+.standalone-game-mode .app-content { max-width: 640px; margin: 0 auto; }
+.standalone-game-mode #gameHubTab > div:first-child { margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -771,22 +774,29 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="gameShopPanel" class="hidden" style="border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:14px;"></div>
 <div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;">
 <button id="gameTabHubBtn" class="page-btn active" onclick="setGameTab('hub')" style="padding:6px 12px; font-size:12px;">게임 목록</button>
-<button id="gameTabRankBtn" class="page-btn" onclick="setGameTab('rank')" style="padding:6px 12px; font-size:12px;">🏆 게임 랭킹</button>
-<button id="gameTabCpsBtn" class="page-btn" onclick="setGameTab('cps')" style="padding:6px 12px; font-size:12px;">⚡ CPS 리더보드</button>
-<button id="gameTabTetrisBtn" class="page-btn" onclick="setGameTab('tetris')" style="padding:6px 12px; font-size:12px;">🧱 테트리스 리더보드</button>
-<button id="gameTab2048Btn" class="page-btn" onclick="setGameTab('2048')" style="padding:6px 12px; font-size:12px;">🔢 2048 리더보드</button>
-<button id="gameTabMineBtn" class="page-btn" onclick="setGameTab('mine')" style="padding:6px 12px; font-size:12px;">💣 지뢰찾기 리더보드</button>
-<button id="gameTabCookieBtn" class="page-btn" onclick="setGameTab('cookie')" style="padding:6px 12px; font-size:12px;">🍪 쿠키 클리커 리더보드</button>
-<button id="gameTabRhythmBtn" class="page-btn" onclick="setGameTab('rhythm')" style="padding:6px 12px; font-size:12px;">🕹️ 얼불춤 리더보드</button>
+<button id="gameTabLeaderboardBtn" class="page-btn" onclick="setGameTab('leaderboard')" style="padding:6px 12px; font-size:12px;">🏆 리더보드</button>
 </div>
 <div id="gameHubTab"></div>
-<div id="gameRankTab" class="hidden"></div>
+<div id="gameLeaderboardTab" class="hidden">
+<div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;">
+<button id="lbSubTotalBtn" class="page-btn active" onclick="setLeaderboardSubTab('total')" style="padding:5px 10px; font-size:11px;">💰 총 포인트</button>
+<button id="lbSubOmokBtn" class="page-btn" onclick="setLeaderboardSubTab('omok')" style="padding:5px 10px; font-size:11px;">⚫⚪ 오목</button>
+<button id="lbSubCpsBtn" class="page-btn" onclick="setLeaderboardSubTab('cps')" style="padding:5px 10px; font-size:11px;">⚡ CPS</button>
+<button id="lbSubTetrisBtn" class="page-btn" onclick="setLeaderboardSubTab('tetris')" style="padding:5px 10px; font-size:11px;">🧱 테트리스</button>
+<button id="lbSub2048Btn" class="page-btn" onclick="setLeaderboardSubTab('2048')" style="padding:5px 10px; font-size:11px;">🔢 2048</button>
+<button id="lbSubMineBtn" class="page-btn" onclick="setLeaderboardSubTab('mine')" style="padding:5px 10px; font-size:11px;">💣 지뢰찾기</button>
+<button id="lbSubCookieBtn" class="page-btn" onclick="setLeaderboardSubTab('cookie')" style="padding:5px 10px; font-size:11px;">🍪 쿠키 클리커</button>
+<button id="lbSubRhythmBtn" class="page-btn" onclick="setLeaderboardSubTab('rhythm')" style="padding:5px 10px; font-size:11px;">🕹️ 얼불춤</button>
+</div>
+<div id="gameRankTab"></div>
+<div id="gameOmokRankTab" class="hidden"></div>
 <div id="gameCpsRankTab" class="hidden"></div>
 <div id="gameTetrisRankTab" class="hidden"></div>
 <div id="game2048RankTab" class="hidden"></div>
 <div id="gameMineRankTab" class="hidden"></div>
 <div id="gameCookieRankTab" class="hidden"></div>
 <div id="gameRhythmRankTab" class="hidden"></div>
+</div>
 </div>
 </section>
 <section id="bookmarksView" class="hidden">
@@ -4862,6 +4872,8 @@ window.purchaseShopItem = async function(itemKey) {
   }
 };
 
+let leaderboardActiveSubTab = 'total';
+
 window.setGameTab = function(tab) {
   gameActiveTab = tab;
   stopTetris();
@@ -4873,23 +4885,33 @@ window.setGameTab = function(tab) {
   stopCardGacha();
   stopOmok();
   document.getElementById('gameTabHubBtn').classList.toggle('active', tab === 'hub');
-  document.getElementById('gameTabRankBtn').classList.toggle('active', tab === 'rank');
-  document.getElementById('gameTabCpsBtn').classList.toggle('active', tab === 'cps');
-  document.getElementById('gameTabTetrisBtn').classList.toggle('active', tab === 'tetris');
-  document.getElementById('gameTab2048Btn').classList.toggle('active', tab === '2048');
-  document.getElementById('gameTabMineBtn').classList.toggle('active', tab === 'mine');
-  document.getElementById('gameTabCookieBtn').classList.toggle('active', tab === 'cookie');
-  document.getElementById('gameTabRhythmBtn').classList.toggle('active', tab === 'rhythm');
+  document.getElementById('gameTabLeaderboardBtn').classList.toggle('active', tab === 'leaderboard');
   document.getElementById('gameHubTab').classList.toggle('hidden', tab !== 'hub');
-  document.getElementById('gameRankTab').classList.toggle('hidden', tab !== 'rank');
+  document.getElementById('gameLeaderboardTab').classList.toggle('hidden', tab !== 'leaderboard');
+  if (tab === 'hub') renderGameHub();
+  else setLeaderboardSubTab(leaderboardActiveSubTab);
+};
+
+window.setLeaderboardSubTab = function(tab) {
+  leaderboardActiveSubTab = tab;
+  document.getElementById('lbSubTotalBtn').classList.toggle('active', tab === 'total');
+  document.getElementById('lbSubOmokBtn').classList.toggle('active', tab === 'omok');
+  document.getElementById('lbSubCpsBtn').classList.toggle('active', tab === 'cps');
+  document.getElementById('lbSubTetrisBtn').classList.toggle('active', tab === 'tetris');
+  document.getElementById('lbSub2048Btn').classList.toggle('active', tab === '2048');
+  document.getElementById('lbSubMineBtn').classList.toggle('active', tab === 'mine');
+  document.getElementById('lbSubCookieBtn').classList.toggle('active', tab === 'cookie');
+  document.getElementById('lbSubRhythmBtn').classList.toggle('active', tab === 'rhythm');
+  document.getElementById('gameRankTab').classList.toggle('hidden', tab !== 'total');
+  document.getElementById('gameOmokRankTab').classList.toggle('hidden', tab !== 'omok');
   document.getElementById('gameCpsRankTab').classList.toggle('hidden', tab !== 'cps');
   document.getElementById('gameTetrisRankTab').classList.toggle('hidden', tab !== 'tetris');
   document.getElementById('game2048RankTab').classList.toggle('hidden', tab !== '2048');
   document.getElementById('gameMineRankTab').classList.toggle('hidden', tab !== 'mine');
   document.getElementById('gameCookieRankTab').classList.toggle('hidden', tab !== 'cookie');
   document.getElementById('gameRhythmRankTab').classList.toggle('hidden', tab !== 'rhythm');
-  if (tab === 'hub') renderGameHub();
-  else if (tab === 'rank') renderGameRankTab();
+  if (tab === 'total') renderGameRankTab();
+  else if (tab === 'omok') renderOmokRankTab();
   else if (tab === 'cps') renderCpsRankTab();
   else if (tab === 'tetris') renderTetrisRankTab();
   else if (tab === '2048') render2048RankTab();
@@ -4907,57 +4929,80 @@ function renderGameHub() {
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🎰 럭키 룰렛</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">하루 한 번, 랜덤 포인트에 도전해 보세요</div>
-        <button onclick="openRouletteGame()" ${roulettePlayedToday ? 'disabled' : ''} style="width:100%; ${roulettePlayedToday ? 'background:var(--border-color); color:var(--text-sub); cursor:not-allowed;' : ''}">${roulettePlayedToday ? '오늘 완료' : '돌리러 가기'}</button>
+        <button onclick="openGameInNewTab('roulette')" ${roulettePlayedToday ? 'disabled' : ''} style="width:100%; ${roulettePlayedToday ? 'background:var(--border-color); color:var(--text-sub); cursor:not-allowed;' : ''}">${roulettePlayedToday ? '오늘 완료' : '돌리러 가기 (새 탭)'}</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⚡ CPS 챌린지</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">원하는 시간 동안 초당 클릭 수(CPS) 겨루기</div>
-        <button onclick="openClickChallenge()" style="width:100%;">도전하기</button>
+        <button onclick="openGameInNewTab('cps')" style="width:100%;">도전하기 (새 탭)</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⭕❌ 틱택토</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">컴퓨터와 한 판! 이기면 포인트 획득</div>
-        <button onclick="openTicTacToeGame()" style="width:100%;">한 판 하기</button>
+        <button onclick="openGameInNewTab('ttt')" style="width:100%;">한 판 하기 (새 탭)</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🧱 테트리스</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">클래식 테트리스! 점수만큼 포인트 획득</div>
-        <button onclick="openTetrisGame()" style="width:100%;">플레이하기</button>
+        <button onclick="openGameInNewTab('tetris')" style="width:100%;">플레이하기 (새 탭)</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🔢 2048</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">타일을 합쳐서 2048을 만들어보세요</div>
-        <button onclick="openGame2048()" style="width:100%;">플레이하기</button>
+        <button onclick="openGameInNewTab('2048')" style="width:100%;">플레이하기 (새 탭)</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">💣 지뢰찾기</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">빠르게 클리어할수록 포인트 UP</div>
-        <button onclick="openMinesweeperGame()" style="width:100%;">플레이하기</button>
+        <button onclick="openGameInNewTab('mine')" style="width:100%;">플레이하기 (새 탭)</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🍪 쿠키 클리커</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">쿠키를 굽고 생산 시설을 늘려서 누적 기록에 도전!</div>
-        <button onclick="openCookieClickerGame()" style="width:100%;">플레이하기</button>
+        <button onclick="openGameInNewTab('cookie')" style="width:100%;">플레이하기 (새 탭)</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🕹️ 얼불춤</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">박자에 맞춰 탭! 한 번 실수하면 끝, 원터치 리듬게임</div>
-        <button onclick="openRhythmGame()" style="width:100%;">플레이하기</button>
+        <button onclick="openGameInNewTab('rhythm')" style="width:100%;">플레이하기 (새 탭)</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🃏 카드깡</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">1P로 카드 한 장 뽑기! 0.5P·1P가 가장 잘 나오고, 높거나 낮을수록 희귀해요</div>
-        <button onclick="openCardGachaGame()" style="width:100%;">카드 뽑으러 가기</button>
+        <button onclick="openGameInNewTab('cardgacha')" style="width:100%;">카드 뽑으러 가기 (새 탭)</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⚫⚪ 오목</div>
-        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">컴퓨터와 5목 대결! 이기면 포인트 획득</div>
-        <button onclick="openOmokGame()" style="width:100%;">한 판 하기</button>
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">컴퓨터와 5목 대결! 쉬운 난이도로 조정됐어요. 이기면 포인트 획득</div>
+        <button onclick="openGameInNewTab('omok')" style="width:100%;">한 판 하기 (새 탭)</button>
       </div>
     </div>
     <div id="gamePlayArea" style="margin-top:14px;"></div>
   `;
 }
+
+// 게임을 현재 탭 하단이 아닌 별도의 새 탭에서 플레이하도록 열어준다
+const GAME_OPEN_FUNC_NAMES = {
+  roulette: 'openRouletteGame',
+  cps: 'openClickChallenge',
+  ttt: 'openTicTacToeGame',
+  tetris: 'openTetrisGame',
+  '2048': 'openGame2048',
+  mine: 'openMinesweeperGame',
+  cookie: 'openCookieClickerGame',
+  rhythm: 'openRhythmGame',
+  cardgacha: 'openCardGachaGame',
+  omok: 'openOmokGame'
+};
+
+window.openGameInNewTab = function(gameKey) {
+  if (!currentUser) { alert('로그인 후 이용할 수 있습니다.'); return; }
+  const url = new URL(location.href);
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('playgame', gameKey);
+  window.open(url.toString(), '_blank');
+};
 
 async function awardGamePoints(gameKey, gameLabel, points, detailText) {
   try {
@@ -6745,7 +6790,7 @@ window.drawCardGacha = async function() {
 };
 
 // --- ⚫⚪ 오목 ---
-const OMOK_SIZE = 30;
+const OMOK_SIZE = 13;
 const OMOK_WIN = 5;
 const OMOK_DIRS = [[0,1],[1,0],[1,1],[1,-1]];
 let omokState = null;
@@ -6797,27 +6842,29 @@ function pickOmokMove(board) {
   for (let i = 0; i < board.length; i++) if (board[i] === null) empties.push(i);
   if (empties.length === board.length) return omokIndex(Math.floor(OMOK_SIZE / 2), Math.floor(OMOK_SIZE / 2));
 
-  // 1) 즉시 승리
+  // 1) 즉시 승리는 항상 챙긴다
   for (const idx of empties) {
     board[idx] = 'O';
     const win = omokCheckWin(board, idx, 'O');
     board[idx] = null;
     if (win) return idx;
   }
-  // 2) 플레이어 승리 저지
-  for (const idx of empties) {
-    board[idx] = 'X';
-    const win = omokCheckWin(board, idx, 'X');
-    board[idx] = null;
-    if (win) return idx;
+  // 2) 플레이어 승리 저지 (쉬운 난이도: 가끔 못 막고 놓친다)
+  if (Math.random() < 0.6) {
+    for (const idx of empties) {
+      board[idx] = 'X';
+      const win = omokCheckWin(board, idx, 'X');
+      board[idx] = null;
+      if (win) return idx;
+    }
   }
-  // 3) 기존 돌 주변으로 후보 축소 (성능 + 자연스러운 수)
+  // 3) 기존 돌 바로 주변으로 후보 축소 (탐색 범위를 좁혀 더 단순하게 둠)
   const near = new Set();
   for (let i = 0; i < board.length; i++) {
     if (board[i] === null) continue;
     const r = Math.floor(i / OMOK_SIZE), c = i % OMOK_SIZE;
-    for (let dr = -2; dr <= 2; dr++) {
-      for (let dc = -2; dc <= 2; dc++) {
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
         const nr = r + dr, nc = c + dc;
         if (omokInBounds(nr, nc)) {
           const ni = omokIndex(nr, nc);
@@ -6834,9 +6881,10 @@ function pickOmokMove(board) {
     const defense = omokScoreCell(board, idx, 'X');
     const r = Math.floor(idx / OMOK_SIZE), c = idx % OMOK_SIZE;
     const centerBonus = -(Math.abs(r - center) + Math.abs(c - center)) * 0.5;
-    let score = offense * 1.1 + defense * 0.9 + centerBonus;
-    // 난이도 하향: 가끔 최선의 수 대신 약간 손해보는 수를 둠
-    if (Math.random() < 0.15) score *= 0.5;
+    // 난이도 하향: 공격/수비 판단력을 크게 낮춤
+    let score = offense * 0.7 + defense * 0.45 + centerBonus;
+    // 난이도 하향: 최선의 수 대신 손해보는 수를 자주 둠
+    if (Math.random() < 0.4) score *= 0.35;
     if (score > bestScore) { bestScore = score; best = [idx]; }
     else if (score === bestScore) best.push(idx);
   }
@@ -6854,10 +6902,10 @@ window.openOmokGame = function() {
   stopOmok();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
-    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">나는 ⚫, 컴퓨터는 ⚪! 5개를 먼저 이으면 승리. 이기면 40P, 비기면 15P, 지면 0P</div>
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">나는 ⚫, 컴퓨터는 ⚪! 5개를 먼저 이으면 승리. 쉬운 난이도로 조정됐어요. 이기면 40P, 비기면 15P, 지면 0P</div>
     <div id="omokGameOverBanner" class="hidden" style="font-size:18px; font-weight:bold; padding:10px; border-radius:8px; margin-bottom:10px;"></div>
     <div style="width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;">
-      <div id="omokBoard" style="display:grid; grid-template-columns:repeat(${OMOK_SIZE}, 16px); grid-auto-rows:16px; gap:1px; width:max-content; margin:0 auto; background:var(--border-color); padding:2px; border-radius:6px;"></div>
+      <div id="omokBoard" style="display:grid; grid-template-columns:repeat(${OMOK_SIZE}, 26px); grid-auto-rows:26px; gap:1px; width:max-content; margin:0 auto; background:var(--border-color); padding:2px; border-radius:6px;"></div>
     </div>
     <button onclick="startOmok()" id="omokStartBtn" style="width:100%; margin-top:12px;">새 게임 시작</button>
     <div id="omokResult" style="margin-top:10px;"></div>
@@ -6905,6 +6953,13 @@ async function finishOmok(winner) {
   banner.style.cssText += bannerStyle;
   banner.classList.remove('hidden');
   await awardGamePoints('omok', '오목', points, `오목 ${outcome}! (${points}P)`);
+  if (winner === 'X') {
+    try {
+      await updateDoc(doc(db, 'users', currentUser), { omokWins: increment(1) });
+    } catch (error) {
+      console.error(error);
+    }
+  }
   const resultText = `오목에서 ${outcome}했어요! (${points}P 획득)`;
   document.getElementById('omokResult').innerHTML = `<div style="font-size:13px; margin-bottom:6px;">+${points}P 획득</div>${renderGameResultActions(resultText)}`;
 }
@@ -6913,8 +6968,37 @@ function drawOmokBoard() {
   const boardEl = document.getElementById('omokBoard');
   if (!boardEl || !omokState) return;
   boardEl.innerHTML = omokState.board.map((cell, idx) => `
-    <div onclick="omokPlaceMark(${idx})" style="width:16px; height:16px; background:var(--card-bg); display:flex; align-items:center; justify-content:center; font-size:11px; cursor:${cell || !omokState.running ? 'default' : 'pointer'};">${cell === 'X' ? '⚫' : (cell === 'O' ? '⚪' : '')}</div>
+    <div onclick="omokPlaceMark(${idx})" style="width:26px; height:26px; background:var(--card-bg); display:flex; align-items:center; justify-content:center; font-size:18px; cursor:${cell || !omokState.running ? 'default' : 'pointer'};">${cell === 'X' ? '⚫' : (cell === 'O' ? '⚪' : '')}</div>
   `).join('');
+}
+
+// --- ⚫⚪ 오목 리더보드 (이긴 횟수 기준) ---
+async function renderOmokRankTab() {
+  const container = document.getElementById('gameOmokRankTab');
+  container.innerHTML = '불러오는 중...';
+  try {
+    const querySnapshot = await getDocs(collection(db, 'users'));
+    const ranked = querySnapshot.docs
+      .map(docSnap => ({ user: docSnap.id, wins: docSnap.data().omokWins || 0 }))
+      .filter(entry => entry.wins > 0)
+      .sort((a, b) => b.wins - a.wins)
+      .slice(0, 30);
+    if (!ranked.length) {
+      container.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">아직 오목에서 승리한 회원이 없어요. 첫 승리의 주인공이 되어보세요!</div>`;
+      return;
+    }
+    container.innerHTML = ranked.map((entry, idx) => `
+      <div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-color);">
+        <span style="width:24px; font-weight:bold; color:${idx < 3 ? 'var(--cafe-green)' : 'var(--text-sub)'};">${idx + 1}</span>
+        ${getAvatarHtml(entry.user, 26)}
+        <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
+        <span style="font-weight:bold; color:var(--cafe-green);">${entry.wins}승</span>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = `<div class="error-box">리더보드를 불러오지 못했습니다.</div>`;
+  }
 }
 
 // --- 🏆 게임 랭킹 ---
@@ -7101,6 +7185,25 @@ window.addEventListener('appinstalled', () => {
   recordDailyVisit();
   setupMentionAutocomplete(document.getElementById('postContent'));
   setupMentionAutocomplete(document.getElementById('chatInput'));
+
+  // 게임을 별도 탭에서 바로 플레이하기 위한 전용 모드
+  const playGameKey = new URLSearchParams(location.search).get('playgame');
+  if (playGameKey) {
+    document.body.classList.add('standalone-game-mode');
+    if (currentUser) {
+      showAppSection('game');
+      const openFnName = GAME_OPEN_FUNC_NAMES[playGameKey];
+      if (openFnName && typeof window[openFnName] === 'function') {
+        setTimeout(() => {
+          window[openFnName]();
+          const playArea = document.getElementById('gamePlayArea');
+          if (playArea) playArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+      }
+    }
+    return;
+  }
+
   const savedSection = localStorage.getItem('cafe_last_section') || 'cafe';
   const savedRoomId = localStorage.getItem('cafe_last_chat_room');
   if (savedRoomId && savedRoomId !== 'global') {
