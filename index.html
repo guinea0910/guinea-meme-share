@@ -2742,6 +2742,7 @@ window.showAppSection = function(section) {
   if (section !== 'game' && typeof stopCookieClicker === 'function') stopCookieClicker();
   if (section !== 'game' && typeof stopRhythm === 'function') stopRhythm();
   if (section !== 'game' && typeof stopCardGacha === 'function') stopCardGacha();
+  if (section !== 'game' && typeof stopOmok === 'function') stopOmok();
   const isCafe = section === 'cafe';
   const isChat = section === 'chat';
   const isSettings = section === 'settings';
@@ -4870,6 +4871,7 @@ window.setGameTab = function(tab) {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
+  stopOmok();
   document.getElementById('gameTabHubBtn').classList.toggle('active', tab === 'hub');
   document.getElementById('gameTabRankBtn').classList.toggle('active', tab === 'rank');
   document.getElementById('gameTabCpsBtn').classList.toggle('active', tab === 'cps');
@@ -4947,6 +4949,11 @@ function renderGameHub() {
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">1P로 카드 한 장 뽑기! 0.5P·1P가 가장 잘 나오고, 높거나 낮을수록 희귀해요</div>
         <button onclick="openCardGachaGame()" style="width:100%;">카드 뽑으러 가기</button>
       </div>
+      <div class="box" style="margin:0; padding:14px;">
+        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⚫⚪ 오목</div>
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">컴퓨터와 5목 대결! 이기면 포인트 획득</div>
+        <button onclick="openOmokGame()" style="width:100%;">한 판 하기</button>
+      </div>
     </div>
     <div id="gamePlayArea" style="margin-top:14px;"></div>
   `;
@@ -5005,6 +5012,7 @@ window.openRouletteGame = async function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
+  stopOmok();
   const area = document.getElementById('gamePlayArea');
   const key = `cafe_roulette_${currentUser}`;
   const lastPlayed = localStorage.getItem(key);
@@ -5056,6 +5064,7 @@ window.openClickChallenge = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
+  stopOmok();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:8px;">측정 시간을 고른 뒤 시작하면 3초 카운트다운 후 CPS(초당 클릭 수)를 측정해요</div>
@@ -5196,6 +5205,7 @@ window.openTicTacToeGame = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
+  stopOmok();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">나는 ❌, 컴퓨터는 ⭕! 이기면 20P, 비기면 8P, 지면 0P</div>
@@ -5322,6 +5332,7 @@ window.openMinesweeperGame = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
+  stopOmok();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">지뢰를 피해서 다 찾아내면 포인트 획득! 빠를수록, 난이도가 높을수록 포인트 UP</div>
@@ -5682,6 +5693,7 @@ window.openTetrisGame = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
+  stopOmok();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
@@ -6001,6 +6013,7 @@ window.openGame2048 = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
+  stopOmok();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
@@ -6052,6 +6065,7 @@ window.start2048 = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
+  stopOmok();
   const board = create2048Board();
   spawn2048Tile(board);
   spawn2048Tile(board);
@@ -6262,6 +6276,7 @@ window.openCookieClickerGame = async function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
+  stopOmok();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">불러오는 중...</div>`;
   try {
@@ -6459,6 +6474,7 @@ window.openRhythmGame = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
+  stopOmok();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">공이 초록 구간을 지날 때 TAP(또는 스페이스바)! 한 번만 실수해도 게임 오버, 비트 수만큼 포인트 획득</div>
@@ -6660,6 +6676,7 @@ window.openCardGachaGame = async function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
+  stopOmok();
   cardGachaState = { drawing: false };
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
@@ -6726,6 +6743,179 @@ window.drawCardGacha = async function() {
     if (drawBtn) drawBtn.disabled = false;
   }
 };
+
+// --- ⚫⚪ 오목 ---
+const OMOK_SIZE = 30;
+const OMOK_WIN = 5;
+const OMOK_DIRS = [[0,1],[1,0],[1,1],[1,-1]];
+let omokState = null;
+
+function stopOmok() { omokState = null; }
+
+function omokIndex(r, c) { return r * OMOK_SIZE + c; }
+function omokInBounds(r, c) { return r >= 0 && r < OMOK_SIZE && c >= 0 && c < OMOK_SIZE; }
+
+function omokCheckWin(board, idx, player) {
+  const r0 = Math.floor(idx / OMOK_SIZE), c0 = idx % OMOK_SIZE;
+  for (const [dr, dc] of OMOK_DIRS) {
+    let count = 1;
+    let r = r0 + dr, c = c0 + dc;
+    while (omokInBounds(r, c) && board[omokIndex(r, c)] === player) { count++; r += dr; c += dc; }
+    r = r0 - dr; c = c0 - dc;
+    while (omokInBounds(r, c) && board[omokIndex(r, c)] === player) { count++; r -= dr; c -= dc; }
+    if (count >= OMOK_WIN) return true;
+  }
+  return false;
+}
+
+function omokLineScore(board, r0, c0, dr, dc, player) {
+  let count = 1, openEnds = 0;
+  let r = r0 + dr, c = c0 + dc;
+  while (omokInBounds(r, c) && board[omokIndex(r, c)] === player) { count++; r += dr; c += dc; }
+  if (omokInBounds(r, c) && board[omokIndex(r, c)] === null) openEnds++;
+  r = r0 - dr; c = c0 - dc;
+  while (omokInBounds(r, c) && board[omokIndex(r, c)] === player) { count++; r -= dr; c -= dc; }
+  if (omokInBounds(r, c) && board[omokIndex(r, c)] === null) openEnds++;
+  if (count >= 5) return 100000;
+  if (count === 4) return openEnds >= 1 ? 10000 : 1000;
+  if (count === 3) return openEnds === 2 ? 2000 : (openEnds === 1 ? 300 : 0);
+  if (count === 2) return openEnds === 2 ? 100 : (openEnds === 1 ? 20 : 0);
+  return openEnds === 2 ? 5 : 1;
+}
+
+function omokScoreCell(board, idx, player) {
+  const r0 = Math.floor(idx / OMOK_SIZE), c0 = idx % OMOK_SIZE;
+  board[idx] = player;
+  let total = 0;
+  for (const [dr, dc] of OMOK_DIRS) total += omokLineScore(board, r0, c0, dr, dc, player);
+  board[idx] = null;
+  return total;
+}
+
+function pickOmokMove(board) {
+  const empties = [];
+  for (let i = 0; i < board.length; i++) if (board[i] === null) empties.push(i);
+  if (empties.length === board.length) return omokIndex(Math.floor(OMOK_SIZE / 2), Math.floor(OMOK_SIZE / 2));
+
+  // 1) 즉시 승리
+  for (const idx of empties) {
+    board[idx] = 'O';
+    const win = omokCheckWin(board, idx, 'O');
+    board[idx] = null;
+    if (win) return idx;
+  }
+  // 2) 플레이어 승리 저지
+  for (const idx of empties) {
+    board[idx] = 'X';
+    const win = omokCheckWin(board, idx, 'X');
+    board[idx] = null;
+    if (win) return idx;
+  }
+  // 3) 기존 돌 주변으로 후보 축소 (성능 + 자연스러운 수)
+  const near = new Set();
+  for (let i = 0; i < board.length; i++) {
+    if (board[i] === null) continue;
+    const r = Math.floor(i / OMOK_SIZE), c = i % OMOK_SIZE;
+    for (let dr = -2; dr <= 2; dr++) {
+      for (let dc = -2; dc <= 2; dc++) {
+        const nr = r + dr, nc = c + dc;
+        if (omokInBounds(nr, nc)) {
+          const ni = omokIndex(nr, nc);
+          if (board[ni] === null) near.add(ni);
+        }
+      }
+    }
+  }
+  const candidates = near.size ? Array.from(near) : empties;
+  const center = Math.floor(OMOK_SIZE / 2);
+  let best = [], bestScore = -Infinity;
+  for (const idx of candidates) {
+    const offense = omokScoreCell(board, idx, 'O');
+    const defense = omokScoreCell(board, idx, 'X');
+    const r = Math.floor(idx / OMOK_SIZE), c = idx % OMOK_SIZE;
+    const centerBonus = -(Math.abs(r - center) + Math.abs(c - center)) * 0.5;
+    let score = offense * 1.1 + defense * 0.9 + centerBonus;
+    // 난이도 하향: 가끔 최선의 수 대신 약간 손해보는 수를 둠
+    if (Math.random() < 0.15) score *= 0.5;
+    if (score > bestScore) { bestScore = score; best = [idx]; }
+    else if (score === bestScore) best.push(idx);
+  }
+  return best[Math.floor(Math.random() * best.length)];
+}
+
+window.openOmokGame = function() {
+  stopTetris();
+  stop2048();
+  stopTtt();
+  stopMinesweeper();
+  stopCookieClicker();
+  stopRhythm();
+  stopCardGacha();
+  stopOmok();
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">나는 ⚫, 컴퓨터는 ⚪! 5개를 먼저 이으면 승리. 이기면 40P, 비기면 15P, 지면 0P</div>
+    <div id="omokGameOverBanner" class="hidden" style="font-size:18px; font-weight:bold; padding:10px; border-radius:8px; margin-bottom:10px;"></div>
+    <div style="width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;">
+      <div id="omokBoard" style="display:grid; grid-template-columns:repeat(${OMOK_SIZE}, 16px); grid-auto-rows:16px; gap:1px; width:max-content; margin:0 auto; background:var(--border-color); padding:2px; border-radius:6px;"></div>
+    </div>
+    <button onclick="startOmok()" id="omokStartBtn" style="width:100%; margin-top:12px;">새 게임 시작</button>
+    <div id="omokResult" style="margin-top:10px;"></div>
+  </div>`;
+  startOmok();
+};
+
+window.startOmok = function() {
+  omokState = { board: Array(OMOK_SIZE * OMOK_SIZE).fill(null), running: true };
+  document.getElementById('omokGameOverBanner').classList.add('hidden');
+  document.getElementById('omokResult').innerHTML = '';
+  document.getElementById('omokStartBtn').textContent = '새 게임 시작';
+  drawOmokBoard();
+};
+
+window.omokPlaceMark = async function(index) {
+  if (!omokState || !omokState.running) return;
+  if (omokState.board[index] !== null) return;
+  omokState.board[index] = 'X';
+  drawOmokBoard();
+  if (omokCheckWin(omokState.board, index, 'X')) { await finishOmok('X'); return; }
+  if (omokState.board.every(cell => cell !== null)) { await finishOmok('draw'); return; }
+  const computerIdx = pickOmokMove(omokState.board);
+  omokState.board[computerIdx] = 'O';
+  drawOmokBoard();
+  if (omokCheckWin(omokState.board, computerIdx, 'O')) { await finishOmok('O'); return; }
+  if (omokState.board.every(cell => cell !== null)) { await finishOmok('draw'); return; }
+};
+
+async function finishOmok(winner) {
+  omokState.running = false;
+  const banner = document.getElementById('omokGameOverBanner');
+  let outcome, points, bannerText, bannerStyle;
+  if (winner === 'X') {
+    outcome = '승리'; points = 40;
+    bannerText = '🎉 승리! 게임 종료'; bannerStyle = 'background:rgba(3,199,90,0.18); color:var(--cafe-green);';
+  } else if (winner === 'draw') {
+    outcome = '무승부'; points = 15;
+    bannerText = '🤝 무승부! 게임 종료'; bannerStyle = 'background:var(--input-bg); color:var(--text-sub);';
+  } else {
+    outcome = '패배'; points = 0;
+    bannerText = '💀 게임 오버! (패배)'; bannerStyle = 'background:rgba(248,113,113,0.18); color:#f87171;';
+  }
+  banner.textContent = bannerText;
+  banner.style.cssText += bannerStyle;
+  banner.classList.remove('hidden');
+  await awardGamePoints('omok', '오목', points, `오목 ${outcome}! (${points}P)`);
+  const resultText = `오목에서 ${outcome}했어요! (${points}P 획득)`;
+  document.getElementById('omokResult').innerHTML = `<div style="font-size:13px; margin-bottom:6px;">+${points}P 획득</div>${renderGameResultActions(resultText)}`;
+}
+
+function drawOmokBoard() {
+  const boardEl = document.getElementById('omokBoard');
+  if (!boardEl || !omokState) return;
+  boardEl.innerHTML = omokState.board.map((cell, idx) => `
+    <div onclick="omokPlaceMark(${idx})" style="width:16px; height:16px; background:var(--card-bg); display:flex; align-items:center; justify-content:center; font-size:11px; cursor:${cell || !omokState.running ? 'default' : 'pointer'};">${cell === 'X' ? '⚫' : (cell === 'O' ? '⚪' : '')}</div>
+  `).join('');
+}
 
 // --- 🏆 게임 랭킹 ---
 async function renderGameRankTab() {
