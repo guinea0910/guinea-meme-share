@@ -775,12 +775,14 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button id="gameTabCpsBtn" class="page-btn" onclick="setGameTab('cps')" style="padding:6px 12px; font-size:12px;">⚡ CPS 리더보드</button>
 <button id="gameTabTetrisBtn" class="page-btn" onclick="setGameTab('tetris')" style="padding:6px 12px; font-size:12px;">🧱 테트리스 리더보드</button>
 <button id="gameTab2048Btn" class="page-btn" onclick="setGameTab('2048')" style="padding:6px 12px; font-size:12px;">🔢 2048 리더보드</button>
+<button id="gameTabMineBtn" class="page-btn" onclick="setGameTab('mine')" style="padding:6px 12px; font-size:12px;">💣 지뢰찾기 리더보드</button>
 </div>
 <div id="gameHubTab"></div>
 <div id="gameRankTab" class="hidden"></div>
 <div id="gameCpsRankTab" class="hidden"></div>
 <div id="gameTetrisRankTab" class="hidden"></div>
 <div id="game2048RankTab" class="hidden"></div>
+<div id="gameMineRankTab" class="hidden"></div>
 </div>
 </section>
 <section id="bookmarksView" class="hidden">
@@ -4858,16 +4860,19 @@ window.setGameTab = function(tab) {
   document.getElementById('gameTabCpsBtn').classList.toggle('active', tab === 'cps');
   document.getElementById('gameTabTetrisBtn').classList.toggle('active', tab === 'tetris');
   document.getElementById('gameTab2048Btn').classList.toggle('active', tab === '2048');
+  document.getElementById('gameTabMineBtn').classList.toggle('active', tab === 'mine');
   document.getElementById('gameHubTab').classList.toggle('hidden', tab !== 'hub');
   document.getElementById('gameRankTab').classList.toggle('hidden', tab !== 'rank');
   document.getElementById('gameCpsRankTab').classList.toggle('hidden', tab !== 'cps');
   document.getElementById('gameTetrisRankTab').classList.toggle('hidden', tab !== 'tetris');
   document.getElementById('game2048RankTab').classList.toggle('hidden', tab !== '2048');
+  document.getElementById('gameMineRankTab').classList.toggle('hidden', tab !== 'mine');
   if (tab === 'hub') renderGameHub();
   else if (tab === 'rank') renderGameRankTab();
   else if (tab === 'cps') renderCpsRankTab();
   else if (tab === 'tetris') renderTetrisRankTab();
-  else render2048RankTab();
+  else if (tab === '2048') render2048RankTab();
+  else renderMineRankTab();
 };
 
 function renderGameHub() {
@@ -5251,9 +5256,12 @@ function drawTicTacToe() {
 }
 
 // --- 💣 지뢰찾기 ---
-const MINE_COLS = 9;
-const MINE_ROWS = 9;
-const MINE_COUNT = 10;
+const MINE_DIFFICULTIES = {
+  easy:   { key: 'easy',   label: '초급', cols: 9,  rows: 9,  mines: 10, base: 200, decay: 5,    floor: 75, field: 'bestMineEasy' },
+  medium: { key: 'medium', label: '중급', cols: 16, rows: 16, mines: 40, base: 200, decay: 0.6,  floor: 60, field: 'bestMineMedium' },
+  hard:   { key: 'hard',   label: '고급', cols: 30, rows: 16, mines: 99, base: 200, decay: 0.25, floor: 50, field: 'bestMineHard' }
+};
+let mineSelectedDifficulty = 'easy';
 let mineState = null;
 
 function stopMinesweeper() {
@@ -5268,26 +5276,59 @@ window.openMinesweeperGame = function() {
   stopMinesweeper();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
-    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">9x9 칸에 지뢰 10개! 빠르게 다 찾아내면 포인트 UP</div>
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">지뢰를 피해서 다 찾아내면 포인트 획득! 빠를수록 포인트 UP (최대 200P)</div>
+    <div style="display:flex; gap:6px; margin-bottom:10px; justify-content:center;">
+      <button onclick="selectMineDifficulty('easy')" id="mineDiffEasyBtn" style="flex:1; max-width:100px; font-size:12px; padding:6px;">초급</button>
+      <button onclick="selectMineDifficulty('medium')" id="mineDiffMediumBtn" style="flex:1; max-width:100px; font-size:12px; padding:6px;">중급</button>
+      <button onclick="selectMineDifficulty('hard')" id="mineDiffHardBtn" style="flex:1; max-width:100px; font-size:12px; padding:6px;">고급</button>
+    </div>
+    <div id="mineDiffInfo" style="font-size:11px; color:var(--text-sub); margin-bottom:8px;"></div>
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
       <span>⏱ <b id="mineTimer">0</b>초</span>
-      <span>🚩 <b id="mineFlagCount">0</b>/${MINE_COUNT}</span>
+      <span>🚩 <b id="mineFlagCount">0</b>/<span id="mineFlagTotal">0</span></span>
     </div>
     <div id="mineGameOverBanner" class="hidden" style="font-size:18px; font-weight:bold; padding:10px; border-radius:8px; margin-bottom:10px;"></div>
-    <div id="mineBoard" style="display:grid; grid-template-columns:repeat(${MINE_COLS}, 1fr); gap:2px; width:100%; max-width:320px; margin:0 auto; user-select:none;"></div>
+    <div style="width:100%; overflow-x:auto;">
+      <div id="mineBoard" style="display:inline-grid; gap:2px; margin:0 auto; user-select:none;"></div>
+    </div>
     <div style="display:flex; gap:8px; margin-top:12px;">
       <button id="mineModeBtn" onclick="toggleMineMode()" style="flex:1;">📍 칸 열기 모드</button>
       <button onclick="startMinesweeper()" style="flex:1;">새 게임 시작</button>
     </div>
     <div id="mineResult" style="margin-top:10px;"></div>
   </div>`;
+  updateMineDifficultyButtons();
   startMinesweeper();
 };
 
+window.selectMineDifficulty = function(diffKey) {
+  mineSelectedDifficulty = diffKey;
+  updateMineDifficultyButtons();
+  startMinesweeper();
+};
+
+function updateMineDifficultyButtons() {
+  const diff = MINE_DIFFICULTIES[mineSelectedDifficulty];
+  ['easy', 'medium', 'hard'].forEach(key => {
+    const btn = document.getElementById(`mineDiff${key[0].toUpperCase()}${key.slice(1)}Btn`);
+    if (!btn) return;
+    const active = key === mineSelectedDifficulty;
+    btn.style.background = active ? 'var(--cafe-green)' : 'var(--input-bg)';
+    btn.style.color = active ? '#fff' : 'var(--text-main)';
+  });
+  const infoEl = document.getElementById('mineDiffInfo');
+  if (infoEl) infoEl.textContent = `${diff.label} · ${diff.cols}x${diff.rows} · 지뢰 ${diff.mines}개`;
+}
+
 window.startMinesweeper = function() {
   stopMinesweeper();
-  const cells = Array.from({ length: MINE_ROWS * MINE_COLS }, () => ({ mine: false, revealed: false, flagged: false, adjacent: 0 }));
+  const diff = MINE_DIFFICULTIES[mineSelectedDifficulty];
+  const cells = Array.from({ length: diff.rows * diff.cols }, () => ({ mine: false, revealed: false, flagged: false, adjacent: 0 }));
   mineState = {
+    difficulty: diff.key,
+    cols: diff.cols,
+    rows: diff.rows,
+    mines: diff.mines,
     cells,
     started: false,
     running: true,
@@ -5300,7 +5341,10 @@ window.startMinesweeper = function() {
   document.getElementById('mineResult').innerHTML = '';
   document.getElementById('mineTimer').textContent = '0';
   document.getElementById('mineFlagCount').textContent = '0';
+  document.getElementById('mineFlagTotal').textContent = diff.mines;
   document.getElementById('mineModeBtn').textContent = '📍 칸 열기 모드';
+  document.getElementById('mineBoard').style.gridTemplateColumns = `repeat(${diff.cols}, 24px)`;
+  updateMineDifficultyButtons();
   drawMinesweeper();
 };
 
@@ -5310,7 +5354,7 @@ window.toggleMineMode = function() {
   document.getElementById('mineModeBtn').textContent = mineState.flagMode ? '🚩 깃발 꽂기 모드' : '📍 칸 열기 모드';
 };
 
-function mineIndex(row, col) { return row * MINE_COLS + col; }
+function mineIndex(row, col) { return row * mineState.cols + col; }
 
 function mineNeighbors(row, col) {
   const result = [];
@@ -5318,37 +5362,37 @@ function mineNeighbors(row, col) {
     for (let dc = -1; dc <= 1; dc++) {
       if (dr === 0 && dc === 0) continue;
       const r = row + dr, c = col + dc;
-      if (r >= 0 && r < MINE_ROWS && c >= 0 && c < MINE_COLS) result.push(mineIndex(r, c));
+      if (r >= 0 && r < mineState.rows && c >= 0 && c < mineState.cols) result.push(mineIndex(r, c));
     }
   }
   return result;
 }
 
 function placeMinesAvoiding(safeIndex) {
-  const { cells } = mineState;
-  const safeRow = Math.floor(safeIndex / MINE_COLS), safeCol = safeIndex % MINE_COLS;
+  const { cells, cols, mines } = mineState;
+  const safeRow = Math.floor(safeIndex / cols), safeCol = safeIndex % cols;
   const safeZone = new Set([safeIndex, ...mineNeighbors(safeRow, safeCol)]);
   const candidates = cells.map((_, i) => i).filter(i => !safeZone.has(i));
   for (let i = candidates.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
   }
-  candidates.slice(0, MINE_COUNT).forEach(i => { cells[i].mine = true; });
+  candidates.slice(0, mines).forEach(i => { cells[i].mine = true; });
   cells.forEach((cell, i) => {
     if (cell.mine) return;
-    const row = Math.floor(i / MINE_COLS), col = i % MINE_COLS;
+    const row = Math.floor(i / cols), col = i % cols;
     cell.adjacent = mineNeighbors(row, col).filter(n => cells[n].mine).length;
   });
 }
 
 function revealMineCell(index) {
-  const { cells } = mineState;
+  const { cells, cols } = mineState;
   const cell = cells[index];
   if (cell.revealed || cell.flagged) return;
   cell.revealed = true;
   mineState.revealedCount++;
   if (cell.adjacent === 0 && !cell.mine) {
-    const row = Math.floor(index / MINE_COLS), col = index % MINE_COLS;
+    const row = Math.floor(index / cols), col = index % cols;
     mineNeighbors(row, col).forEach(n => { if (!cells[n].revealed && !cells[n].flagged) revealMineCell(n); });
   }
 }
@@ -5381,7 +5425,7 @@ window.mineCellClick = function(index) {
   }
   revealMineCell(index);
   drawMinesweeper();
-  const totalSafe = MINE_ROWS * MINE_COLS - MINE_COUNT;
+  const totalSafe = mineState.rows * mineState.cols - mineState.mines;
   if (mineState.revealedCount >= totalSafe) {
     finishMinesweeper(true);
   }
@@ -5396,13 +5440,15 @@ async function finishMinesweeper(won) {
     mineState.cells.forEach(c => { if (c.mine) c.revealed = true; });
   }
   drawMinesweeper();
+  const diff = MINE_DIFFICULTIES[mineState.difficulty];
   const banner = document.getElementById('mineGameOverBanner');
-  let points, bannerText, bannerStyle, outcome;
+  let points, bannerText, bannerStyle, outcome, isNewBest = false;
   if (won) {
     outcome = '성공';
-    points = Math.max(15, 40 - mineState.elapsed);
-    bannerText = `🎉 클리어! (${mineState.elapsed}초, ${points}P)`;
+    points = Math.min(200, Math.max(diff.floor, Math.round(diff.base - mineState.elapsed * diff.decay)));
+    bannerText = `🎉 ${diff.label} 클리어! (${mineState.elapsed}초, ${points}P)`;
     bannerStyle = 'background:rgba(3,199,90,0.18); color:var(--cafe-green);';
+    isNewBest = await updateBestMinesweeper(diff.key, mineState.elapsed);
   } else {
     outcome = '실패';
     points = 0;
@@ -5412,9 +5458,30 @@ async function finishMinesweeper(won) {
   banner.textContent = bannerText;
   banner.style.cssText += bannerStyle;
   banner.classList.remove('hidden');
-  await awardGamePoints('minesweeper', '지뢰찾기', points, `지뢰찾기 ${outcome}! (${points}P)`);
-  const resultText = `지뢰찾기에서 ${outcome}했어요! (${points}P 획득)`;
-  document.getElementById('mineResult').innerHTML = `<div style="font-size:13px; margin-bottom:6px;">+${points}P 획득</div>${renderGameResultActions(resultText)}`;
+  await awardGamePoints('minesweeper', '지뢰찾기', points, `지뢰찾기(${diff.label}) ${outcome}! (${points}P)`);
+  const resultText = `지뢰찾기 ${diff.label}에서 ${outcome}했어요! (${points}P 획득)`;
+  document.getElementById('mineResult').innerHTML = `
+    <div style="font-size:13px; margin-bottom:4px;">+${points}P 획득</div>
+    ${isNewBest ? `<div style="font-size:12px; color:var(--cafe-green); margin-bottom:6px;">🎉 ${diff.label} 개인 최고 기록 갱신!</div>` : ''}
+    ${renderGameResultActions(resultText)}
+  `;
+}
+
+async function updateBestMinesweeper(difficultyKey, elapsed) {
+  try {
+    const diff = MINE_DIFFICULTIES[difficultyKey];
+    const userRef = doc(db, 'users', currentUser);
+    const snap = await getDoc(userRef);
+    const currentBest = snap.exists() ? (snap.data()[diff.field] || 0) : 0;
+    if (!currentBest || elapsed < currentBest) {
+      await updateDoc(userRef, { [diff.field]: elapsed, [`${diff.field}At`]: Date.now() });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
 }
 
 function drawMinesweeper() {
@@ -5432,8 +5499,56 @@ function drawMinesweeper() {
     } else if (cell.flagged) {
       content = '🚩';
     }
-    return `<div onclick="mineCellClick(${idx})" style="aspect-ratio:1; background:${bg}; border:1px solid var(--border-color); border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:bold; cursor:${!mineState.running ? 'default' : 'pointer'}; color:${color};">${content}</div>`;
+    return `<div onclick="mineCellClick(${idx})" style="aspect-ratio:1; width:24px; background:${bg}; border:1px solid var(--border-color); border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; cursor:${!mineState.running ? 'default' : 'pointer'}; color:${color};">${content}</div>`;
   }).join('');
+}
+
+let mineRankDifficulty = 'easy';
+async function renderMineRankTab() {
+  const container = document.getElementById('gameMineRankTab');
+  container.innerHTML = `
+    <div style="display:flex; gap:6px; margin-bottom:12px;">
+      <button onclick="setMineRankDifficulty('easy')" class="page-btn ${mineRankDifficulty === 'easy' ? 'active' : ''}" style="padding:5px 10px; font-size:12px;">초급</button>
+      <button onclick="setMineRankDifficulty('medium')" class="page-btn ${mineRankDifficulty === 'medium' ? 'active' : ''}" style="padding:5px 10px; font-size:12px;">중급</button>
+      <button onclick="setMineRankDifficulty('hard')" class="page-btn ${mineRankDifficulty === 'hard' ? 'active' : ''}" style="padding:5px 10px; font-size:12px;">고급</button>
+    </div>
+    <div id="mineRankList">불러오는 중...</div>
+  `;
+  await loadMineRankList();
+}
+
+window.setMineRankDifficulty = function(diffKey) {
+  mineRankDifficulty = diffKey;
+  renderMineRankTab();
+};
+
+async function loadMineRankList() {
+  const listEl = document.getElementById('mineRankList');
+  if (!listEl) return;
+  try {
+    const diff = MINE_DIFFICULTIES[mineRankDifficulty];
+    const querySnapshot = await getDocs(collection(db, 'users'));
+    const ranked = querySnapshot.docs
+      .map(docSnap => ({ user: docSnap.id, time: docSnap.data()[diff.field] || 0 }))
+      .filter(entry => entry.time > 0)
+      .sort((a, b) => a.time - b.time)
+      .slice(0, 30);
+    if (!ranked.length) {
+      listEl.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">아직 ${diff.label} 난이도를 클리어한 회원이 없어요. 첫 기록을 남겨보세요!</div>`;
+      return;
+    }
+    listEl.innerHTML = ranked.map((entry, idx) => `
+      <div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-color);">
+        <span style="width:24px; font-weight:bold; color:${idx < 3 ? 'var(--cafe-green)' : 'var(--text-sub)'};">${idx + 1}</span>
+        ${getAvatarHtml(entry.user, 26)}
+        <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
+        <span style="font-weight:bold; color:var(--cafe-green);">${entry.time}초</span>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error(error);
+    listEl.innerHTML = `<div class="error-box">리더보드를 불러오지 못했습니다.</div>`;
+  }
 }
 
 // --- 🧱 테트리스 ---
