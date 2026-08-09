@@ -761,10 +761,14 @@ button:hover { background-color: var(--cafe-green-hover); }
 </section>
 <section id="gameView" class="hidden">
 <div class="box">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
 <h2 style="margin:0;">🎮 미니게임</h2>
+<div style="display:flex; align-items:center; gap:8px;">
 <div id="myGamePointsBadge" style="font-size:13px; color: var(--cafe-green); font-weight:bold;"></div>
+<button onclick="toggleGameShop()" style="padding:6px 10px; font-size:12px;">🛒 상점</button>
 </div>
+</div>
+<div id="gameShopPanel" class="hidden" style="border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:14px;"></div>
 <div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;">
 <button id="gameTabHubBtn" class="page-btn active" onclick="setGameTab('hub')" style="padding:6px 12px; font-size:12px;">게임 목록</button>
 <button id="gameTabRankBtn" class="page-btn" onclick="setGameTab('rank')" style="padding:6px 12px; font-size:12px;">🏆 게임 랭킹</button>
@@ -2727,6 +2731,7 @@ window.showAppSection = function(section) {
   if (section !== 'profile') localStorage.setItem('cafe_last_section', section);
   if (section !== 'game' && typeof stopTetris === 'function') stopTetris();
   if (section !== 'game' && typeof stop2048 === 'function') stop2048();
+  if (section !== 'game' && typeof stopTtt === 'function') stopTtt();
   const isCafe = section === 'cafe';
   const isChat = section === 'chat';
   const isSettings = section === 'settings';
@@ -4771,10 +4776,81 @@ async function refreshMyGamePointsBadge() {
   }
 }
 
+// ===== 🛒 미니게임 상점 =====
+const GAME_SHOP_ITEMS = [
+  { key: 'rouletteRespin', icon: '🎰', name: '럭키 룰렛 한 번 더 돌리기', desc: '오늘 이미 돌렸어도 한 번 더 돌릴 수 있어요', price: 50 },
+  { key: 'undo2048', icon: '🔄', name: '2048 되돌리기권', desc: '게임 오버 전 마지막 결정을 다시 내릴 수 있어요', price: 100 }
+];
+
+window.toggleGameShop = async function() {
+  if (!currentUser) { alert('로그인 후 상점을 이용할 수 있습니다.'); return; }
+  const panel = document.getElementById('gameShopPanel');
+  const willOpen = panel.classList.contains('hidden');
+  if (!willOpen) { panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+  await renderGameShop();
+};
+
+async function renderGameShop() {
+  const panel = document.getElementById('gameShopPanel');
+  panel.innerHTML = '불러오는 중...';
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser));
+    const data = snap.exists() ? snap.data() : {};
+    const points = data.gamePoints || 0;
+    const undoTickets = data.undoTickets2048 || 0;
+    panel.innerHTML = `
+      <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">보유 포인트: <b style="color:var(--cafe-green);">${points}P</b> · 보유 2048 되돌리기권: <b>${undoTickets}개</b></div>
+      ${GAME_SHOP_ITEMS.map(item => `
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-color);">
+          <span style="font-size:22px;">${item.icon}</span>
+          <div style="flex:1; text-align:left;">
+            <div style="font-size:13px; font-weight:bold;">${item.name}</div>
+            <div style="font-size:11px; color:var(--text-sub);">${item.desc}</div>
+          </div>
+          <button onclick="purchaseShopItem('${item.key}')" style="padding:6px 10px; font-size:12px; flex:0 0 auto;">${item.price}P 구매</button>
+        </div>
+      `).join('')}
+    `;
+  } catch (error) {
+    console.error(error);
+    panel.innerHTML = '<div class="error-box">상점을 불러오지 못했습니다.</div>';
+  }
+}
+
+window.purchaseShopItem = async function(itemKey) {
+  const item = GAME_SHOP_ITEMS.find(entry => entry.key === itemKey);
+  if (!item) return;
+  try {
+    const userRef = doc(db, 'users', currentUser);
+    const snap = await getDoc(userRef);
+    const points = snap.exists() ? (snap.data().gamePoints || 0) : 0;
+    if (points < item.price) {
+      alert(`포인트가 부족해요. (필요: ${item.price}P / 보유: ${points}P)`);
+      return;
+    }
+    await updateDoc(userRef, { gamePoints: increment(-item.price) });
+    if (item.key === 'rouletteRespin') {
+      localStorage.removeItem(`cafe_roulette_${currentUser}`);
+      alert('룰렛을 한 번 더 돌릴 수 있어요! 게임 목록에서 도전해 보세요.');
+      if (gameActiveTab === 'hub') renderGameHub();
+    } else if (item.key === 'undo2048') {
+      await updateDoc(userRef, { undoTickets2048: increment(1) });
+      alert('2048 되돌리기권을 구매했어요!');
+    }
+    await refreshMyGamePointsBadge();
+    await renderGameShop();
+  } catch (error) {
+    console.error(error);
+    alert('구매에 실패했습니다.');
+  }
+};
+
 window.setGameTab = function(tab) {
   gameActiveTab = tab;
   stopTetris();
   stop2048();
+  stopTtt();
   document.getElementById('gameTabHubBtn').classList.toggle('active', tab === 'hub');
   document.getElementById('gameTabRankBtn').classList.toggle('active', tab === 'rank');
   document.getElementById('gameTabCpsBtn').classList.toggle('active', tab === 'cps');
@@ -4794,12 +4870,14 @@ window.setGameTab = function(tab) {
 
 function renderGameHub() {
   const container = document.getElementById('gameHubTab');
+  const rouletteKey = `cafe_roulette_${currentUser}`;
+  const roulettePlayedToday = localStorage.getItem(rouletteKey) === getTodayDateKey();
   container.innerHTML = `
     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px;">
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🎰 럭키 룰렛</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">하루 한 번, 랜덤 포인트에 도전해 보세요</div>
-        <button onclick="openRouletteGame()" style="width:100%;">돌리러 가기</button>
+        <button onclick="openRouletteGame()" ${roulettePlayedToday ? 'disabled' : ''} style="width:100%; ${roulettePlayedToday ? 'background:var(--border-color); color:var(--text-sub); cursor:not-allowed;' : ''}">${roulettePlayedToday ? '오늘 완료' : '돌리러 가기'}</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⚡ CPS 챌린지</div>
@@ -4807,9 +4885,9 @@ function renderGameHub() {
         <button onclick="openClickChallenge()" style="width:100%;">도전하기</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
-        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">✊✌️✋ 가위바위보</div>
+        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⭕❌ 틱택토</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">컴퓨터와 한 판! 이기면 포인트 획득</div>
-        <button onclick="openRpsGame()" style="width:100%;">한 판 하기</button>
+        <button onclick="openTicTacToeGame()" style="width:100%;">한 판 하기</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🧱 테트리스</div>
@@ -4874,6 +4952,7 @@ window.shareGameResultToBoard = function(text) {
 window.openRouletteGame = async function() {
   stopTetris();
   stop2048();
+  stopTtt();
   const area = document.getElementById('gamePlayArea');
   const key = `cafe_roulette_${currentUser}`;
   const lastPlayed = localStorage.getItem(key);
@@ -4920,6 +4999,7 @@ let cpsChallengeDuration = 5;
 window.openClickChallenge = function() {
   stopTetris();
   stop2048();
+  stopTtt();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:8px;">측정 시간을 고른 뒤 시작하면 3초 카운트다운 후 CPS(초당 클릭 수)를 측정해요</div>
@@ -5048,42 +5128,111 @@ async function renderCpsRankTab() {
 }
 
 
-// --- ✊✌️✋ 가위바위보 ---
-window.openRpsGame = function() {
+// --- ⭕❌ 틱택토 ---
+let tttState = null;
+function stopTtt() { tttState = null; }
+
+window.openTicTacToeGame = function() {
   stopTetris();
   stop2048();
+  stopTtt();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
-    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">이기면 15P, 비기면 5P, 지면 0P!</div>
-    <div style="display:flex; gap:8px; justify-content:center;">
-      <button onclick="playRps('rock')" style="font-size:24px; padding:12px 16px;">✊</button>
-      <button onclick="playRps('scissors')" style="font-size:24px; padding:12px 16px;">✌️</button>
-      <button onclick="playRps('paper')" style="font-size:24px; padding:12px 16px;">✋</button>
-    </div>
-    <div id="rpsResult" style="margin-top:12px;"></div>
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">나는 ❌, 컴퓨터는 ⭕! 이기면 20P, 비기면 8P, 지면 0P</div>
+    <div id="tttGameOverBanner" class="hidden" style="font-size:18px; font-weight:bold; padding:10px; border-radius:8px; margin-bottom:10px;"></div>
+    <div id="tttBoard" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; width:100%; max-width:240px; margin:0 auto;"></div>
+    <button onclick="startTicTacToe()" id="tttStartBtn" style="width:100%; margin-top:12px;">새 게임 시작</button>
+    <div id="tttResult" style="margin-top:10px;"></div>
   </div>`;
+  startTicTacToe();
 };
 
-window.playRps = async function(myChoice) {
-  const choices = ['rock', 'scissors', 'paper'];
-  const labels = { rock: '✊ 바위', scissors: '✌️ 가위', paper: '✋ 보' };
-  const computerChoice = choices[Math.floor(Math.random() * 3)];
-  let outcome, points;
-  if (myChoice === computerChoice) {
-    outcome = '무승부'; points = 5;
-  } else if (
-    (myChoice === 'rock' && computerChoice === 'scissors') ||
-    (myChoice === 'scissors' && computerChoice === 'paper') ||
-    (myChoice === 'paper' && computerChoice === 'rock')
-  ) {
-    outcome = '승리'; points = 15;
+window.startTicTacToe = function() {
+  tttState = { board: Array(9).fill(null), running: true };
+  document.getElementById('tttGameOverBanner').classList.add('hidden');
+  document.getElementById('tttResult').innerHTML = '';
+  document.getElementById('tttStartBtn').textContent = '새 게임 시작';
+  drawTicTacToe();
+};
+
+const TTT_WIN_LINES = [
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6]
+];
+
+function getTttWinner(board) {
+  for (const [a, b, c] of TTT_WIN_LINES) {
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) return board[a];
+  }
+  if (board.every(cell => cell !== null)) return 'draw';
+  return null;
+}
+
+function pickComputerTttMove(board) {
+  const empties = board.map((v, i) => v === null ? i : null).filter(v => v !== null);
+  // 1) 컴퓨터가 이길 수 있으면 승리
+  for (const idx of empties) {
+    const test = [...board]; test[idx] = 'O';
+    if (getTttWinner(test) === 'O') return idx;
+  }
+  // 2) 플레이어 승리를 막아야 하면 막기
+  for (const idx of empties) {
+    const test = [...board]; test[idx] = 'X';
+    if (getTttWinner(test) === 'X') return idx;
+  }
+  // 3) 중앙 우선
+  if (board[4] === null) return 4;
+  // 4) 코너 우선
+  const corners = [0, 2, 6, 8].filter(i => board[i] === null);
+  if (corners.length) return corners[Math.floor(Math.random() * corners.length)];
+  // 5) 아무 칸
+  return empties[Math.floor(Math.random() * empties.length)];
+}
+
+window.tttPlaceMark = async function(index) {
+  if (!tttState || !tttState.running) return;
+  if (tttState.board[index] !== null) return;
+  tttState.board[index] = 'X';
+  drawTicTacToe();
+  let winner = getTttWinner(tttState.board);
+  if (winner) { await finishTicTacToe(winner); return; }
+  const computerIdx = pickComputerTttMove(tttState.board);
+  tttState.board[computerIdx] = 'O';
+  drawTicTacToe();
+  winner = getTttWinner(tttState.board);
+  if (winner) { await finishTicTacToe(winner); return; }
+};
+
+async function finishTicTacToe(winner) {
+  tttState.running = false;
+  const banner = document.getElementById('tttGameOverBanner');
+  let outcome, points, bannerText, bannerStyle;
+  if (winner === 'X') {
+    outcome = '승리'; points = 20;
+    bannerText = '🎉 승리! 게임 종료'; bannerStyle = 'background:rgba(3,199,90,0.18); color:var(--cafe-green);';
+  } else if (winner === 'draw') {
+    outcome = '무승부'; points = 8;
+    bannerText = '🤝 무승부! 게임 종료'; bannerStyle = 'background:var(--input-bg); color:var(--text-sub);';
   } else {
     outcome = '패배'; points = 0;
+    bannerText = '💀 게임 오버! (패배)'; bannerStyle = 'background:rgba(248,113,113,0.18); color:#f87171;';
   }
-  await awardGamePoints('rps', '가위바위보', points, `가위바위보 ${outcome}! (${points}P)`);
-  const resultText = `가위바위보에서 ${labels[myChoice]} vs ${labels[computerChoice]} → ${outcome}! (${points}P 획득)`;
-  document.getElementById('rpsResult').innerHTML = `<div style="font-size:14px; margin-bottom:6px;">나: ${labels[myChoice]} · 상대: ${labels[computerChoice]}<br><b>${outcome}!</b> (+${points}P)</div>${renderGameResultActions(resultText)}`;
-};
+  banner.textContent = bannerText;
+  banner.style.cssText += bannerStyle;
+  banner.classList.remove('hidden');
+  await awardGamePoints('ttt', '틱택토', points, `틱택토 ${outcome}! (${points}P)`);
+  const resultText = `틱택토에서 ${outcome}했어요! (${points}P 획득)`;
+  document.getElementById('tttResult').innerHTML = `<div style="font-size:13px; margin-bottom:6px;">+${points}P 획득</div>${renderGameResultActions(resultText)}`;
+}
+
+function drawTicTacToe() {
+  const board = document.getElementById('tttBoard');
+  if (!board || !tttState) return;
+  board.innerHTML = tttState.board.map((cell, idx) => `
+    <div onclick="tttPlaceMark(${idx})" style="aspect-ratio:1; background:var(--input-bg); border:1px solid var(--border-color); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:bold; cursor:${cell || !tttState.running ? 'default' : 'pointer'}; color:${cell === 'X' ? 'var(--cafe-green)' : '#f87171'};">${cell === 'X' ? '❌' : (cell === 'O' ? '⭕' : '')}</div>
+  `).join('');
+}
 
 // --- 🧱 테트리스 ---
 const TETRIS_COLS = 10;
@@ -5116,6 +5265,7 @@ function stopTetris() {
 window.openTetrisGame = function() {
   stopTetris();
   stop2048();
+  stopTtt();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
@@ -5123,6 +5273,7 @@ window.openTetrisGame = function() {
       <span>줄: <b id="tetrisLines">0</b></span>
       <span>레벨: <b id="tetrisLevel">1</b></span>
     </div>
+    <div id="tetrisGameOverBanner" class="hidden" style="font-size:18px; font-weight:bold; padding:10px; border-radius:8px; margin-bottom:10px; background:rgba(248,113,113,0.18); color:#f87171;">💀 게임 오버!</div>
     <canvas id="tetrisCanvas" width="${TETRIS_COLS * TETRIS_BLOCK}" height="${TETRIS_ROWS * TETRIS_BLOCK}" style="background:var(--input-bg); border:1px solid var(--border-color); border-radius:8px; touch-action:none;"></canvas>
     <div style="display:flex; justify-content:center; gap:8px; margin-top:10px; flex-wrap:wrap;">
       <button onclick="tetrisAction('left')" style="font-size:20px; padding:12px 18px;">◀</button>
@@ -5177,6 +5328,7 @@ window.startTetris = function() {
   };
   document.getElementById('tetrisStartBtn').textContent = '재시작';
   document.getElementById('tetrisResult').innerHTML = '';
+  document.getElementById('tetrisGameOverBanner').classList.add('hidden');
   drawTetrisBoard(tetrisState.board, tetrisState.piece);
   tetrisState.keyHandler = event => {
     if (!tetrisState || !tetrisState.running) return;
@@ -5263,6 +5415,8 @@ async function endTetrisGame() {
   tetrisState.running = false;
   clearInterval(tetrisState.dropTimer);
   if (tetrisState.keyHandler) document.removeEventListener('keydown', tetrisState.keyHandler);
+  const banner = document.getElementById('tetrisGameOverBanner');
+  if (banner) banner.classList.remove('hidden');
   const { score, lines } = tetrisState;
   const points = Math.max(1, Math.round(score / 20));
   await awardGamePoints('tetris', '테트리스', points, `테트리스에서 ${score}점(${lines}줄)을 기록해서 ${points}P 획득!`);
@@ -5271,7 +5425,7 @@ async function endTetrisGame() {
   const resultBox = document.getElementById('tetrisResult');
   if (resultBox) {
     resultBox.innerHTML = `
-      <div style="font-size:14px; margin-bottom:4px;">🧱 게임 오버! 점수 <b>${score}</b> · <b>${lines}</b>줄 → <b>${points}P</b> 획득!</div>
+      <div style="font-size:14px; margin-bottom:4px;">점수 <b>${score}</b> · <b>${lines}</b>줄 → <b>${points}P</b> 획득!</div>
       ${isNewBest ? `<div style="font-size:12px; color:var(--cafe-green); margin-bottom:6px;">🎉 개인 최고 기록 갱신!</div>` : ''}
       ${renderGameResultActions(resultText)}
     `;
@@ -5426,12 +5580,14 @@ function can2048Move(grid) {
 window.openGame2048 = function() {
   stopTetris();
   stop2048();
+  stopTtt();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
       <span>점수: <b id="game2048Score">0</b></span>
       <span>최고 타일: <b id="game2048BestTile">-</b></span>
     </div>
+    <div id="game2048GameOverBanner" class="hidden" style="font-size:18px; font-weight:bold; padding:10px; border-radius:8px; margin-bottom:10px; background:rgba(248,113,113,0.18); color:#f87171;">💀 게임 오버!</div>
     <div id="game2048Board" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; width:100%; max-width:300px; margin:0 auto; touch-action:none;"></div>
     <div style="display:flex; flex-direction:column; align-items:center; gap:6px; margin-top:12px;">
       <button onclick="move2048('up')" style="font-size:20px; padding:10px 20px;">▲</button>
@@ -5471,13 +5627,15 @@ function setup2048Swipe() {
 window.start2048 = function() {
   stopTetris();
   stop2048();
+  stopTtt();
   const board = create2048Board();
   spawn2048Tile(board);
   spawn2048Tile(board);
-  game2048State = { board, score: 0, running: true, keyHandler: null };
+  game2048State = { board, score: 0, running: true, keyHandler: null, previousBoard: null, previousScore: 0 };
   document.getElementById('game2048StartBtn').textContent = '재시작';
   document.getElementById('game2048Result').innerHTML = '';
   document.getElementById('game2048Score').textContent = '0';
+  document.getElementById('game2048GameOverBanner').classList.add('hidden');
   draw2048Board(board);
   game2048State.keyHandler = event => {
     if (!game2048State || !game2048State.running) return;
@@ -5492,8 +5650,12 @@ window.start2048 = function() {
 
 window.move2048 = async function(direction) {
   if (!game2048State || !game2048State.running) return;
+  const previousBoard = game2048State.board.map(row => [...row]);
+  const previousScore = game2048State.score;
   const { grid, scoreGained, moved } = process2048(direction, game2048State.board);
   if (!moved) return;
+  game2048State.previousBoard = previousBoard;
+  game2048State.previousScore = previousScore;
   game2048State.board = grid;
   game2048State.score += scoreGained;
   spawn2048Tile(grid);
@@ -5509,19 +5671,61 @@ window.move2048 = async function(direction) {
 };
 
 async function end2048Game(score, bestTile) {
+  const banner = document.getElementById('game2048GameOverBanner');
+  if (banner) banner.classList.remove('hidden');
   const points = Math.max(1, Math.round(score / 20));
   await awardGamePoints('2048', '2048', points, `2048에서 ${score}점(최고 타일 ${bestTile})을 기록해서 ${points}P 획득!`);
   const isNewBest = await updateBest2048(score, bestTile);
   const resultText = `2048에서 ${score}점(최고 타일 ${bestTile})을 기록했어요! (${points}P 획득)`;
+  let undoTickets = 0;
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser));
+    undoTickets = snap.exists() ? (snap.data().undoTickets2048 || 0) : 0;
+  } catch (error) {
+    console.error(error);
+  }
   const resultBox = document.getElementById('game2048Result');
   if (resultBox) {
     resultBox.innerHTML = `
-      <div style="font-size:14px; margin-bottom:4px;">🔢 게임 오버! 점수 <b>${score}</b> · 최고 타일 <b>${bestTile}</b> → <b>${points}P</b> 획득!</div>
+      <div style="font-size:14px; margin-bottom:4px;">점수 <b>${score}</b> · 최고 타일 <b>${bestTile}</b> → <b>${points}P</b> 획득!</div>
       ${isNewBest ? `<div style="font-size:12px; color:var(--cafe-green); margin-bottom:6px;">🎉 개인 최고 기록 갱신!</div>` : ''}
+      ${undoTickets > 0 && game2048State && game2048State.previousBoard ? `<button onclick="use2048UndoTicket()" style="width:100%; margin-bottom:8px; background:#eab308; color:#111;">🔄 되돌리기권 사용하기 (보유 ${undoTickets}개)</button>` : ''}
       ${renderGameResultActions(resultText)}
     `;
   }
 }
+
+window.use2048UndoTicket = async function() {
+  if (!game2048State || !game2048State.previousBoard) return;
+  try {
+    const userRef = doc(db, 'users', currentUser);
+    const snap = await getDoc(userRef);
+    const tickets = snap.exists() ? (snap.data().undoTickets2048 || 0) : 0;
+    if (tickets <= 0) { alert('보유한 되돌리기권이 없어요.'); return; }
+    await updateDoc(userRef, { undoTickets2048: increment(-1) });
+    game2048State.board = game2048State.previousBoard.map(row => [...row]);
+    game2048State.score = game2048State.previousScore;
+    game2048State.previousBoard = null;
+    game2048State.running = true;
+    document.getElementById('game2048GameOverBanner').classList.add('hidden');
+    document.getElementById('game2048Result').innerHTML = '';
+    document.getElementById('game2048Score').textContent = game2048State.score;
+    draw2048Board(game2048State.board);
+    game2048State.keyHandler = event => {
+      if (!game2048State || !game2048State.running) return;
+      const map = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
+      if (map[event.key]) {
+        event.preventDefault();
+        move2048(map[event.key]);
+      }
+    };
+    document.addEventListener('keydown', game2048State.keyHandler);
+    alert('되돌리기권을 사용했어요! 마지막 결정을 다시 내려보세요.');
+  } catch (error) {
+    console.error(error);
+    alert('되돌리기권 사용에 실패했습니다.');
+  }
+};
 
 async function updateBest2048(score, bestTile) {
   try {
