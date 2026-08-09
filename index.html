@@ -618,6 +618,23 @@ button:hover { background-color: var(--cafe-green-hover); }
 </select>
 <textarea id="postContent" rows="3" placeholder="내용을 입력해 주세요..." oninput="scheduleDraftSave()"></textarea>
 <input type="text" id="postTagsInput" placeholder="태그 입력 (쉼표로 구분, 예: 고양이,웃김)" oninput="scheduleDraftSave()">
+<div style="display:flex; gap:16px; align-items:center; margin-bottom:10px; font-size:13px;">
+<label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" id="postIsNotice" onchange="handlePostOptionsChange()" style="width:auto; margin:0;"> 📢 공지로 등록</label>
+<label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" id="postIsPoll" onchange="handlePostOptionsChange()" style="width:auto; margin:0;"> 🗳️ 투표 추가</label>
+</div>
+<div id="pollBuilder" class="hidden" style="margin-bottom:10px; border:1px solid var(--border-color); border-radius:8px; padding:10px;">
+<label style="font-size:12px; color:var(--text-sub);">투표 항목 (최소 2개, 최대 6개) — 위 내용이 투표 질문이 됩니다</label>
+<div id="pollOptionsList" style="margin-top:6px;"></div>
+<button type="button" onclick="addPollOption()" style="padding:5px 10px; font-size:12px; background:var(--border-color); color:var(--text-main);">+ 옵션 추가</button>
+</div>
+<div id="visibilitySection" class="hidden" style="margin-bottom:10px; border:1px solid var(--border-color); border-radius:8px; padding:10px;">
+<label style="font-size:12px; color:var(--text-sub);">공개 대상</label>
+<div style="display:flex; gap:16px; margin:6px 0; font-size:13px;">
+<label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="radio" name="postVisibility" value="public" checked onchange="handlePostOptionsChange()" style="width:auto; margin:0;"> 전체 공개</label>
+<label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="radio" name="postVisibility" value="private" onchange="handlePostOptionsChange()" style="width:auto; margin:0;"> 🔒 특정 회원에게만</label>
+</div>
+<div id="privateUserPicker" class="hidden" style="max-height:150px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px; padding:8px;"></div>
+</div>
 <div id="dropZone" class="drop-zone">
 사진/GIF 업로드 (여러 장 선택 가능, 움짤도 애니메이션 그대로 업로드됩니다)
 </div>
@@ -1538,6 +1555,13 @@ function getPostVideo(post) {
   return null;
 }
 
+function canViewPost(post) {
+  if (!post.visibility || post.visibility !== 'private') return true;
+  if (currentUserRole === 'admin') return true;
+  if (post.author === currentUser) return true;
+  return (post.allowedUsers || []).includes(currentUser);
+}
+
 function parseTagsInput(text) {
   if (!text) return [];
   return [...new Set(text.split(',').map(tag => tag.trim().replace(/^#/, '')).filter(Boolean))].slice(0, 10);
@@ -1553,8 +1577,138 @@ function renderTagChips(tags, size = 'list') {
   return tags.map(tag => `<span onclick="event.stopPropagation(); selectTagFilter('${escapeHtml(tag)}')" style="font-size:${fontSize}; color: var(--text-sub); border:1px solid var(--border-color); padding:1px 7px; border-radius:8px; margin-right:4px; cursor:pointer;">#${escapeHtml(tag)}</span>`).join('');
 }
 
+// ===== 투표 =====
+function renderPollHtml(post) {
+  if (!post.poll || !Array.isArray(post.poll.options) || post.poll.options.length < 2) return '';
+  const votes = post.poll.votes || {};
+  const voterIds = Object.keys(votes);
+  const totalVoters = voterIds.length;
+  const myVote = currentUser && Object.prototype.hasOwnProperty.call(votes, currentUser) ? votes[currentUser] : null;
+  const hasVoted = myVote !== null;
+  const counts = post.poll.options.map((_, idx) => voterIds.filter(user => votes[user] === idx).length);
+  const optionsHtml = post.poll.options.map((optionText, idx) => {
+    const count = counts[idx];
+    const pct = totalVoters ? Math.round((count / totalVoters) * 100) : 0;
+    const isMine = myVote === idx;
+    if (hasVoted) {
+      return `<div onclick="handleVote('${post.id}', ${idx})" style="cursor:pointer; margin-bottom:6px; border:1px solid ${isMine ? 'var(--cafe-green)' : 'var(--border-color)'}; border-radius:8px; padding:9px 12px; position:relative; overflow:hidden;">
+        <div style="position:absolute; left:0; top:0; bottom:0; width:${pct}%; background:${isMine ? 'rgba(3,199,90,0.18)' : 'var(--input-bg)'}; z-index:0; transition:width .2s;"></div>
+        <div style="position:relative; z-index:1; display:flex; justify-content:space-between; align-items:center; font-size:13px;">
+          <span>${isMine ? '✅ ' : ''}${escapeHtml(optionText)}</span>
+          <span style="color:var(--text-sub); font-size:12px;">${pct}% · ${count}명</span>
+        </div>
+      </div>`;
+    }
+    return `<button onclick="handleVote('${post.id}', ${idx})" style="display:block; width:100%; text-align:left; margin-bottom:6px; padding:9px 12px; font-size:13px; background:var(--input-bg); color:var(--text-main); border:1px solid var(--border-color);">${escapeHtml(optionText)}</button>`;
+  }).join('');
+  const loginNotice = !currentUser ? `<div style="font-size:12px; color:var(--text-sub); margin-top:4px;">로그인 후 투표할 수 있어요.</div>` : '';
+  const changeNotice = hasVoted ? `<div style="font-size:11px; color:var(--text-sub); margin-top:4px;">다른 항목을 눌러 투표를 바꿀 수 있어요.</div>` : '';
+  return `<div style="margin-top:12px; border:1px solid var(--border-color); border-radius:10px; padding:12px; background:var(--card-bg);">
+    <div style="font-size:12px; color:var(--text-sub); margin-bottom:8px;">🗳️ 투표 · 총 ${totalVoters}명 참여</div>
+    ${optionsHtml}
+    ${loginNotice}${changeNotice}
+  </div>`;
+}
+
+window.handleVote = async function(postId, optionIndex) {
+  if (!currentUser) { alert('로그인 후 투표할 수 있습니다.'); return; }
+  try {
+    const postRef = doc(db, 'posts', postId);
+    const postSnap = await getDoc(postRef);
+    if (!postSnap.exists()) return;
+    const data = postSnap.data();
+    if (!data.poll) return;
+    const votes = { ...(data.poll.votes || {}) };
+    votes[currentUser] = optionIndex;
+    await updateDoc(postRef, { 'poll.votes': votes });
+    openDetail(postId);
+  } catch (error) {
+    console.error(error);
+    alert('투표 처리에 실패했습니다.');
+  }
+};
+
 // 이미지를 기기(사진 앱)에 저장. data URL이라 대부분의 데스크톱/안드로이드 브라우저는 바로
 // 다운로드되고, iOS Safari 등 일부 환경은 새 탭으로 열려 길게 눌러 저장하는 방식으로 동작합니다.
+// ===== 투표 항목 빌더 / 비공개 대상 선택 =====
+function renderPollOptionInputs(count) {
+  const list = document.getElementById('pollOptionsList');
+  if (!list) return;
+  const existing = Array.from(list.querySelectorAll('input')).map(input => input.value);
+  const total = Math.max(2, Math.min(6, count));
+  list.innerHTML = Array.from({ length: total }).map((_, idx) => `
+    <div style="display:flex; gap:6px; align-items:center;">
+      <input type="text" class="poll-option-input" placeholder="옵션 ${idx + 1}" value="${escapeHtml(existing[idx] || '')}" style="margin-bottom:6px;">
+      ${total > 2 ? `<button type="button" onclick="removePollOption(${idx})" style="padding:6px 9px; font-size:12px; background:var(--border-color); color:var(--text-main); margin-bottom:6px;">✕</button>` : ''}
+    </div>
+  `).join('');
+}
+
+window.addPollOption = function() {
+  const list = document.getElementById('pollOptionsList');
+  const current = list ? list.querySelectorAll('input').length : 2;
+  if (current >= 6) { alert('옵션은 최대 6개까지 추가할 수 있어요.'); return; }
+  renderPollOptionInputs(current + 1);
+};
+
+window.removePollOption = function(indexToRemove) {
+  const list = document.getElementById('pollOptionsList');
+  if (!list) return;
+  const values = Array.from(list.querySelectorAll('input')).map(input => input.value);
+  values.splice(indexToRemove, 1);
+  const total = Math.max(2, values.length);
+  list.innerHTML = Array.from({ length: total }).map((_, idx) => `
+    <div style="display:flex; gap:6px; align-items:center;">
+      <input type="text" class="poll-option-input" placeholder="옵션 ${idx + 1}" value="${escapeHtml(values[idx] || '')}" style="margin-bottom:6px;">
+      ${total > 2 ? `<button type="button" onclick="removePollOption(${idx})" style="padding:6px 9px; font-size:12px; background:var(--border-color); color:var(--text-main); margin-bottom:6px;">✕</button>` : ''}
+    </div>
+  `).join('');
+};
+
+window.handlePostOptionsChange = async function() {
+  const isNotice = document.getElementById('postIsNotice').checked;
+  const isPoll = document.getElementById('postIsPoll').checked;
+  const pollBuilder = document.getElementById('pollBuilder');
+  const visibilitySection = document.getElementById('visibilitySection');
+  if (isPoll) {
+    pollBuilder.classList.remove('hidden');
+    if (!document.getElementById('pollOptionsList').children.length) renderPollOptionInputs(2);
+  } else {
+    pollBuilder.classList.add('hidden');
+  }
+  if (isNotice || isPoll) {
+    visibilitySection.classList.remove('hidden');
+  } else {
+    visibilitySection.classList.add('hidden');
+  }
+  const visibilityValue = document.querySelector('input[name="postVisibility"]:checked')?.value || 'public';
+  const picker = document.getElementById('privateUserPicker');
+  if (visibilityValue === 'private') {
+    picker.classList.remove('hidden');
+    await ensureUsersLoaded();
+    const checkedUsers = new Set(Array.from(picker.querySelectorAll('input:checked')).map(input => input.value));
+    picker.innerHTML = allUsers.filter(user => user !== currentUser).map(user => `
+      <label style="display:flex; align-items:center; gap:6px; padding:4px 0; font-size:13px; cursor:pointer;">
+        <input type="checkbox" class="private-user-checkbox" value="${escapeHtml(user)}" ${checkedUsers.has(user) ? 'checked' : ''} style="width:auto; margin:0;"> ${escapeHtml(user)}
+      </label>
+    `).join('') || `<div style="font-size:12px; color:var(--text-sub);">선택할 수 있는 다른 회원이 없어요.</div>`;
+  } else {
+    picker.classList.add('hidden');
+  }
+};
+
+function resetPostOptionsForm() {
+  document.getElementById('postIsNotice').checked = false;
+  document.getElementById('postIsPoll').checked = false;
+  document.getElementById('pollBuilder').classList.add('hidden');
+  document.getElementById('pollOptionsList').innerHTML = '';
+  document.getElementById('visibilitySection').classList.add('hidden');
+  document.getElementById('privateUserPicker').classList.add('hidden');
+  document.getElementById('privateUserPicker').innerHTML = '';
+  const publicRadio = document.querySelector('input[name="postVisibility"][value="public"]');
+  if (publicRadio) publicRadio.checked = true;
+}
+
 window.downloadImage = function(src, filename) {
   try {
     const link = document.createElement('a');
@@ -1583,6 +1737,29 @@ window.handleCreatePost = async function() {
     alert('내용이나 사진, 유튜브 링크 중 하나는 입력해 주세요');
     return;
   }
+  const isNotice = document.getElementById('postIsNotice').checked;
+  const isPoll = document.getElementById('postIsPoll').checked;
+  const visibility = document.querySelector('input[name="postVisibility"]:checked')?.value || 'public';
+  let poll = null;
+  if (isPoll) {
+    const optionTexts = Array.from(document.querySelectorAll('#pollOptionsList .poll-option-input'))
+      .map(input => input.value.trim())
+      .filter(Boolean);
+    if (optionTexts.length < 2) {
+      alert('투표 옵션을 2개 이상 입력해 주세요.');
+      return;
+    }
+    poll = { options: optionTexts, votes: {} };
+  }
+  let allowedUsers = [];
+  if ((isNotice || isPoll) && visibility === 'private') {
+    allowedUsers = Array.from(document.querySelectorAll('#privateUserPicker .private-user-checkbox:checked')).map(input => input.value);
+    if (!allowedUsers.length) {
+      alert('비공개로 등록하려면 공개 대상을 한 명 이상 선택해 주세요.');
+      return;
+    }
+    allowedUsers.push(currentUser);
+  }
   try {
     const postRef = await addDoc(collection(db, "posts"), {
       author: currentUser,
@@ -1595,7 +1772,11 @@ window.handleCreatePost = async function() {
       createdAt: Date.now(),
       viewedUsers: [],
       likes: [],
-      comments: []
+      comments: [],
+      isNotice: isNotice,
+      poll: poll,
+      visibility: (isNotice || isPoll) ? visibility : 'public',
+      allowedUsers: allowedUsers
     });
     await notifyMentions(content, { type: 'post', postId: postRef.id });
     syncToSheet('post', 'create', {
@@ -1612,6 +1793,7 @@ window.handleCreatePost = async function() {
     document.getElementById('youtubeUrlInput').value = '';
     compressedImages = [];
     renderImagePreviews();
+    resetPostOptionsForm();
     clearDraft();
     closeWriteForm();
     goToList();
@@ -2130,6 +2312,10 @@ window.openDetail = async function(postId) {
       return;
     }
     const post = { id: postSnap.id, ...postSnap.data() };
+    if (!canViewPost(post)) {
+      postsContainer.innerHTML = '<div class="error-box"><b>🔒 비공개 게시글입니다.</b><br>작성자가 지정한 회원만 볼 수 있어요.</div>';
+      return;
+    }
     if (currentUser) {
       const viewedUsers = post.viewedUsers || [];
       if (!viewedUsers.includes(currentUser)) {
@@ -2175,7 +2361,10 @@ window.openDetail = async function(postId) {
     }
     const categoryHtml = post.category ? `<span style="font-size:11px; color: var(--cafe-green); border:1px solid var(--cafe-green); padding:2px 8px; border-radius:10px; margin-right:8px;">${escapeHtml(post.category)}</span>` : '';
     const pinnedHtml = post.pinned ? `<span style="font-size:11px; color:#eab308; margin-right:8px;">📌 고정됨</span>` : '';
+    const noticeHtml = post.isNotice ? `<span style="font-size:11px; color:#f97316; margin-right:8px;">📢 공지</span>` : '';
+    const privateHtml = post.visibility === 'private' ? `<span style="font-size:11px; color:var(--text-sub); margin-right:8px;">🔒 비공개 (${(post.allowedUsers || []).length}명 공개)</span>` : '';
     const detailTagsHtml = getPostTags(post).length ? `<div style="margin-top:8px;">${renderTagChips(getPostTags(post), 'detail')}</div>` : '';
+    const pollHtml = renderPollHtml(post);
     const commentsHtml = Array.isArray(comments)
       ? renderCommentTree(post.id, [...comments].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)), null, 0)
       : '';
@@ -2190,7 +2379,7 @@ window.openDetail = async function(postId) {
       <button onclick="goToList()" style="margin-bottom: 15px; background-color: var(--border-color); font-size: 13px; padding: 6px 12px;">← 목록으로</button>
       <div class="post-card">
         <div class="post-header">
-          <span class="post-author">${pinnedHtml}${categoryHtml}<span style="cursor:pointer;" onclick="openProfile('${post.author}')">${escapeHtml(post.author)}</span></span>
+          <span class="post-author">${pinnedHtml}${noticeHtml}${privateHtml}${categoryHtml}<span style="cursor:pointer;" onclick="openProfile('${post.author}')">${escapeHtml(post.author)}</span></span>
           <div style="display:flex; gap:6px;">${pinBtnHtml}${editBtnHtml}${deleteBtnHtml}</div>
         </div>
         <div class="post-time">${formatDate(post.createdAt)}</div>
@@ -2198,6 +2387,7 @@ window.openDetail = async function(postId) {
         ${detailTagsHtml}
         ${imgHtml}
         ${videoHtml}
+        ${pollHtml}
         <div class="post-stats" style="margin-top: 15px;">
           <span>👀 조회 ${viewsCount}회</span>
           <span>❤️ 좋아요 ${likeCount}개</span>
@@ -2291,6 +2481,7 @@ async function loadPostsList() {
     querySnapshot.forEach((docSnap) => {
       allPosts.push({ id: docSnap.id, ...docSnap.data() });
     });
+    allPosts = allPosts.filter(canViewPost);
     allPosts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     await fetchUsersAndRanking();
     renderCategoryFilterBar();
@@ -2411,6 +2602,9 @@ function renderPostList() {
     const displayTitle = post.content ? post.content : '(이미지 게시물)';
     const categoryTag = post.category ? `<span style="font-size:10px; color: var(--cafe-green); border:1px solid var(--cafe-green); padding:1px 6px; border-radius:8px; margin-right:4px;">${escapeHtml(post.category)}</span>` : '';
     const pinnedTag = post.pinned ? `<span style="font-size:10px; color:#eab308; margin-right:4px;">📌 고정</span>` : '';
+    const noticeTag = post.isNotice ? `<span style="font-size:10px; color:#f97316; margin-right:4px;">📢 공지</span>` : '';
+    const pollTag = post.poll ? `<span style="font-size:10px; color:var(--text-sub); margin-right:4px;">🗳️ 투표</span>` : '';
+    const privateTag = post.visibility === 'private' ? `<span style="font-size:10px; color:var(--text-sub); margin-right:4px;">🔒 비공개</span>` : '';
     const listTagsHtml = getPostTags(post).length ? `<div style="margin-top:3px;">${renderTagChips(getPostTags(post), 'list')}</div>` : '';
     item.innerHTML = `
       ${thumbHtml}
@@ -2420,7 +2614,7 @@ function renderPostList() {
           <span>/</span>
           <span style="color: var(--cafe-green); font-weight: bold; cursor:pointer;" onclick="event.stopPropagation(); openProfile('${escapeHtml(post.author)}');">${escapeHtml(post.author)}</span>
         </div>
-        <div class="list-title">${pinnedTag}${categoryTag}${escapeHtml(displayTitle)}</div>
+        <div class="list-title">${pinnedTag}${noticeTag}${pollTag}${privateTag}${categoryTag}${escapeHtml(displayTitle)}</div>
         ${listTagsHtml}
       </div>
       <div class="list-stats-badge">
@@ -2684,7 +2878,7 @@ async function loadRankingView() {
   try {
     if (!allPosts.length) {
       const querySnapshot = await getDocs(collection(db, 'posts'));
-      allPosts = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+      allPosts = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() })).filter(canViewPost);
     }
     await fetchUsersAndRanking();
     const userViewTotals = {};
