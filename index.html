@@ -538,9 +538,19 @@ button:hover { background-color: var(--cafe-green-hover); }
   .admin-row-actions { flex-direction: row; margin-top: 6px; }
   .admin-row-actions button { flex: 1; padding: 9px 6px; font-size: 12px; }
 }
-.standalone-game-mode .sidebar { display: none; }
-.standalone-game-mode .app-content { max-width: 640px; margin: 0 auto; }
-.standalone-game-mode #gameHubTab > div:first-child { margin-bottom: 8px; }
+.game-play-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.game-play-back-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  background: var(--border-color);
+  color: var(--text-main);
+  width: auto;
+}
 </style>
 </head>
 <body>
@@ -797,6 +807,15 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="gameCookieRankTab" class="hidden"></div>
 <div id="gameRhythmRankTab" class="hidden"></div>
 </div>
+</div>
+</section>
+<section id="gamePlayView" class="hidden">
+<div class="box">
+<div class="game-play-header">
+<button class="game-play-back-btn" onclick="closeGameDetail()">← 게임 목록으로</button>
+<h2 id="gamePlayDetailTitle" style="margin:0; font-size:16px;">게임</h2>
+</div>
+<div id="gamePlayArea"></div>
 </div>
 </section>
 <section id="bookmarksView" class="hidden">
@@ -2745,14 +2764,14 @@ function getChatAvatarHtml(username) {
 
 window.showAppSection = function(section) {
   if (section !== 'profile') localStorage.setItem('cafe_last_section', section);
-  if (section !== 'game' && typeof stopTetris === 'function') stopTetris();
-  if (section !== 'game' && typeof stop2048 === 'function') stop2048();
-  if (section !== 'game' && typeof stopTtt === 'function') stopTtt();
-  if (section !== 'game' && typeof stopMinesweeper === 'function') stopMinesweeper();
-  if (section !== 'game' && typeof stopCookieClicker === 'function') stopCookieClicker();
-  if (section !== 'game' && typeof stopRhythm === 'function') stopRhythm();
-  if (section !== 'game' && typeof stopCardGacha === 'function') stopCardGacha();
-  if (section !== 'game' && typeof stopOmok === 'function') stopOmok();
+  if (section !== 'gamePlay' && typeof stopTetris === 'function') stopTetris();
+  if (section !== 'gamePlay' && typeof stop2048 === 'function') stop2048();
+  if (section !== 'gamePlay' && typeof stopTtt === 'function') stopTtt();
+  if (section !== 'gamePlay' && typeof stopMinesweeper === 'function') stopMinesweeper();
+  if (section !== 'gamePlay' && typeof stopCookieClicker === 'function') stopCookieClicker();
+  if (section !== 'gamePlay' && typeof stopRhythm === 'function') stopRhythm();
+  if (section !== 'gamePlay' && typeof stopCardGacha === 'function') stopCardGacha();
+  if (section !== 'gamePlay' && typeof stopOmok === 'function') stopOmok();
   const isCafe = section === 'cafe';
   const isChat = section === 'chat';
   const isSettings = section === 'settings';
@@ -2760,6 +2779,7 @@ window.showAppSection = function(section) {
   const isNotifications = section === 'notifications';
   const isRanking = section === 'ranking';
   const isGame = section === 'game';
+  const isGamePlay = section === 'gamePlay';
   const isBookmarks = section === 'bookmarks';
   const isProfile = section === 'profile';
   const isAdmin = section === 'admin';
@@ -2770,6 +2790,7 @@ window.showAppSection = function(section) {
   document.getElementById('notificationsView').classList.toggle('hidden', !isNotifications);
   document.getElementById('rankingView').classList.toggle('hidden', !isRanking);
   document.getElementById('gameView').classList.toggle('hidden', !isGame);
+  document.getElementById('gamePlayView').classList.toggle('hidden', !isGamePlay);
   document.getElementById('bookmarksView').classList.toggle('hidden', !isBookmarks);
   document.getElementById('profileView').classList.toggle('hidden', !isProfile);
   document.getElementById('adminView').classList.toggle('hidden', !isAdmin);
@@ -2779,7 +2800,7 @@ window.showAppSection = function(section) {
   document.getElementById('popularNavBtn').classList.toggle('active', isPopular);
   document.getElementById('notificationsNavBtn').classList.toggle('active', isNotifications);
   document.getElementById('rankingNavBtn').classList.toggle('active', isRanking);
-  document.getElementById('gameNavBtn').classList.toggle('active', isGame);
+  document.getElementById('gameNavBtn').classList.toggle('active', isGame || isGamePlay);
   document.getElementById('bookmarksNavBtn').classList.toggle('active', isBookmarks);
   document.getElementById('profileNavBtn').classList.toggle('active', isProfile && profileViewUser === currentUser);
   document.getElementById('adminNavBtn').classList.toggle('active', isAdmin);
@@ -2788,6 +2809,7 @@ window.showAppSection = function(section) {
   if (isNotifications) openNotifications();
   if (isRanking) loadRankingView();
   if (isGame) loadGameView();
+  if (isGamePlay) loadGamePlayDetail();
   if (isBookmarks) loadBookmarksView();
   if (isAdmin) { setAdminTab(adminActiveTab); }
   else { unsubscribeAdminPresence(); }
@@ -4775,6 +4797,8 @@ window.openChat = function() {
 
 // ===== 미니게임 =====
 let gameActiveTab = 'hub';
+let currentGamePlayKey = null;
+let currentGamePlayLabel = '';
 let clickChallengeState = null;
 
 async function loadGameView() {
@@ -4929,59 +4953,57 @@ function renderGameHub() {
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🎰 럭키 룰렛</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">하루 한 번, 랜덤 포인트에 도전해 보세요</div>
-        <button onclick="openGameInNewTab('roulette')" ${roulettePlayedToday ? 'disabled' : ''} style="width:100%; ${roulettePlayedToday ? 'background:var(--border-color); color:var(--text-sub); cursor:not-allowed;' : ''}">${roulettePlayedToday ? '오늘 완료' : '돌리러 가기 (새 탭)'}</button>
+        <button onclick="openGameDetail('roulette', '🎰 럭키 룰렛')" ${roulettePlayedToday ? 'disabled' : ''} style="width:100%; ${roulettePlayedToday ? 'background:var(--border-color); color:var(--text-sub); cursor:not-allowed;' : ''}">${roulettePlayedToday ? '오늘 완료' : '돌리러 가기'}</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⚡ CPS 챌린지</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">원하는 시간 동안 초당 클릭 수(CPS) 겨루기</div>
-        <button onclick="openGameInNewTab('cps')" style="width:100%;">도전하기 (새 탭)</button>
+        <button onclick="openGameDetail('cps', '⚡ CPS 챌린지')" style="width:100%;">도전하기</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⭕❌ 틱택토</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">컴퓨터와 한 판! 이기면 포인트 획득</div>
-        <button onclick="openGameInNewTab('ttt')" style="width:100%;">한 판 하기 (새 탭)</button>
+        <button onclick="openGameDetail('ttt', '⭕❌ 틱택토')" style="width:100%;">한 판 하기</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🧱 테트리스</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">클래식 테트리스! 점수만큼 포인트 획득</div>
-        <button onclick="openGameInNewTab('tetris')" style="width:100%;">플레이하기 (새 탭)</button>
+        <button onclick="openGameDetail('tetris', '🧱 테트리스')" style="width:100%;">플레이하기</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🔢 2048</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">타일을 합쳐서 2048을 만들어보세요</div>
-        <button onclick="openGameInNewTab('2048')" style="width:100%;">플레이하기 (새 탭)</button>
+        <button onclick="openGameDetail('2048', '🔢 2048')" style="width:100%;">플레이하기</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">💣 지뢰찾기</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">빠르게 클리어할수록 포인트 UP</div>
-        <button onclick="openGameInNewTab('mine')" style="width:100%;">플레이하기 (새 탭)</button>
+        <button onclick="openGameDetail('mine', '💣 지뢰찾기')" style="width:100%;">플레이하기</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🍪 쿠키 클리커</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">쿠키를 굽고 생산 시설을 늘려서 누적 기록에 도전!</div>
-        <button onclick="openGameInNewTab('cookie')" style="width:100%;">플레이하기 (새 탭)</button>
+        <button onclick="openGameDetail('cookie', '🍪 쿠키 클리커')" style="width:100%;">플레이하기</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🕹️ 얼불춤</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">박자에 맞춰 탭! 한 번 실수하면 끝, 원터치 리듬게임</div>
-        <button onclick="openGameInNewTab('rhythm')" style="width:100%;">플레이하기 (새 탭)</button>
+        <button onclick="openGameDetail('rhythm', '🕹️ 얼불춤')" style="width:100%;">플레이하기</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🃏 카드깡</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">1P로 카드 한 장 뽑기! 0.5P·1P가 가장 잘 나오고, 높거나 낮을수록 희귀해요</div>
-        <button onclick="openGameInNewTab('cardgacha')" style="width:100%;">카드 뽑으러 가기 (새 탭)</button>
+        <button onclick="openGameDetail('cardgacha', '🃏 카드깡')" style="width:100%;">카드 뽑으러 가기</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⚫⚪ 오목</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">컴퓨터와 5목 대결! 쉬운 난이도로 조정됐어요. 이기면 포인트 획득</div>
-        <button onclick="openGameInNewTab('omok')" style="width:100%;">한 판 하기 (새 탭)</button>
+        <button onclick="openGameDetail('omok', '⚫⚪ 오목')" style="width:100%;">한 판 하기</button>
       </div>
     </div>
-    <div id="gamePlayArea" style="margin-top:14px;"></div>
   `;
 }
 
-// 게임을 현재 탭 하단이 아닌 별도의 새 탭에서 플레이하도록 열어준다
 const GAME_OPEN_FUNC_NAMES = {
   roulette: 'openRouletteGame',
   cps: 'openClickChallenge',
@@ -4995,14 +5017,40 @@ const GAME_OPEN_FUNC_NAMES = {
   omok: 'openOmokGame'
 };
 
-window.openGameInNewTab = function(gameKey) {
+function stopAllGames() {
+  stopTetris();
+  stop2048();
+  stopTtt();
+  stopMinesweeper();
+  stopCookieClicker();
+  stopRhythm();
+  stopCardGacha();
+  stopOmok();
+}
+
+// 게임 목록 화면 하단이 아닌, 게시글 상세보기처럼 별도의 전용 화면(탭)으로 게임을 연다
+window.openGameDetail = function(gameKey, gameLabel) {
   if (!currentUser) { alert('로그인 후 이용할 수 있습니다.'); return; }
-  const url = new URL(location.href);
-  url.search = '';
-  url.hash = '';
-  url.searchParams.set('playgame', gameKey);
-  window.open(url.toString(), '_blank');
+  currentGamePlayKey = gameKey;
+  currentGamePlayLabel = gameLabel || '';
+  showAppSection('gamePlay');
 };
+
+window.closeGameDetail = function() {
+  stopAllGames();
+  currentGamePlayKey = null;
+  showAppSection('game');
+};
+
+function loadGamePlayDetail() {
+  document.getElementById('gamePlayDetailTitle').textContent = currentGamePlayLabel || '게임';
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = '';
+  const openFnName = GAME_OPEN_FUNC_NAMES[currentGamePlayKey];
+  if (openFnName && typeof window[openFnName] === 'function') {
+    window[openFnName]();
+  }
+}
 
 async function awardGamePoints(gameKey, gameLabel, points, detailText) {
   try {
@@ -7185,25 +7233,6 @@ window.addEventListener('appinstalled', () => {
   recordDailyVisit();
   setupMentionAutocomplete(document.getElementById('postContent'));
   setupMentionAutocomplete(document.getElementById('chatInput'));
-
-  // 게임을 별도 탭에서 바로 플레이하기 위한 전용 모드
-  const playGameKey = new URLSearchParams(location.search).get('playgame');
-  if (playGameKey) {
-    document.body.classList.add('standalone-game-mode');
-    if (currentUser) {
-      showAppSection('game');
-      const openFnName = GAME_OPEN_FUNC_NAMES[playGameKey];
-      if (openFnName && typeof window[openFnName] === 'function') {
-        setTimeout(() => {
-          window[openFnName]();
-          const playArea = document.getElementById('gamePlayArea');
-          if (playArea) playArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 0);
-      }
-    }
-    return;
-  }
-
   const savedSection = localStorage.getItem('cafe_last_section') || 'cafe';
   const savedRoomId = localStorage.getItem('cafe_last_chat_room');
   if (savedRoomId && savedRoomId !== 'global') {
