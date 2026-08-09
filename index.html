@@ -5257,9 +5257,9 @@ function drawTicTacToe() {
 
 // --- 💣 지뢰찾기 ---
 const MINE_DIFFICULTIES = {
-  easy:   { key: 'easy',   label: '초급', cols: 9,  rows: 9,  mines: 10, base: 200, decay: 5,    floor: 75, field: 'bestMineEasy' },
-  medium: { key: 'medium', label: '중급', cols: 16, rows: 16, mines: 40, base: 200, decay: 0.6,  floor: 60, field: 'bestMineMedium' },
-  hard:   { key: 'hard',   label: '고급', cols: 30, rows: 16, mines: 99, base: 200, decay: 0.25, floor: 50, field: 'bestMineHard' }
+  easy:   { key: 'easy',   label: '초급', cols: 9,  rows: 9,  mines: 10, base: 200, decay: 5,     floor: 75,  field: 'bestMineEasy' },
+  medium: { key: 'medium', label: '중급', cols: 16, rows: 16, mines: 40, base: 300, decay: 0.9,   floor: 90,  field: 'bestMineMedium' },
+  hard:   { key: 'hard',   label: '고급', cols: 20, rows: 20, mines: 99, base: 500, decay: 0.625, floor: 125, field: 'bestMineHard' }
 };
 let mineSelectedDifficulty = 'easy';
 let mineState = null;
@@ -5276,7 +5276,7 @@ window.openMinesweeperGame = function() {
   stopMinesweeper();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
-    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">지뢰를 피해서 다 찾아내면 포인트 획득! 빠를수록 포인트 UP (최대 200P)</div>
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">지뢰를 피해서 다 찾아내면 포인트 획득! 빠를수록, 난이도가 높을수록 포인트 UP</div>
     <div style="display:flex; gap:6px; margin-bottom:10px; justify-content:center;">
       <button onclick="selectMineDifficulty('easy')" id="mineDiffEasyBtn" style="flex:1; max-width:100px; font-size:12px; padding:6px;">초급</button>
       <button onclick="selectMineDifficulty('medium')" id="mineDiffMediumBtn" style="flex:1; max-width:100px; font-size:12px; padding:6px;">중급</button>
@@ -5317,7 +5317,7 @@ function updateMineDifficultyButtons() {
     btn.style.color = active ? '#fff' : 'var(--text-main)';
   });
   const infoEl = document.getElementById('mineDiffInfo');
-  if (infoEl) infoEl.textContent = `${diff.label} · ${diff.cols}x${diff.rows} · 지뢰 ${diff.mines}개`;
+  if (infoEl) infoEl.textContent = `${diff.label} · ${diff.cols}x${diff.rows} · 지뢰 ${diff.mines}개 · 최대 ${diff.base}P`;
 }
 
 window.startMinesweeper = function() {
@@ -5445,7 +5445,7 @@ async function finishMinesweeper(won) {
   let points, bannerText, bannerStyle, outcome, isNewBest = false;
   if (won) {
     outcome = '성공';
-    points = Math.min(200, Math.max(diff.floor, Math.round(diff.base - mineState.elapsed * diff.decay)));
+    points = Math.min(diff.base, Math.max(diff.floor, Math.round(diff.base - mineState.elapsed * diff.decay)));
     bannerText = `🎉 ${diff.label} 클리어! (${mineState.elapsed}초, ${points}P)`;
     bannerStyle = 'background:rgba(3,199,90,0.18); color:var(--cafe-green);';
     isNewBest = await updateBestMinesweeper(diff.key, mineState.elapsed);
