@@ -2741,6 +2741,7 @@ window.showAppSection = function(section) {
   if (section !== 'game' && typeof stopMinesweeper === 'function') stopMinesweeper();
   if (section !== 'game' && typeof stopCookieClicker === 'function') stopCookieClicker();
   if (section !== 'game' && typeof stopRhythm === 'function') stopRhythm();
+  if (section !== 'game' && typeof stopCardGacha === 'function') stopCardGacha();
   const isCafe = section === 'cafe';
   const isChat = section === 'chat';
   const isSettings = section === 'settings';
@@ -4868,6 +4869,7 @@ window.setGameTab = function(tab) {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
+  stopCardGacha();
   document.getElementById('gameTabHubBtn').classList.toggle('active', tab === 'hub');
   document.getElementById('gameTabRankBtn').classList.toggle('active', tab === 'rank');
   document.getElementById('gameTabCpsBtn').classList.toggle('active', tab === 'cps');
@@ -4940,6 +4942,11 @@ function renderGameHub() {
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">박자에 맞춰 탭! 한 번 실수하면 끝, 원터치 리듬게임</div>
         <button onclick="openRhythmGame()" style="width:100%;">플레이하기</button>
       </div>
+      <div class="box" style="margin:0; padding:14px;">
+        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🃏 카드깡</div>
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">1P로 카드 한 장 뽑기! 0.5P·1P가 가장 잘 나오고, 높거나 낮을수록 희귀해요</div>
+        <button onclick="openCardGachaGame()" style="width:100%;">카드 뽑으러 가기</button>
+      </div>
     </div>
     <div id="gamePlayArea" style="margin-top:14px;"></div>
   `;
@@ -4997,6 +5004,7 @@ window.openRouletteGame = async function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
+  stopCardGacha();
   const area = document.getElementById('gamePlayArea');
   const key = `cafe_roulette_${currentUser}`;
   const lastPlayed = localStorage.getItem(key);
@@ -5047,6 +5055,7 @@ window.openClickChallenge = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
+  stopCardGacha();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:8px;">측정 시간을 고른 뒤 시작하면 3초 카운트다운 후 CPS(초당 클릭 수)를 측정해요</div>
@@ -5186,6 +5195,7 @@ window.openTicTacToeGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
+  stopCardGacha();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">나는 ❌, 컴퓨터는 ⭕! 이기면 20P, 비기면 8P, 지면 0P</div>
@@ -5311,6 +5321,7 @@ window.openMinesweeperGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
+  stopCardGacha();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">지뢰를 피해서 다 찾아내면 포인트 획득! 빠를수록, 난이도가 높을수록 포인트 UP</div>
@@ -5670,6 +5681,7 @@ window.openTetrisGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
+  stopCardGacha();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
@@ -5988,6 +6000,7 @@ window.openGame2048 = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
+  stopCardGacha();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
@@ -6038,6 +6051,7 @@ window.start2048 = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
+  stopCardGacha();
   const board = create2048Board();
   spawn2048Tile(board);
   spawn2048Tile(board);
@@ -6247,6 +6261,7 @@ window.openCookieClickerGame = async function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
+  stopCardGacha();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">불러오는 중...</div>`;
   try {
@@ -6443,6 +6458,7 @@ window.openRhythmGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
+  stopCardGacha();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">공이 초록 구간을 지날 때 TAP(또는 스페이스바)! 한 번만 실수해도 게임 오버, 비트 수만큼 포인트 획득</div>
@@ -6608,6 +6624,108 @@ async function renderRhythmRankTab() {
     container.innerHTML = `<div class="error-box">리더보드를 불러오지 못했습니다.</div>`;
   }
 }
+
+// --- 🃏 카드깡 ---
+let cardGachaState = null;
+const CARD_GACHA_COST = 1;
+
+function stopCardGacha() {
+  cardGachaState = null;
+}
+
+function pickCardGachaValue() {
+  const values = [];
+  for (let i = 0; i <= 200; i++) values.push(i / 2); // 0, 0.5, 1, ..., 100
+  const weights = values.map(v => {
+    let steps;
+    if (v < 0.5) steps = (0.5 - v) / 0.5;
+    else if (v > 1) steps = (v - 1) / 0.5;
+    else steps = 0;
+    return 1 / Math.pow(1 + steps, 2.5);
+  });
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < values.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return values[i];
+  }
+  return values[values.length - 1];
+}
+
+window.openCardGachaGame = async function() {
+  stopTetris();
+  stop2048();
+  stopTtt();
+  stopMinesweeper();
+  stopCookieClicker();
+  stopRhythm();
+  stopCardGacha();
+  cardGachaState = { drawing: false };
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">1P를 내고 카드를 뽑으면 0~100P 중 하나가 무작위로 나와요. 0.5P·1P가 가장 흔하고, 값이 커지거나 0에 가까워질수록 희귀해요.</div>
+    <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">보유 포인트: <b id="cardGachaPointsDisplay" style="color:var(--cafe-green);">-</b></div>
+    <div id="cardGachaCard" style="width:120px; height:160px; margin:0 auto 14px; background:var(--input-bg); border:2px solid var(--border-color); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:42px;">🃏</div>
+    <button id="cardGachaDrawBtn" onclick="drawCardGacha()" style="width:100%;">${CARD_GACHA_COST}P로 카드 뽑기</button>
+    <div id="cardGachaResult" style="margin-top:10px;"></div>
+  </div>`;
+  await refreshCardGachaPointsDisplay();
+};
+
+async function refreshCardGachaPointsDisplay() {
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser));
+    const points = snap.exists() ? (snap.data().gamePoints || 0) : 0;
+    const el = document.getElementById('cardGachaPointsDisplay');
+    if (el) el.textContent = `${points}P`;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+window.drawCardGacha = async function() {
+  if (!currentUser || !cardGachaState || cardGachaState.drawing) return;
+  const drawBtn = document.getElementById('cardGachaDrawBtn');
+  const cardEl = document.getElementById('cardGachaCard');
+  const resultEl = document.getElementById('cardGachaResult');
+  try {
+    const userRef = doc(db, 'users', currentUser);
+    const snap = await getDoc(userRef);
+    const points = snap.exists() ? (snap.data().gamePoints || 0) : 0;
+    if (points < CARD_GACHA_COST) {
+      alert(`포인트가 부족해요. (필요: ${CARD_GACHA_COST}P / 보유: ${points}P)`);
+      return;
+    }
+    cardGachaState.drawing = true;
+    if (drawBtn) drawBtn.disabled = true;
+    if (cardEl) cardEl.textContent = '🎴';
+    const value = pickCardGachaValue();
+    const net = value - CARD_GACHA_COST;
+    await updateDoc(userRef, { gamePoints: increment(net) });
+    await addDoc(collection(db, 'gameScores'), {
+      user: currentUser,
+      game: 'cardgacha',
+      points: net,
+      detail: `카드깡: ${CARD_GACHA_COST}P 소모 → ${value}P 카드 (순변화 ${net >= 0 ? '+' : ''}${net}P)`,
+      createdAt: Date.now()
+    });
+    await refreshMyGamePointsBadge();
+    await refreshCardGachaPointsDisplay();
+    if (cardEl) cardEl.textContent = value >= 10 ? '💎' : (value >= 2 ? '⭐' : '🃏');
+    const resultText = `카드깡에서 ${value}P 카드를 뽑았어요! (${CARD_GACHA_COST}P 소모, 순변화 ${net >= 0 ? '+' : ''}${net}P)`;
+    if (resultEl) resultEl.innerHTML = `
+      <div style="font-size:16px; font-weight:bold; margin-bottom:4px; color:${net > 0 ? 'var(--cafe-green)' : (net < 0 ? '#f87171' : 'var(--text-sub)')};">${value}P 카드!</div>
+      <div style="font-size:12px; color:var(--text-sub); margin-bottom:6px;">순변화 ${net >= 0 ? '+' : ''}${net}P</div>
+      ${renderGameResultActions(resultText)}
+    `;
+  } catch (error) {
+    console.error(error);
+    alert('카드 뽑기에 실패했습니다.');
+  } finally {
+    if (cardGachaState) cardGachaState.drawing = false;
+    if (drawBtn) drawBtn.disabled = false;
+  }
+};
 
 // --- 🏆 게임 랭킹 ---
 async function renderGameRankTab() {
