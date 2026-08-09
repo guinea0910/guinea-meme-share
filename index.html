@@ -768,9 +768,11 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;">
 <button id="gameTabHubBtn" class="page-btn active" onclick="setGameTab('hub')" style="padding:6px 12px; font-size:12px;">게임 목록</button>
 <button id="gameTabRankBtn" class="page-btn" onclick="setGameTab('rank')" style="padding:6px 12px; font-size:12px;">🏆 게임 랭킹</button>
+<button id="gameTabCpsBtn" class="page-btn" onclick="setGameTab('cps')" style="padding:6px 12px; font-size:12px;">⚡ CPS 리더보드</button>
 </div>
 <div id="gameHubTab"></div>
 <div id="gameRankTab" class="hidden"></div>
+<div id="gameCpsRankTab" class="hidden"></div>
 </div>
 </section>
 <section id="bookmarksView" class="hidden">
@@ -4767,10 +4769,13 @@ window.setGameTab = function(tab) {
   gameActiveTab = tab;
   document.getElementById('gameTabHubBtn').classList.toggle('active', tab === 'hub');
   document.getElementById('gameTabRankBtn').classList.toggle('active', tab === 'rank');
+  document.getElementById('gameTabCpsBtn').classList.toggle('active', tab === 'cps');
   document.getElementById('gameHubTab').classList.toggle('hidden', tab !== 'hub');
   document.getElementById('gameRankTab').classList.toggle('hidden', tab !== 'rank');
+  document.getElementById('gameCpsRankTab').classList.toggle('hidden', tab !== 'cps');
   if (tab === 'hub') renderGameHub();
-  else renderGameRankTab();
+  else if (tab === 'rank') renderGameRankTab();
+  else renderCpsRankTab();
 };
 
 function renderGameHub() {
@@ -4783,8 +4788,8 @@ function renderGameHub() {
         <button onclick="openRouletteGame()" style="width:100%;">돌리러 가기</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
-        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⚡ 반응속도 챌린지</div>
-        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">5초 동안 최대한 많이 클릭하기</div>
+        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⚡ CPS 챌린지</div>
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">원하는 시간 동안 초당 클릭 수(CPS) 겨루기</div>
         <button onclick="openClickChallenge()" style="width:100%;">도전하기</button>
       </div>
       <div class="box" style="margin:0; padding:14px;">
@@ -4882,21 +4887,37 @@ window.spinRoulette = async function() {
   }, 1400);
 };
 
-// --- ⚡ 반응속도 클릭 챌린지 ---
+// --- ⚡ CPS 챌린지 (초당 클릭 수) ---
+const CPS_DURATION_OPTIONS = [5, 10, 15, 30];
+let cpsChallengeDuration = 5;
+
 window.openClickChallenge = function() {
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
-    <div style="font-size:13px; color:var(--text-sub); margin-bottom:8px;">시작을 누르면 3초 카운트다운 후 클릭 타이밍이 시작돼요</div>
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:8px;">측정 시간을 고른 뒤 시작하면 3초 카운트다운 후 CPS(초당 클릭 수)를 측정해요</div>
+    <div id="cpsDurationPicker" style="display:flex; gap:6px; justify-content:center; margin-bottom:12px; flex-wrap:wrap;">
+      ${CPS_DURATION_OPTIONS.map(sec => `<button class="page-btn ${sec === cpsChallengeDuration ? 'active' : ''}" onclick="setCpsDuration(${sec})" style="padding:6px 14px; font-size:13px;">${sec}초</button>`).join('')}
+    </div>
     <div id="clickChallengeStatus" style="font-size:16px; font-weight:bold; margin-bottom:10px;">준비됐나요?</div>
-    <button id="clickChallengeMainBtn" onclick="startClickChallenge()">시작하기</button>
+    <button id="clickChallengeMainBtn" onclick="startClickChallenge()" style="width:100%; min-height:170px; font-size:26px; font-weight:bold; border-radius:16px;">시작하기</button>
     <div id="clickChallengeResult" style="margin-top:10px;"></div>
   </div>`;
+};
+
+window.setCpsDuration = function(sec) {
+  cpsChallengeDuration = sec;
+  document.querySelectorAll('#cpsDurationPicker .page-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent === `${sec}초`);
+  });
 };
 
 window.startClickChallenge = function() {
   const statusEl = document.getElementById('clickChallengeStatus');
   const mainBtn = document.getElementById('clickChallengeMainBtn');
-  clickChallengeState = { count: 0, active: false };
+  const duration = cpsChallengeDuration;
+  clickChallengeState = { count: 0, active: false, duration };
+  const durationPicker = document.getElementById('cpsDurationPicker');
+  if (durationPicker) durationPicker.querySelectorAll('button').forEach(btn => btn.disabled = true);
   mainBtn.textContent = '준비 중...';
   mainBtn.disabled = true;
   let countdown = 3;
@@ -4907,12 +4928,12 @@ window.startClickChallenge = function() {
       statusEl.textContent = `${countdown}`;
     } else {
       clearInterval(countdownTimer);
-      statusEl.textContent = '지금 클릭하세요! (5초)';
+      statusEl.textContent = `지금 클릭하세요! (${duration}초)`;
       clickChallengeState.active = true;
       mainBtn.textContent = `클릭! (0)`;
       mainBtn.disabled = false;
       mainBtn.onclick = registerClickChallengeTap;
-      let secondsLeft = 5;
+      let secondsLeft = duration;
       const runTimer = setInterval(() => {
         secondsLeft--;
         if (secondsLeft <= 0) {
@@ -4934,16 +4955,70 @@ async function finishClickChallenge() {
   if (!clickChallengeState) return;
   clickChallengeState.active = false;
   const count = clickChallengeState.count;
-  const points = count * 2;
+  const duration = clickChallengeState.duration || 5;
+  const cps = Math.round((count / duration) * 100) / 100;
+  const points = Math.round(cps * 10);
   const mainBtn = document.getElementById('clickChallengeMainBtn');
   const statusEl = document.getElementById('clickChallengeStatus');
   mainBtn.disabled = true;
   mainBtn.onclick = null;
   statusEl.textContent = '종료!';
-  await awardGamePoints('click', '반응속도 챌린지', points, `5초 동안 ${count}번 클릭해서 ${points}P 획득!`);
-  const resultText = `반응속도 챌린지에서 ${count}번 클릭! (${points}P 획득)`;
-  document.getElementById('clickChallengeResult').innerHTML = `<div style="font-size:14px; margin-bottom:6px;">⚡ <b>${count}번</b> 클릭 → <b>${points}P</b> 획득!</div>${renderGameResultActions(resultText)}`;
+  await awardGamePoints('cps', 'CPS 챌린지', points, `${duration}초 동안 ${count}번 클릭 (CPS ${cps}) → ${points}P 획득!`);
+  const isNewBest = await updateBestCps(cps, count, duration);
+  const resultText = `CPS 챌린지(${duration}초)에서 ${cps} CPS(${count}번 클릭)를 기록했어요! (${points}P 획득)`;
+  document.getElementById('clickChallengeResult').innerHTML = `
+    <div style="font-size:14px; margin-bottom:4px;">⚡ CPS <b>${cps}</b> (${duration}초 동안 ${count}번 클릭) → <b>${points}P</b> 획득!</div>
+    ${isNewBest ? `<div style="font-size:12px; color:var(--cafe-green); margin-bottom:6px;">🎉 개인 최고 기록 갱신!</div>` : ''}
+    ${renderGameResultActions(resultText)}
+  `;
 }
+
+async function updateBestCps(cps, clickCount, duration) {
+  try {
+    const userRef = doc(db, 'users', currentUser);
+    const snap = await getDoc(userRef);
+    const currentBest = snap.exists() ? (snap.data().bestCps || 0) : 0;
+    if (cps > currentBest) {
+      await updateDoc(userRef, { bestCps: cps, bestCpsClicks: clickCount, bestCpsDuration: duration, bestCpsAt: Date.now() });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}
+
+// --- ⚡ CPS 리더보드 ---
+async function renderCpsRankTab() {
+  const container = document.getElementById('gameCpsRankTab');
+  container.innerHTML = '불러오는 중...';
+  try {
+    const querySnapshot = await getDocs(collection(db, 'users'));
+    const ranked = querySnapshot.docs
+      .map(docSnap => ({ user: docSnap.id, cps: docSnap.data().bestCps || 0, clicks: docSnap.data().bestCpsClicks || 0 }))
+      .filter(entry => entry.cps > 0)
+      .sort((a, b) => b.cps - a.cps)
+      .slice(0, 30);
+    if (!ranked.length) {
+      container.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">아직 CPS 챌린지에 도전한 회원이 없어요. 첫 기록을 남겨보세요!</div>`;
+      return;
+    }
+    container.innerHTML = ranked.map((entry, idx) => `
+      <div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-color);">
+        <span style="width:24px; font-weight:bold; color:${idx < 3 ? 'var(--cafe-green)' : 'var(--text-sub)'};">${idx + 1}</span>
+        ${getAvatarHtml(entry.user, 26)}
+        <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
+        <span style="font-size:11px; color:var(--text-sub);">(${entry.clicks}클릭/5초)</span>
+        <span style="font-weight:bold; color:var(--cafe-green);">${entry.cps} CPS</span>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = `<div class="error-box">리더보드를 불러오지 못했습니다.</div>`;
+  }
+}
+
 
 // --- ✊✌️✋ 가위바위보 ---
 window.openRpsGame = function() {
