@@ -2732,6 +2732,7 @@ window.showAppSection = function(section) {
   if (section !== 'game' && typeof stopTetris === 'function') stopTetris();
   if (section !== 'game' && typeof stop2048 === 'function') stop2048();
   if (section !== 'game' && typeof stopTtt === 'function') stopTtt();
+  if (section !== 'game' && typeof stopMinesweeper === 'function') stopMinesweeper();
   const isCafe = section === 'cafe';
   const isChat = section === 'chat';
   const isSettings = section === 'settings';
@@ -4851,6 +4852,7 @@ window.setGameTab = function(tab) {
   stopTetris();
   stop2048();
   stopTtt();
+  stopMinesweeper();
   document.getElementById('gameTabHubBtn').classList.toggle('active', tab === 'hub');
   document.getElementById('gameTabRankBtn').classList.toggle('active', tab === 'rank');
   document.getElementById('gameTabCpsBtn').classList.toggle('active', tab === 'cps');
@@ -4898,6 +4900,11 @@ function renderGameHub() {
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🔢 2048</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">타일을 합쳐서 2048을 만들어보세요</div>
         <button onclick="openGame2048()" style="width:100%;">플레이하기</button>
+      </div>
+      <div class="box" style="margin:0; padding:14px;">
+        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">💣 지뢰찾기</div>
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">9x9, 지뢰 10개! 빠르게 클리어할수록 포인트 UP</div>
+        <button onclick="openMinesweeperGame()" style="width:100%;">플레이하기</button>
       </div>
     </div>
     <div id="gamePlayArea" style="margin-top:14px;"></div>
@@ -4953,6 +4960,7 @@ window.openRouletteGame = async function() {
   stopTetris();
   stop2048();
   stopTtt();
+  stopMinesweeper();
   const area = document.getElementById('gamePlayArea');
   const key = `cafe_roulette_${currentUser}`;
   const lastPlayed = localStorage.getItem(key);
@@ -5000,6 +5008,7 @@ window.openClickChallenge = function() {
   stopTetris();
   stop2048();
   stopTtt();
+  stopMinesweeper();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:8px;">측정 시간을 고른 뒤 시작하면 3초 카운트다운 후 CPS(초당 클릭 수)를 측정해요</div>
@@ -5136,6 +5145,7 @@ window.openTicTacToeGame = function() {
   stopTetris();
   stop2048();
   stopTtt();
+  stopMinesweeper();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">나는 ❌, 컴퓨터는 ⭕! 이기면 20P, 비기면 8P, 지면 0P</div>
@@ -5171,21 +5181,27 @@ function getTttWinner(board) {
 
 function pickComputerTttMove(board) {
   const empties = board.map((v, i) => v === null ? i : null).filter(v => v !== null);
+  // 난이도 하향: 일정 확률로 최적 수 대신 아무 칸에나 둠 (컴퓨터가 가끔 실수함)
+  if (Math.random() < 0.5) {
+    return empties[Math.floor(Math.random() * empties.length)];
+  }
   // 1) 컴퓨터가 이길 수 있으면 승리
   for (const idx of empties) {
     const test = [...board]; test[idx] = 'O';
     if (getTttWinner(test) === 'O') return idx;
   }
-  // 2) 플레이어 승리를 막아야 하면 막기
-  for (const idx of empties) {
-    const test = [...board]; test[idx] = 'X';
-    if (getTttWinner(test) === 'X') return idx;
+  // 2) 플레이어 승리를 막아야 하면 막기 (가끔 놓침)
+  if (Math.random() < 0.7) {
+    for (const idx of empties) {
+      const test = [...board]; test[idx] = 'X';
+      if (getTttWinner(test) === 'X') return idx;
+    }
   }
   // 3) 중앙 우선
-  if (board[4] === null) return 4;
+  if (board[4] === null && Math.random() < 0.5) return 4;
   // 4) 코너 우선
   const corners = [0, 2, 6, 8].filter(i => board[i] === null);
-  if (corners.length) return corners[Math.floor(Math.random() * corners.length)];
+  if (corners.length && Math.random() < 0.5) return corners[Math.floor(Math.random() * corners.length)];
   // 5) 아무 칸
   return empties[Math.floor(Math.random() * empties.length)];
 }
@@ -5234,6 +5250,192 @@ function drawTicTacToe() {
   `).join('');
 }
 
+// --- 💣 지뢰찾기 ---
+const MINE_COLS = 9;
+const MINE_ROWS = 9;
+const MINE_COUNT = 10;
+let mineState = null;
+
+function stopMinesweeper() {
+  if (mineState && mineState.timer) clearInterval(mineState.timer);
+  mineState = null;
+}
+
+window.openMinesweeperGame = function() {
+  stopTetris();
+  stop2048();
+  stopTtt();
+  stopMinesweeper();
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">9x9 칸에 지뢰 10개! 빠르게 다 찾아내면 포인트 UP</div>
+    <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
+      <span>⏱ <b id="mineTimer">0</b>초</span>
+      <span>🚩 <b id="mineFlagCount">0</b>/${MINE_COUNT}</span>
+    </div>
+    <div id="mineGameOverBanner" class="hidden" style="font-size:18px; font-weight:bold; padding:10px; border-radius:8px; margin-bottom:10px;"></div>
+    <div id="mineBoard" style="display:grid; grid-template-columns:repeat(${MINE_COLS}, 1fr); gap:2px; width:100%; max-width:320px; margin:0 auto; user-select:none;"></div>
+    <div style="display:flex; gap:8px; margin-top:12px;">
+      <button id="mineModeBtn" onclick="toggleMineMode()" style="flex:1;">📍 칸 열기 모드</button>
+      <button onclick="startMinesweeper()" style="flex:1;">새 게임 시작</button>
+    </div>
+    <div id="mineResult" style="margin-top:10px;"></div>
+  </div>`;
+  startMinesweeper();
+};
+
+window.startMinesweeper = function() {
+  stopMinesweeper();
+  const cells = Array.from({ length: MINE_ROWS * MINE_COLS }, () => ({ mine: false, revealed: false, flagged: false, adjacent: 0 }));
+  mineState = {
+    cells,
+    started: false,
+    running: true,
+    flagMode: false,
+    elapsed: 0,
+    timer: null,
+    revealedCount: 0
+  };
+  document.getElementById('mineGameOverBanner').classList.add('hidden');
+  document.getElementById('mineResult').innerHTML = '';
+  document.getElementById('mineTimer').textContent = '0';
+  document.getElementById('mineFlagCount').textContent = '0';
+  document.getElementById('mineModeBtn').textContent = '📍 칸 열기 모드';
+  drawMinesweeper();
+};
+
+window.toggleMineMode = function() {
+  if (!mineState || !mineState.running) return;
+  mineState.flagMode = !mineState.flagMode;
+  document.getElementById('mineModeBtn').textContent = mineState.flagMode ? '🚩 깃발 꽂기 모드' : '📍 칸 열기 모드';
+};
+
+function mineIndex(row, col) { return row * MINE_COLS + col; }
+
+function mineNeighbors(row, col) {
+  const result = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const r = row + dr, c = col + dc;
+      if (r >= 0 && r < MINE_ROWS && c >= 0 && c < MINE_COLS) result.push(mineIndex(r, c));
+    }
+  }
+  return result;
+}
+
+function placeMinesAvoiding(safeIndex) {
+  const { cells } = mineState;
+  const safeRow = Math.floor(safeIndex / MINE_COLS), safeCol = safeIndex % MINE_COLS;
+  const safeZone = new Set([safeIndex, ...mineNeighbors(safeRow, safeCol)]);
+  const candidates = cells.map((_, i) => i).filter(i => !safeZone.has(i));
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+  candidates.slice(0, MINE_COUNT).forEach(i => { cells[i].mine = true; });
+  cells.forEach((cell, i) => {
+    if (cell.mine) return;
+    const row = Math.floor(i / MINE_COLS), col = i % MINE_COLS;
+    cell.adjacent = mineNeighbors(row, col).filter(n => cells[n].mine).length;
+  });
+}
+
+function revealMineCell(index) {
+  const { cells } = mineState;
+  const cell = cells[index];
+  if (cell.revealed || cell.flagged) return;
+  cell.revealed = true;
+  mineState.revealedCount++;
+  if (cell.adjacent === 0 && !cell.mine) {
+    const row = Math.floor(index / MINE_COLS), col = index % MINE_COLS;
+    mineNeighbors(row, col).forEach(n => { if (!cells[n].revealed && !cells[n].flagged) revealMineCell(n); });
+  }
+}
+
+window.mineCellClick = function(index) {
+  if (!mineState || !mineState.running) return;
+  const cell = mineState.cells[index];
+  if (mineState.flagMode) {
+    if (cell.revealed) return;
+    cell.flagged = !cell.flagged;
+    document.getElementById('mineFlagCount').textContent = mineState.cells.filter(c => c.flagged).length;
+    drawMinesweeper();
+    return;
+  }
+  if (cell.flagged || cell.revealed) return;
+  if (!mineState.started) {
+    mineState.started = true;
+    placeMinesAvoiding(index);
+    mineState.timer = setInterval(() => {
+      mineState.elapsed++;
+      const timerEl = document.getElementById('mineTimer');
+      if (timerEl) timerEl.textContent = mineState.elapsed;
+    }, 1000);
+  }
+  if (cell.mine) {
+    cell.revealed = true;
+    drawMinesweeper();
+    finishMinesweeper(false);
+    return;
+  }
+  revealMineCell(index);
+  drawMinesweeper();
+  const totalSafe = MINE_ROWS * MINE_COLS - MINE_COUNT;
+  if (mineState.revealedCount >= totalSafe) {
+    finishMinesweeper(true);
+  }
+};
+
+async function finishMinesweeper(won) {
+  mineState.running = false;
+  if (mineState.timer) clearInterval(mineState.timer);
+  if (won) {
+    mineState.cells.forEach(c => { if (c.mine) c.flagged = true; });
+  } else {
+    mineState.cells.forEach(c => { if (c.mine) c.revealed = true; });
+  }
+  drawMinesweeper();
+  const banner = document.getElementById('mineGameOverBanner');
+  let points, bannerText, bannerStyle, outcome;
+  if (won) {
+    outcome = '성공';
+    points = Math.max(15, 40 - mineState.elapsed);
+    bannerText = `🎉 클리어! (${mineState.elapsed}초, ${points}P)`;
+    bannerStyle = 'background:rgba(3,199,90,0.18); color:var(--cafe-green);';
+  } else {
+    outcome = '실패';
+    points = 0;
+    bannerText = '💥 지뢰를 밟았어요!';
+    bannerStyle = 'background:rgba(248,113,113,0.18); color:#f87171;';
+  }
+  banner.textContent = bannerText;
+  banner.style.cssText += bannerStyle;
+  banner.classList.remove('hidden');
+  await awardGamePoints('minesweeper', '지뢰찾기', points, `지뢰찾기 ${outcome}! (${points}P)`);
+  const resultText = `지뢰찾기에서 ${outcome}했어요! (${points}P 획득)`;
+  document.getElementById('mineResult').innerHTML = `<div style="font-size:13px; margin-bottom:6px;">+${points}P 획득</div>${renderGameResultActions(resultText)}`;
+}
+
+function drawMinesweeper() {
+  const board = document.getElementById('mineBoard');
+  if (!board || !mineState) return;
+  const numColors = ['', '#60a5fa', 'var(--cafe-green)', '#f87171', '#c084fc', '#fb923c', '#22d3ee', 'var(--text-main)', 'var(--text-sub)'];
+  board.innerHTML = mineState.cells.map((cell, idx) => {
+    let content = '';
+    let bg = 'var(--input-bg)';
+    let color = 'var(--text-main)';
+    if (cell.revealed) {
+      bg = 'transparent';
+      if (cell.mine) { content = '💣'; bg = 'rgba(248,113,113,0.25)'; }
+      else if (cell.adjacent > 0) { content = cell.adjacent; color = numColors[cell.adjacent]; }
+    } else if (cell.flagged) {
+      content = '🚩';
+    }
+    return `<div onclick="mineCellClick(${idx})" style="aspect-ratio:1; background:${bg}; border:1px solid var(--border-color); border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:bold; cursor:${!mineState.running ? 'default' : 'pointer'}; color:${color};">${content}</div>`;
+  }).join('');
+}
+
 // --- 🧱 테트리스 ---
 const TETRIS_COLS = 10;
 const TETRIS_ROWS = 18;
@@ -5266,6 +5468,7 @@ window.openTetrisGame = function() {
   stopTetris();
   stop2048();
   stopTtt();
+  stopMinesweeper();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
@@ -5581,6 +5784,7 @@ window.openGame2048 = function() {
   stopTetris();
   stop2048();
   stopTtt();
+  stopMinesweeper();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
@@ -5628,6 +5832,7 @@ window.start2048 = function() {
   stopTetris();
   stop2048();
   stopTtt();
+  stopMinesweeper();
   const board = create2048Board();
   spawn2048Tile(board);
   spawn2048Tile(board);
