@@ -770,11 +770,13 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button id="gameTabRankBtn" class="page-btn" onclick="setGameTab('rank')" style="padding:6px 12px; font-size:12px;">🏆 게임 랭킹</button>
 <button id="gameTabCpsBtn" class="page-btn" onclick="setGameTab('cps')" style="padding:6px 12px; font-size:12px;">⚡ CPS 리더보드</button>
 <button id="gameTabTetrisBtn" class="page-btn" onclick="setGameTab('tetris')" style="padding:6px 12px; font-size:12px;">🧱 테트리스 리더보드</button>
+<button id="gameTab2048Btn" class="page-btn" onclick="setGameTab('2048')" style="padding:6px 12px; font-size:12px;">🔢 2048 리더보드</button>
 </div>
 <div id="gameHubTab"></div>
 <div id="gameRankTab" class="hidden"></div>
 <div id="gameCpsRankTab" class="hidden"></div>
 <div id="gameTetrisRankTab" class="hidden"></div>
+<div id="game2048RankTab" class="hidden"></div>
 </div>
 </section>
 <section id="bookmarksView" class="hidden">
@@ -2724,6 +2726,7 @@ function getChatAvatarHtml(username) {
 window.showAppSection = function(section) {
   if (section !== 'profile') localStorage.setItem('cafe_last_section', section);
   if (section !== 'game' && typeof stopTetris === 'function') stopTetris();
+  if (section !== 'game' && typeof stop2048 === 'function') stop2048();
   const isCafe = section === 'cafe';
   const isChat = section === 'chat';
   const isSettings = section === 'settings';
@@ -4771,18 +4774,22 @@ async function refreshMyGamePointsBadge() {
 window.setGameTab = function(tab) {
   gameActiveTab = tab;
   stopTetris();
+  stop2048();
   document.getElementById('gameTabHubBtn').classList.toggle('active', tab === 'hub');
   document.getElementById('gameTabRankBtn').classList.toggle('active', tab === 'rank');
   document.getElementById('gameTabCpsBtn').classList.toggle('active', tab === 'cps');
   document.getElementById('gameTabTetrisBtn').classList.toggle('active', tab === 'tetris');
+  document.getElementById('gameTab2048Btn').classList.toggle('active', tab === '2048');
   document.getElementById('gameHubTab').classList.toggle('hidden', tab !== 'hub');
   document.getElementById('gameRankTab').classList.toggle('hidden', tab !== 'rank');
   document.getElementById('gameCpsRankTab').classList.toggle('hidden', tab !== 'cps');
   document.getElementById('gameTetrisRankTab').classList.toggle('hidden', tab !== 'tetris');
+  document.getElementById('game2048RankTab').classList.toggle('hidden', tab !== '2048');
   if (tab === 'hub') renderGameHub();
   else if (tab === 'rank') renderGameRankTab();
   else if (tab === 'cps') renderCpsRankTab();
-  else renderTetrisRankTab();
+  else if (tab === 'tetris') renderTetrisRankTab();
+  else render2048RankTab();
 };
 
 function renderGameHub() {
@@ -4808,6 +4815,11 @@ function renderGameHub() {
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🧱 테트리스</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">클래식 테트리스! 점수만큼 포인트 획득</div>
         <button onclick="openTetrisGame()" style="width:100%;">플레이하기</button>
+      </div>
+      <div class="box" style="margin:0; padding:14px;">
+        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🔢 2048</div>
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">타일을 합쳐서 2048을 만들어보세요</div>
+        <button onclick="openGame2048()" style="width:100%;">플레이하기</button>
       </div>
     </div>
     <div id="gamePlayArea" style="margin-top:14px;"></div>
@@ -4861,6 +4873,7 @@ window.shareGameResultToBoard = function(text) {
 // --- 🎰 럭키 룰렛 ---
 window.openRouletteGame = async function() {
   stopTetris();
+  stop2048();
   const area = document.getElementById('gamePlayArea');
   const key = `cafe_roulette_${currentUser}`;
   const lastPlayed = localStorage.getItem(key);
@@ -4906,6 +4919,7 @@ let cpsChallengeDuration = 5;
 
 window.openClickChallenge = function() {
   stopTetris();
+  stop2048();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:8px;">측정 시간을 고른 뒤 시작하면 3초 카운트다운 후 CPS(초당 클릭 수)를 측정해요</div>
@@ -5037,6 +5051,7 @@ async function renderCpsRankTab() {
 // --- ✊✌️✋ 가위바위보 ---
 window.openRpsGame = function() {
   stopTetris();
+  stop2048();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">이기면 15P, 비기면 5P, 지면 0P!</div>
@@ -5100,6 +5115,7 @@ function stopTetris() {
 
 window.openTetrisGame = function() {
   stopTetris();
+  stop2048();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
@@ -5323,6 +5339,238 @@ async function renderTetrisRankTab() {
         ${getAvatarHtml(entry.user, 26)}
         <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
         <span style="font-size:11px; color:var(--text-sub);">(${entry.lines}줄)</span>
+        <span style="font-weight:bold; color:var(--cafe-green);">${entry.score}점</span>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = `<div class="error-box">리더보드를 불러오지 못했습니다.</div>`;
+  }
+}
+
+// --- 🔢 2048 ---
+const GAME_2048_COLORS = { 2:'#eee4da', 4:'#ede0c8', 8:'#f2b179', 16:'#f59563', 32:'#f67c5f', 64:'#f65e3b', 128:'#edcf72', 256:'#edcc61', 512:'#edc850', 1024:'#edc53f', 2048:'#edc22e' };
+let game2048State = null;
+
+function stop2048() {
+  if (game2048State) {
+    if (game2048State.keyHandler) document.removeEventListener('keydown', game2048State.keyHandler);
+    game2048State = null;
+  }
+}
+
+function create2048Board() {
+  return Array.from({ length: 4 }, () => Array(4).fill(0));
+}
+
+function spawn2048Tile(grid) {
+  const emptyCells = [];
+  grid.forEach((row, r) => row.forEach((value, c) => { if (value === 0) emptyCells.push([r, c]); }));
+  if (!emptyCells.length) return;
+  const [r, c] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+  grid[r][c] = Math.random() < 0.9 ? 2 : 4;
+}
+
+function transpose2048(grid) {
+  const result = create2048Board();
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) result[c][r] = grid[r][c];
+  return result;
+}
+
+function slide2048RowLeft(row) {
+  const filtered = row.filter(v => v !== 0);
+  let scoreGained = 0;
+  for (let i = 0; i < filtered.length - 1; i++) {
+    if (filtered[i] === filtered[i + 1]) {
+      filtered[i] *= 2;
+      scoreGained += filtered[i];
+      filtered[i + 1] = 0;
+    }
+  }
+  const merged = filtered.filter(v => v !== 0);
+  while (merged.length < 4) merged.push(0);
+  return { row: merged, scoreGained };
+}
+
+function process2048(direction, grid) {
+  let g = grid.map(row => [...row]);
+  let scoreGained = 0;
+  let moved = false;
+  if (direction === 'up' || direction === 'down') g = transpose2048(g);
+  if (direction === 'right' || direction === 'down') g = g.map(row => [...row].reverse());
+  const newGrid = g.map(row => {
+    const original = [...row];
+    const { row: newRow, scoreGained: gained } = slide2048RowLeft(row);
+    if (newRow.some((v, i) => v !== original[i])) moved = true;
+    scoreGained += gained;
+    return newRow;
+  });
+  let result = newGrid;
+  if (direction === 'right' || direction === 'down') result = result.map(row => [...row].reverse());
+  if (direction === 'up' || direction === 'down') result = transpose2048(result);
+  return { grid: result, scoreGained, moved };
+}
+
+function can2048Move(grid) {
+  if (grid.some(row => row.some(v => v === 0))) return true;
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      const value = grid[r][c];
+      if (c < 3 && grid[r][c + 1] === value) return true;
+      if (r < 3 && grid[r + 1][c] === value) return true;
+    }
+  }
+  return false;
+}
+
+window.openGame2048 = function() {
+  stopTetris();
+  stop2048();
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
+      <span>점수: <b id="game2048Score">0</b></span>
+      <span>최고 타일: <b id="game2048BestTile">-</b></span>
+    </div>
+    <div id="game2048Board" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; width:100%; max-width:300px; margin:0 auto; touch-action:none;"></div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px; margin-top:12px;">
+      <button onclick="move2048('up')" style="font-size:20px; padding:10px 20px;">▲</button>
+      <div style="display:flex; gap:6px;">
+        <button onclick="move2048('left')" style="font-size:20px; padding:10px 20px;">◀</button>
+        <button onclick="move2048('down')" style="font-size:20px; padding:10px 20px;">▼</button>
+        <button onclick="move2048('right')" style="font-size:20px; padding:10px 20px;">▶</button>
+      </div>
+    </div>
+    <div style="font-size:11px; color:var(--text-sub); margin-top:8px;">PC에서는 방향키로, 모바일에서는 보드를 스와이프해도 조작할 수 있어요</div>
+    <button onclick="start2048()" id="game2048StartBtn" style="width:100%; margin-top:12px;">시작하기</button>
+    <div id="game2048Result" style="margin-top:10px;"></div>
+  </div>`;
+  draw2048Board(create2048Board());
+  setup2048Swipe();
+};
+
+function setup2048Swipe() {
+  const board = document.getElementById('game2048Board');
+  if (!board) return;
+  let startX = 0, startY = 0;
+  board.addEventListener('touchstart', event => {
+    const touch = event.touches[0];
+    startX = touch.clientX;
+    startY = touch.clientY;
+  }, { passive: true });
+  board.addEventListener('touchend', event => {
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+    if (Math.abs(dx) > Math.abs(dy)) move2048(dx > 0 ? 'right' : 'left');
+    else move2048(dy > 0 ? 'down' : 'up');
+  }, { passive: true });
+}
+
+window.start2048 = function() {
+  stopTetris();
+  stop2048();
+  const board = create2048Board();
+  spawn2048Tile(board);
+  spawn2048Tile(board);
+  game2048State = { board, score: 0, running: true, keyHandler: null };
+  document.getElementById('game2048StartBtn').textContent = '재시작';
+  document.getElementById('game2048Result').innerHTML = '';
+  document.getElementById('game2048Score').textContent = '0';
+  draw2048Board(board);
+  game2048State.keyHandler = event => {
+    if (!game2048State || !game2048State.running) return;
+    const map = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
+    if (map[event.key]) {
+      event.preventDefault();
+      move2048(map[event.key]);
+    }
+  };
+  document.addEventListener('keydown', game2048State.keyHandler);
+};
+
+window.move2048 = async function(direction) {
+  if (!game2048State || !game2048State.running) return;
+  const { grid, scoreGained, moved } = process2048(direction, game2048State.board);
+  if (!moved) return;
+  game2048State.board = grid;
+  game2048State.score += scoreGained;
+  spawn2048Tile(grid);
+  draw2048Board(grid);
+  document.getElementById('game2048Score').textContent = game2048State.score;
+  const bestTile = Math.max(...grid.flat());
+  document.getElementById('game2048BestTile').textContent = bestTile;
+  if (!can2048Move(grid)) {
+    game2048State.running = false;
+    if (game2048State.keyHandler) document.removeEventListener('keydown', game2048State.keyHandler);
+    await end2048Game(game2048State.score, bestTile);
+  }
+};
+
+async function end2048Game(score, bestTile) {
+  const points = Math.max(1, Math.round(score / 20));
+  await awardGamePoints('2048', '2048', points, `2048에서 ${score}점(최고 타일 ${bestTile})을 기록해서 ${points}P 획득!`);
+  const isNewBest = await updateBest2048(score, bestTile);
+  const resultText = `2048에서 ${score}점(최고 타일 ${bestTile})을 기록했어요! (${points}P 획득)`;
+  const resultBox = document.getElementById('game2048Result');
+  if (resultBox) {
+    resultBox.innerHTML = `
+      <div style="font-size:14px; margin-bottom:4px;">🔢 게임 오버! 점수 <b>${score}</b> · 최고 타일 <b>${bestTile}</b> → <b>${points}P</b> 획득!</div>
+      ${isNewBest ? `<div style="font-size:12px; color:var(--cafe-green); margin-bottom:6px;">🎉 개인 최고 기록 갱신!</div>` : ''}
+      ${renderGameResultActions(resultText)}
+    `;
+  }
+}
+
+async function updateBest2048(score, bestTile) {
+  try {
+    const userRef = doc(db, 'users', currentUser);
+    const snap = await getDoc(userRef);
+    const currentBest = snap.exists() ? (snap.data().best2048Score || 0) : 0;
+    if (score > currentBest) {
+      await updateDoc(userRef, { best2048Score: score, best2048Tile: bestTile, best2048At: Date.now() });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}
+
+function draw2048Board(grid) {
+  const container = document.getElementById('game2048Board');
+  if (!container) return;
+  container.innerHTML = grid.map(row => row.map(value => {
+    const bg = value ? (GAME_2048_COLORS[value] || '#3c3a32') : 'var(--input-bg)';
+    const textColor = value && value <= 4 ? '#776e65' : '#ffffff';
+    const fontSize = value >= 1024 ? '16px' : (value >= 100 ? '18px' : '22px');
+    return `<div style="width:100%; aspect-ratio:1; background:${bg}; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:${fontSize}; color:${textColor};">${value || ''}</div>`;
+  }).join('')).join('');
+}
+
+// --- 🔢 2048 리더보드 ---
+async function render2048RankTab() {
+  const container = document.getElementById('game2048RankTab');
+  container.innerHTML = '불러오는 중...';
+  try {
+    const querySnapshot = await getDocs(collection(db, 'users'));
+    const ranked = querySnapshot.docs
+      .map(docSnap => ({ user: docSnap.id, score: docSnap.data().best2048Score || 0, tile: docSnap.data().best2048Tile || 0 }))
+      .filter(entry => entry.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 30);
+    if (!ranked.length) {
+      container.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">아직 2048에 도전한 회원이 없어요. 첫 기록을 남겨보세요!</div>`;
+      return;
+    }
+    container.innerHTML = ranked.map((entry, idx) => `
+      <div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-color);">
+        <span style="width:24px; font-weight:bold; color:${idx < 3 ? 'var(--cafe-green)' : 'var(--text-sub)'};">${idx + 1}</span>
+        ${getAvatarHtml(entry.user, 26)}
+        <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
+        <span style="font-size:11px; color:var(--text-sub);">(최고 ${entry.tile})</span>
         <span style="font-weight:bold; color:var(--cafe-green);">${entry.score}점</span>
       </div>
     `).join('');
