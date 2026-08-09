@@ -776,6 +776,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button id="gameTabTetrisBtn" class="page-btn" onclick="setGameTab('tetris')" style="padding:6px 12px; font-size:12px;">🧱 테트리스 리더보드</button>
 <button id="gameTab2048Btn" class="page-btn" onclick="setGameTab('2048')" style="padding:6px 12px; font-size:12px;">🔢 2048 리더보드</button>
 <button id="gameTabMineBtn" class="page-btn" onclick="setGameTab('mine')" style="padding:6px 12px; font-size:12px;">💣 지뢰찾기 리더보드</button>
+<button id="gameTabCookieBtn" class="page-btn" onclick="setGameTab('cookie')" style="padding:6px 12px; font-size:12px;">🍪 쿠키 클리커 리더보드</button>
 </div>
 <div id="gameHubTab"></div>
 <div id="gameRankTab" class="hidden"></div>
@@ -783,6 +784,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="gameTetrisRankTab" class="hidden"></div>
 <div id="game2048RankTab" class="hidden"></div>
 <div id="gameMineRankTab" class="hidden"></div>
+<div id="gameCookieRankTab" class="hidden"></div>
 </div>
 </section>
 <section id="bookmarksView" class="hidden">
@@ -2735,6 +2737,7 @@ window.showAppSection = function(section) {
   if (section !== 'game' && typeof stop2048 === 'function') stop2048();
   if (section !== 'game' && typeof stopTtt === 'function') stopTtt();
   if (section !== 'game' && typeof stopMinesweeper === 'function') stopMinesweeper();
+  if (section !== 'game' && typeof stopCookieClicker === 'function') stopCookieClicker();
   const isCafe = section === 'cafe';
   const isChat = section === 'chat';
   const isSettings = section === 'settings';
@@ -4782,7 +4785,8 @@ async function refreshMyGamePointsBadge() {
 // ===== 🛒 미니게임 상점 =====
 const GAME_SHOP_ITEMS = [
   { key: 'rouletteRespin', icon: '🎰', name: '럭키 룰렛 한 번 더 돌리기', desc: '오늘 이미 돌렸어도 한 번 더 돌릴 수 있어요', price: 50 },
-  { key: 'undo2048', icon: '🔄', name: '2048 되돌리기권', desc: '게임 오버 전 마지막 결정을 다시 내릴 수 있어요', price: 100 }
+  { key: 'undo2048', icon: '🔄', name: '2048 되돌리기권', desc: '게임 오버 전 마지막 결정을 다시 내릴 수 있어요', price: 100 },
+  { key: 'undoMine', icon: '💣', name: '지뢰찾기 되돌리기권', desc: '게임 오버 1턴 전으로 돌아갈 수 있어요', price: 150 }
 ];
 
 window.toggleGameShop = async function() {
@@ -4802,8 +4806,9 @@ async function renderGameShop() {
     const data = snap.exists() ? snap.data() : {};
     const points = data.gamePoints || 0;
     const undoTickets = data.undoTickets2048 || 0;
+    const undoMineTickets = data.undoTicketsMine || 0;
     panel.innerHTML = `
-      <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">보유 포인트: <b style="color:var(--cafe-green);">${points}P</b> · 보유 2048 되돌리기권: <b>${undoTickets}개</b></div>
+      <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">보유 포인트: <b style="color:var(--cafe-green);">${points}P</b> · 2048 되돌리기권: <b>${undoTickets}개</b> · 지뢰찾기 되돌리기권: <b>${undoMineTickets}개</b></div>
       ${GAME_SHOP_ITEMS.map(item => `
         <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-color);">
           <span style="font-size:22px;">${item.icon}</span>
@@ -4840,6 +4845,9 @@ window.purchaseShopItem = async function(itemKey) {
     } else if (item.key === 'undo2048') {
       await updateDoc(userRef, { undoTickets2048: increment(1) });
       alert('2048 되돌리기권을 구매했어요!');
+    } else if (item.key === 'undoMine') {
+      await updateDoc(userRef, { undoTicketsMine: increment(1) });
+      alert('지뢰찾기 되돌리기권을 구매했어요!');
     }
     await refreshMyGamePointsBadge();
     await renderGameShop();
@@ -4855,24 +4863,28 @@ window.setGameTab = function(tab) {
   stop2048();
   stopTtt();
   stopMinesweeper();
+  stopCookieClicker();
   document.getElementById('gameTabHubBtn').classList.toggle('active', tab === 'hub');
   document.getElementById('gameTabRankBtn').classList.toggle('active', tab === 'rank');
   document.getElementById('gameTabCpsBtn').classList.toggle('active', tab === 'cps');
   document.getElementById('gameTabTetrisBtn').classList.toggle('active', tab === 'tetris');
   document.getElementById('gameTab2048Btn').classList.toggle('active', tab === '2048');
   document.getElementById('gameTabMineBtn').classList.toggle('active', tab === 'mine');
+  document.getElementById('gameTabCookieBtn').classList.toggle('active', tab === 'cookie');
   document.getElementById('gameHubTab').classList.toggle('hidden', tab !== 'hub');
   document.getElementById('gameRankTab').classList.toggle('hidden', tab !== 'rank');
   document.getElementById('gameCpsRankTab').classList.toggle('hidden', tab !== 'cps');
   document.getElementById('gameTetrisRankTab').classList.toggle('hidden', tab !== 'tetris');
   document.getElementById('game2048RankTab').classList.toggle('hidden', tab !== '2048');
   document.getElementById('gameMineRankTab').classList.toggle('hidden', tab !== 'mine');
+  document.getElementById('gameCookieRankTab').classList.toggle('hidden', tab !== 'cookie');
   if (tab === 'hub') renderGameHub();
   else if (tab === 'rank') renderGameRankTab();
   else if (tab === 'cps') renderCpsRankTab();
   else if (tab === 'tetris') renderTetrisRankTab();
   else if (tab === '2048') render2048RankTab();
-  else renderMineRankTab();
+  else if (tab === 'mine') renderMineRankTab();
+  else renderCookieRankTab();
 };
 
 function renderGameHub() {
@@ -4910,6 +4922,11 @@ function renderGameHub() {
         <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">💣 지뢰찾기</div>
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">9x9, 지뢰 10개! 빠르게 클리어할수록 포인트 UP</div>
         <button onclick="openMinesweeperGame()" style="width:100%;">플레이하기</button>
+      </div>
+      <div class="box" style="margin:0; padding:14px;">
+        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🍪 쿠키 클리커</div>
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">쿠키를 굽고 생산 시설을 늘려서 누적 기록에 도전!</div>
+        <button onclick="openCookieClickerGame()" style="width:100%;">플레이하기</button>
       </div>
     </div>
     <div id="gamePlayArea" style="margin-top:14px;"></div>
@@ -4966,6 +4983,7 @@ window.openRouletteGame = async function() {
   stop2048();
   stopTtt();
   stopMinesweeper();
+  stopCookieClicker();
   const area = document.getElementById('gamePlayArea');
   const key = `cafe_roulette_${currentUser}`;
   const lastPlayed = localStorage.getItem(key);
@@ -5014,6 +5032,7 @@ window.openClickChallenge = function() {
   stop2048();
   stopTtt();
   stopMinesweeper();
+  stopCookieClicker();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:8px;">측정 시간을 고른 뒤 시작하면 3초 카운트다운 후 CPS(초당 클릭 수)를 측정해요</div>
@@ -5151,6 +5170,7 @@ window.openTicTacToeGame = function() {
   stop2048();
   stopTtt();
   stopMinesweeper();
+  stopCookieClicker();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">나는 ❌, 컴퓨터는 ⭕! 이기면 20P, 비기면 8P, 지면 0P</div>
@@ -5274,6 +5294,7 @@ window.openMinesweeperGame = function() {
   stop2048();
   stopTtt();
   stopMinesweeper();
+  stopCookieClicker();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">지뢰를 피해서 다 찾아내면 포인트 획득! 빠를수록, 난이도가 높을수록 포인트 UP</div>
@@ -5417,6 +5438,12 @@ window.mineCellClick = function(index) {
       if (timerEl) timerEl.textContent = mineState.elapsed;
     }, 1000);
   }
+  // 되돌리기권용 스냅샷: 이번 클릭으로 게임 오버가 나면 이 시점으로 되돌아갈 수 있음
+  mineState.previousSnapshot = {
+    cells: mineState.cells.map(c => ({ ...c })),
+    elapsed: mineState.elapsed,
+    revealedCount: mineState.revealedCount
+  };
   if (cell.mine) {
     cell.revealed = true;
     drawMinesweeper();
@@ -5460,12 +5487,53 @@ async function finishMinesweeper(won) {
   banner.classList.remove('hidden');
   await awardGamePoints('minesweeper', '지뢰찾기', points, `지뢰찾기(${diff.label}) ${outcome}! (${points}P)`);
   const resultText = `지뢰찾기 ${diff.label}에서 ${outcome}했어요! (${points}P 획득)`;
+  let undoTickets = 0;
+  if (!won) {
+    try {
+      const snap = await getDoc(doc(db, 'users', currentUser));
+      undoTickets = snap.exists() ? (snap.data().undoTicketsMine || 0) : 0;
+    } catch (error) {
+      console.error(error);
+    }
+  }
   document.getElementById('mineResult').innerHTML = `
     <div style="font-size:13px; margin-bottom:4px;">+${points}P 획득</div>
     ${isNewBest ? `<div style="font-size:12px; color:var(--cafe-green); margin-bottom:6px;">🎉 ${diff.label} 개인 최고 기록 갱신!</div>` : ''}
+    ${!won && undoTickets > 0 && mineState.previousSnapshot ? `<button onclick="useMineUndoTicket()" style="width:100%; margin-bottom:8px; background:#eab308; color:#111;">🔄 되돌리기권 사용하기 (보유 ${undoTickets}개)</button>` : ''}
     ${renderGameResultActions(resultText)}
   `;
 }
+
+window.useMineUndoTicket = async function() {
+  if (!mineState || !mineState.previousSnapshot) return;
+  try {
+    const userRef = doc(db, 'users', currentUser);
+    const snap = await getDoc(userRef);
+    const tickets = snap.exists() ? (snap.data().undoTicketsMine || 0) : 0;
+    if (tickets <= 0) { alert('보유한 되돌리기권이 없어요.'); return; }
+    await updateDoc(userRef, { undoTicketsMine: increment(-1) });
+    const snapshot = mineState.previousSnapshot;
+    mineState.cells = snapshot.cells.map(c => ({ ...c }));
+    mineState.elapsed = snapshot.elapsed;
+    mineState.revealedCount = snapshot.revealedCount;
+    mineState.previousSnapshot = null;
+    mineState.running = true;
+    document.getElementById('mineGameOverBanner').classList.add('hidden');
+    document.getElementById('mineResult').innerHTML = '';
+    document.getElementById('mineTimer').textContent = mineState.elapsed;
+    document.getElementById('mineFlagCount').textContent = mineState.cells.filter(c => c.flagged).length;
+    drawMinesweeper();
+    mineState.timer = setInterval(() => {
+      mineState.elapsed++;
+      const timerEl = document.getElementById('mineTimer');
+      if (timerEl) timerEl.textContent = mineState.elapsed;
+    }, 1000);
+    alert('되돌리기권을 사용했어요! 마지막 클릭 전으로 돌아갔어요.');
+  } catch (error) {
+    console.error(error);
+    alert('되돌리기에 실패했습니다.');
+  }
+};
 
 async function updateBestMinesweeper(difficultyKey, elapsed) {
   try {
@@ -5584,6 +5652,7 @@ window.openTetrisGame = function() {
   stop2048();
   stopTtt();
   stopMinesweeper();
+  stopCookieClicker();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
@@ -5900,6 +5969,7 @@ window.openGame2048 = function() {
   stop2048();
   stopTtt();
   stopMinesweeper();
+  stopCookieClicker();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
@@ -5948,6 +6018,7 @@ window.start2048 = function() {
   stop2048();
   stopTtt();
   stopMinesweeper();
+  stopCookieClicker();
   const board = create2048Board();
   spawn2048Tile(board);
   spawn2048Tile(board);
@@ -6096,6 +6167,238 @@ async function render2048RankTab() {
         <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
         <span style="font-size:11px; color:var(--text-sub);">(최고 ${entry.tile})</span>
         <span style="font-weight:bold; color:var(--cafe-green);">${entry.score}점</span>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = `<div class="error-box">리더보드를 불러오지 못했습니다.</div>`;
+  }
+}
+
+// --- 🍪 쿠키 클리커 ---
+const COOKIE_GENERATORS = [
+  { key: 'cursor', icon: '👆', name: '커서', baseCost: 15, cps: 0.1 },
+  { key: 'grandma', icon: '👵', name: '할머니', baseCost: 100, cps: 1 },
+  { key: 'farm', icon: '🌾', name: '농장', baseCost: 1100, cps: 8 },
+  { key: 'factory', icon: '🏭', name: '공장', baseCost: 12000, cps: 47 },
+  { key: 'bank', icon: '🏦', name: '은행', baseCost: 130000, cps: 260 },
+  { key: 'temple', icon: '🛕', name: '신전', baseCost: 1400000, cps: 1400 }
+];
+const COOKIE_MILESTONES = [
+  { threshold: 100, points: 5 },
+  { threshold: 1000, points: 15 },
+  { threshold: 10000, points: 30 },
+  { threshold: 100000, points: 60 },
+  { threshold: 1000000, points: 120 },
+  { threshold: 10000000, points: 250 }
+];
+const COOKIE_OFFLINE_CAP_SECONDS = 4 * 60 * 60; // 오프라인 적립 최대 4시간
+let cookieState = null;
+
+function stopCookieClicker() {
+  if (cookieState) {
+    if (cookieState.tickTimer) clearInterval(cookieState.tickTimer);
+    if (cookieState.saveTimer) clearInterval(cookieState.saveTimer);
+    if (cookieState.visibilityHandler) document.removeEventListener('visibilitychange', cookieState.visibilityHandler);
+    saveCookieState();
+    cookieState = null;
+  }
+}
+
+function cookieGeneratorCost(gen, owned) {
+  return Math.ceil(gen.baseCost * Math.pow(1.15, owned));
+}
+
+function computeCookieCps(generators) {
+  return COOKIE_GENERATORS.reduce((sum, gen) => sum + gen.cps * (generators[gen.key] || 0), 0);
+}
+
+function formatCookieNumber(num) {
+  const n = Math.floor(num);
+  if (n < 1000) return String(n);
+  if (n < 1000000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  if (n < 1000000000) return (n / 1000000).toFixed(2).replace(/\.00$/, '') + 'M';
+  return (n / 1000000000).toFixed(2).replace(/\.00$/, '') + 'B';
+}
+
+window.openCookieClickerGame = async function() {
+  stopTetris();
+  stop2048();
+  stopTtt();
+  stopMinesweeper();
+  stopCookieClicker();
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">불러오는 중...</div>`;
+  try {
+    const userRef = doc(db, 'users', currentUser);
+    const snap = await getDoc(userRef);
+    const data = snap.exists() ? snap.data() : {};
+    const generators = { ...(data.cookieGenerators || {}) };
+    let cookieCount = data.cookieCount || 0;
+    let cookieTotalBaked = data.cookieTotalBaked || 0;
+    const claimed = data.cookieMilestonesClaimed || [];
+    const lastSaved = data.cookieLastSaved || Date.now();
+    const cps = computeCookieCps(generators);
+    const offlineSeconds = Math.min(COOKIE_OFFLINE_CAP_SECONDS, Math.max(0, Math.floor((Date.now() - lastSaved) / 1000)));
+    const offlineEarned = Math.floor(cps * offlineSeconds);
+    if (offlineEarned > 0) {
+      cookieCount += offlineEarned;
+      cookieTotalBaked += offlineEarned;
+    }
+    cookieState = {
+      cookieCount,
+      cookieTotalBaked,
+      generators,
+      claimed: [...claimed],
+      tickTimer: null,
+      saveTimer: null,
+      dirty: false
+    };
+    area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+      <div style="font-size:13px; color:var(--text-sub); margin-bottom:6px;">쿠키를 눌러서 굽고, 생산 시설을 사서 자동으로 쿠키를 만들어보세요! 누적 쿠키 기록에 따라 포인트도 얻어요</div>
+      ${offlineEarned > 0 ? `<div style="font-size:12px; color:var(--cafe-green); margin-bottom:8px;">💤 자리를 비운 동안 쿠키 ${formatCookieNumber(offlineEarned)}개를 자동으로 구웠어요!</div>` : ''}
+      <div style="font-size:28px; font-weight:bold; margin-bottom:2px;" id="cookieCount">🍪 ${formatCookieNumber(cookieCount)}</div>
+      <div style="font-size:12px; color:var(--text-sub); margin-bottom:12px;" id="cookieCps">초당 ${computeCookieCps(generators).toFixed(1)}개 생산 중</div>
+      <div id="cookieBigButton" onclick="cookieClickerClick()" style="font-size:72px; cursor:pointer; user-select:none; line-height:1; margin-bottom:14px; transition:transform 0.08s;">🍪</div>
+      <div style="text-align:left;">
+        ${COOKIE_GENERATORS.map(gen => `
+          <div id="cookieGenRow-${gen.key}" onclick="buyCookieGenerator('${gen.key}')" style="display:flex; align-items:center; gap:10px; padding:8px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:6px; cursor:pointer;">
+            <span style="font-size:22px;">${gen.icon}</span>
+            <div style="flex:1;">
+              <div style="font-size:13px; font-weight:bold;">${gen.name} <span style="font-weight:normal; color:var(--text-sub); font-size:11px;">(보유 ${generators[gen.key] || 0}개 · 개당 ${gen.cps}/초)</span></div>
+              <div style="font-size:11px; color:var(--text-sub);" id="cookieGenCost-${gen.key}">비용 ${formatCookieNumber(cookieGeneratorCost(gen, generators[gen.key] || 0))}개</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="font-size:11px; color:var(--text-sub); margin-top:8px;">🏆 누적 구운 쿠키: <b id="cookieTotalBaked">${formatCookieNumber(cookieTotalBaked)}</b>개</div>
+      <div id="cookieMilestoneToast"></div>
+    </div>`;
+    cookieState.tickTimer = setInterval(cookieClickerTick, 1000);
+    cookieState.saveTimer = setInterval(saveCookieState, 10000);
+    cookieState.visibilityHandler = () => { if (document.hidden) saveCookieState(); };
+    document.addEventListener('visibilitychange', cookieState.visibilityHandler);
+    checkCookieMilestones();
+  } catch (error) {
+    console.error(error);
+    area.innerHTML = `<div class="box error-box" style="margin:0;">쿠키 클리커를 불러오지 못했습니다.</div>`;
+  }
+};
+
+window.cookieClickerClick = function() {
+  if (!cookieState) return;
+  cookieState.cookieCount += 1;
+  cookieState.cookieTotalBaked += 1;
+  cookieState.dirty = true;
+  updateCookieDisplay();
+  checkCookieMilestones();
+  const btn = document.getElementById('cookieBigButton');
+  if (btn) {
+    btn.style.transform = 'scale(0.9)';
+    setTimeout(() => { btn.style.transform = 'scale(1)'; }, 80);
+  }
+};
+
+function cookieClickerTick() {
+  if (!cookieState) return;
+  const cps = computeCookieCps(cookieState.generators);
+  if (cps > 0) {
+    cookieState.cookieCount += cps;
+    cookieState.cookieTotalBaked += cps;
+    cookieState.dirty = true;
+    updateCookieDisplay();
+    checkCookieMilestones();
+  }
+}
+
+function updateCookieDisplay() {
+  if (!cookieState) return;
+  const countEl = document.getElementById('cookieCount');
+  const cpsEl = document.getElementById('cookieCps');
+  const totalEl = document.getElementById('cookieTotalBaked');
+  if (countEl) countEl.textContent = `🍪 ${formatCookieNumber(cookieState.cookieCount)}`;
+  if (cpsEl) cpsEl.textContent = `초당 ${computeCookieCps(cookieState.generators).toFixed(1)}개 생산 중`;
+  if (totalEl) totalEl.textContent = formatCookieNumber(cookieState.cookieTotalBaked);
+  COOKIE_GENERATORS.forEach(gen => {
+    const costEl = document.getElementById(`cookieGenCost-${gen.key}`);
+    if (costEl) {
+      const cost = cookieGeneratorCost(gen, cookieState.generators[gen.key] || 0);
+      costEl.textContent = `비용 ${formatCookieNumber(cost)}개`;
+      costEl.style.color = cookieState.cookieCount >= cost ? 'var(--cafe-green)' : 'var(--text-sub)';
+    }
+  });
+}
+
+window.buyCookieGenerator = function(key) {
+  if (!cookieState) return;
+  const gen = COOKIE_GENERATORS.find(g => g.key === key);
+  if (!gen) return;
+  const owned = cookieState.generators[key] || 0;
+  const cost = cookieGeneratorCost(gen, owned);
+  if (cookieState.cookieCount < cost) return;
+  cookieState.cookieCount -= cost;
+  cookieState.generators[key] = owned + 1;
+  cookieState.dirty = true;
+  const row = document.getElementById(`cookieGenRow-${key}`);
+  if (row) {
+    const countLabel = row.querySelector('div > div');
+    if (countLabel) countLabel.innerHTML = `${gen.name} <span style="font-weight:normal; color:var(--text-sub); font-size:11px;">(보유 ${cookieState.generators[key]}개 · 개당 ${gen.cps}/초)</span>`;
+  }
+  updateCookieDisplay();
+  saveCookieState();
+};
+
+async function checkCookieMilestones() {
+  if (!cookieState) return;
+  for (const milestone of COOKIE_MILESTONES) {
+    if (cookieState.cookieTotalBaked >= milestone.threshold && !cookieState.claimed.includes(milestone.threshold)) {
+      cookieState.claimed.push(milestone.threshold);
+      await awardGamePoints('cookie', '쿠키 클리커', milestone.points, `쿠키 클리커에서 누적 ${formatCookieNumber(milestone.threshold)}개 달성! (${milestone.points}P)`);
+      const toast = document.getElementById('cookieMilestoneToast');
+      if (toast) {
+        toast.innerHTML = `<div style="font-size:12px; color:var(--cafe-green); margin-top:8px;">🎉 누적 ${formatCookieNumber(milestone.threshold)}개 달성! +${milestone.points}P 획득</div>`;
+      }
+      saveCookieState();
+    }
+  }
+}
+
+async function saveCookieState() {
+  if (!cookieState || !currentUser) return;
+  try {
+    await updateDoc(doc(db, 'users', currentUser), {
+      cookieCount: cookieState.cookieCount,
+      cookieTotalBaked: cookieState.cookieTotalBaked,
+      cookieGenerators: cookieState.generators,
+      cookieMilestonesClaimed: cookieState.claimed,
+      cookieLastSaved: Date.now()
+    });
+    cookieState.dirty = false;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function renderCookieRankTab() {
+  const container = document.getElementById('gameCookieRankTab');
+  container.innerHTML = '불러오는 중...';
+  try {
+    const querySnapshot = await getDocs(collection(db, 'users'));
+    const ranked = querySnapshot.docs
+      .map(docSnap => ({ user: docSnap.id, total: docSnap.data().cookieTotalBaked || 0 }))
+      .filter(entry => entry.total > 0)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 30);
+    if (!ranked.length) {
+      container.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">아직 쿠키 클리커를 플레이한 회원이 없어요. 첫 쿠키를 구워보세요!</div>`;
+      return;
+    }
+    container.innerHTML = ranked.map((entry, idx) => `
+      <div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-color);">
+        <span style="width:24px; font-weight:bold; color:${idx < 3 ? 'var(--cafe-green)' : 'var(--text-sub)'};">${idx + 1}</span>
+        ${getAvatarHtml(entry.user, 26)}
+        <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
+        <span style="font-weight:bold; color:var(--cafe-green);">🍪 ${formatCookieNumber(entry.total)}</span>
       </div>
     `).join('');
   } catch (error) {
