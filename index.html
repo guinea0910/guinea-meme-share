@@ -797,6 +797,9 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button id="lbSubMineBtn" class="page-btn" onclick="setLeaderboardSubTab('mine')" style="padding:5px 10px; font-size:11px;">💣 지뢰찾기</button>
 <button id="lbSubCookieBtn" class="page-btn" onclick="setLeaderboardSubTab('cookie')" style="padding:5px 10px; font-size:11px;">🍪 쿠키 클리커</button>
 <button id="lbSubRhythmBtn" class="page-btn" onclick="setLeaderboardSubTab('rhythm')" style="padding:5px 10px; font-size:11px;">🕹️ 얼불춤</button>
+<button id="lbSubSnakeBtn" class="page-btn" onclick="setLeaderboardSubTab('snake')" style="padding:5px 10px; font-size:11px;">🐍 스네이크</button>
+<button id="lbSubPongBtn" class="page-btn" onclick="setLeaderboardSubTab('pong')" style="padding:5px 10px; font-size:11px;">🏓 핑퐁</button>
+<button id="lbSubReactionBtn" class="page-btn" onclick="setLeaderboardSubTab('reaction')" style="padding:5px 10px; font-size:11px;">⚡ 반응속도</button>
 </div>
 <div id="gameRankTab"></div>
 <div id="gameOmokRankTab" class="hidden"></div>
@@ -806,6 +809,9 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="gameMineRankTab" class="hidden"></div>
 <div id="gameCookieRankTab" class="hidden"></div>
 <div id="gameRhythmRankTab" class="hidden"></div>
+<div id="gameSnakeRankTab" class="hidden"></div>
+<div id="gamePongRankTab" class="hidden"></div>
+<div id="gameReactionRankTab" class="hidden"></div>
 </div>
 </div>
 </section>
@@ -2772,6 +2778,9 @@ window.showAppSection = function(section) {
   if (section !== 'gamePlay' && typeof stopRhythm === 'function') stopRhythm();
   if (section !== 'gamePlay' && typeof stopCardGacha === 'function') stopCardGacha();
   if (section !== 'gamePlay' && typeof stopOmok === 'function') stopOmok();
+  if (section !== 'gamePlay' && typeof stopSnake === 'function') stopSnake();
+  if (section !== 'gamePlay' && typeof stopPong === 'function') stopPong();
+  if (section !== 'gamePlay' && typeof stopReaction === 'function') stopReaction();
   const isCafe = section === 'cafe';
   const isChat = section === 'chat';
   const isSettings = section === 'settings';
@@ -4908,6 +4917,9 @@ window.setGameTab = function(tab) {
   stopRhythm();
   stopCardGacha();
   stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
   document.getElementById('gameTabHubBtn').classList.toggle('active', tab === 'hub');
   document.getElementById('gameTabLeaderboardBtn').classList.toggle('active', tab === 'leaderboard');
   document.getElementById('gameHubTab').classList.toggle('hidden', tab !== 'hub');
@@ -4926,6 +4938,9 @@ window.setLeaderboardSubTab = function(tab) {
   document.getElementById('lbSubMineBtn').classList.toggle('active', tab === 'mine');
   document.getElementById('lbSubCookieBtn').classList.toggle('active', tab === 'cookie');
   document.getElementById('lbSubRhythmBtn').classList.toggle('active', tab === 'rhythm');
+  document.getElementById('lbSubSnakeBtn').classList.toggle('active', tab === 'snake');
+  document.getElementById('lbSubPongBtn').classList.toggle('active', tab === 'pong');
+  document.getElementById('lbSubReactionBtn').classList.toggle('active', tab === 'reaction');
   document.getElementById('gameRankTab').classList.toggle('hidden', tab !== 'total');
   document.getElementById('gameOmokRankTab').classList.toggle('hidden', tab !== 'omok');
   document.getElementById('gameCpsRankTab').classList.toggle('hidden', tab !== 'cps');
@@ -4934,6 +4949,9 @@ window.setLeaderboardSubTab = function(tab) {
   document.getElementById('gameMineRankTab').classList.toggle('hidden', tab !== 'mine');
   document.getElementById('gameCookieRankTab').classList.toggle('hidden', tab !== 'cookie');
   document.getElementById('gameRhythmRankTab').classList.toggle('hidden', tab !== 'rhythm');
+  document.getElementById('gameSnakeRankTab').classList.toggle('hidden', tab !== 'snake');
+  document.getElementById('gamePongRankTab').classList.toggle('hidden', tab !== 'pong');
+  document.getElementById('gameReactionRankTab').classList.toggle('hidden', tab !== 'reaction');
   if (tab === 'total') renderGameRankTab();
   else if (tab === 'omok') renderOmokRankTab();
   else if (tab === 'cps') renderCpsRankTab();
@@ -4941,7 +4959,10 @@ window.setLeaderboardSubTab = function(tab) {
   else if (tab === '2048') render2048RankTab();
   else if (tab === 'mine') renderMineRankTab();
   else if (tab === 'cookie') renderCookieRankTab();
-  else renderRhythmRankTab();
+  else if (tab === 'rhythm') renderRhythmRankTab();
+  else if (tab === 'snake') renderSnakeRankTab();
+  else if (tab === 'pong') renderPongRankTab();
+  else renderReactionRankTab();
 };
 
 function renderGameHub() {
@@ -5000,6 +5021,21 @@ function renderGameHub() {
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">컴퓨터와 5목 대결! 쉬운 난이도로 조정됐어요. 이기면 포인트 획득</div>
         <button onclick="openGameDetail('omok', '⚫⚪ 오목')" style="width:100%;">한 판 하기</button>
       </div>
+      <div class="box" style="margin:0; padding:14px;">
+        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🐍 스네이크</div>
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">방향키로 먹이를 먹고 몸을 키우세요! 길수록 포인트 UP</div>
+        <button onclick="openGameDetail('snake', '🐍 스네이크')" style="width:100%;">플레이하기</button>
+      </div>
+      <div class="box" style="margin:0; padding:14px;">
+        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🏓 핑퐁</div>
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">컴퓨터를 상대로 공을 튕겨내며 랠리를 이어가 보세요</div>
+        <button onclick="openGameDetail('pong', '🏓 핑퐁')" style="width:100%;">플레이하기</button>
+      </div>
+      <div class="box" style="margin:0; padding:14px;">
+        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⚡ 반응속도 테스트</div>
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">화면이 초록색으로 바뀌는 순간 탭! 빠를수록 포인트 UP</div>
+        <button onclick="openGameDetail('reaction', '⚡ 반응속도 테스트')" style="width:100%;">도전하기</button>
+      </div>
     </div>
   `;
 }
@@ -5014,7 +5050,10 @@ const GAME_OPEN_FUNC_NAMES = {
   cookie: 'openCookieClickerGame',
   rhythm: 'openRhythmGame',
   cardgacha: 'openCardGachaGame',
-  omok: 'openOmokGame'
+  omok: 'openOmokGame',
+  snake: 'openSnakeGame',
+  pong: 'openPongGame',
+  reaction: 'openReactionGame'
 };
 
 function stopAllGames() {
@@ -5026,6 +5065,9 @@ function stopAllGames() {
   stopRhythm();
   stopCardGacha();
   stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
 }
 
 // 게임 목록 화면 하단이 아닌, 게시글 상세보기처럼 별도의 전용 화면(탭)으로 게임을 연다
@@ -5106,6 +5148,9 @@ window.openRouletteGame = async function() {
   stopRhythm();
   stopCardGacha();
   stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
   const area = document.getElementById('gamePlayArea');
   const key = `cafe_roulette_${currentUser}`;
   const lastPlayed = localStorage.getItem(key);
@@ -5158,6 +5203,9 @@ window.openClickChallenge = function() {
   stopRhythm();
   stopCardGacha();
   stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:8px;">측정 시간을 고른 뒤 시작하면 3초 카운트다운 후 CPS(초당 클릭 수)를 측정해요</div>
@@ -5299,6 +5347,9 @@ window.openTicTacToeGame = function() {
   stopRhythm();
   stopCardGacha();
   stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">나는 ❌, 컴퓨터는 ⭕! 이기면 20P, 비기면 8P, 지면 0P</div>
@@ -5426,6 +5477,9 @@ window.openMinesweeperGame = function() {
   stopRhythm();
   stopCardGacha();
   stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">지뢰를 피해서 다 찾아내면 포인트 획득! 빠를수록, 난이도가 높을수록 포인트 UP</div>
@@ -5787,6 +5841,9 @@ window.openTetrisGame = function() {
   stopRhythm();
   stopCardGacha();
   stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
@@ -6107,6 +6164,9 @@ window.openGame2048 = function() {
   stopRhythm();
   stopCardGacha();
   stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
@@ -6159,6 +6219,9 @@ window.start2048 = function() {
   stopRhythm();
   stopCardGacha();
   stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
   const board = create2048Board();
   spawn2048Tile(board);
   spawn2048Tile(board);
@@ -6322,7 +6385,14 @@ const COOKIE_GENERATORS = [
   { key: 'farm', icon: '🌾', name: '농장', baseCost: 1100, cps: 8 },
   { key: 'factory', icon: '🏭', name: '공장', baseCost: 12000, cps: 47 },
   { key: 'bank', icon: '🏦', name: '은행', baseCost: 130000, cps: 260 },
-  { key: 'temple', icon: '🛕', name: '신전', baseCost: 1400000, cps: 1400 }
+  { key: 'temple', icon: '🛕', name: '신전', baseCost: 1400000, cps: 1400 },
+  { key: 'wizardTower', icon: '🧙', name: '마법사의 탑', baseCost: 15000000, cps: 7500 },
+  { key: 'shipment', icon: '🚀', name: '화물 우주선', baseCost: 160000000, cps: 40000 },
+  { key: 'alchemyLab', icon: '⚗️', name: '연금술 연구소', baseCost: 1700000000, cps: 215000 },
+  { key: 'portal', icon: '🌀', name: '차원의 문', baseCost: 18000000000, cps: 1150000 },
+  { key: 'timeMachine', icon: '⏳', name: '타임머신', baseCost: 195000000000, cps: 6200000 },
+  { key: 'antimatter', icon: '⚛️', name: '반물질 응축기', baseCost: 2100000000000, cps: 33000000 },
+  { key: 'prism', icon: '🔮', name: '프리즘', baseCost: 22500000000000, cps: 178000000 }
 ];
 const COOKIE_MILESTONES = [
   { threshold: 100, points: 5 },
@@ -6330,7 +6400,12 @@ const COOKIE_MILESTONES = [
   { threshold: 10000, points: 30 },
   { threshold: 100000, points: 60 },
   { threshold: 1000000, points: 120 },
-  { threshold: 10000000, points: 250 }
+  { threshold: 10000000, points: 250 },
+  { threshold: 100000000, points: 450 },
+  { threshold: 1000000000, points: 800 },
+  { threshold: 10000000000, points: 1400 },
+  { threshold: 100000000000, points: 2500 },
+  { threshold: 1000000000000, points: 4500 }
 ];
 const COOKIE_OFFLINE_CAP_SECONDS = 4 * 60 * 60; // 오프라인 적립 최대 4시간
 let cookieState = null;
@@ -6358,7 +6433,13 @@ function formatCookieNumber(num) {
   if (n < 1000) return String(n);
   if (n < 1000000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
   if (n < 1000000000) return (n / 1000000).toFixed(2).replace(/\.00$/, '') + 'M';
-  return (n / 1000000000).toFixed(2).replace(/\.00$/, '') + 'B';
+  if (n < 1000000000000) return (n / 1000000000).toFixed(2).replace(/\.00$/, '') + 'B';
+  if (n < 1000000000000000) return (n / 1000000000000).toFixed(2).replace(/\.00$/, '') + 'T';
+  return (n / 1000000000000000).toFixed(2).replace(/\.00$/, '') + 'Qa';
+}
+
+function formatCookieCps(cps) {
+  return cps < 1000 ? cps : formatCookieNumber(cps);
 }
 
 window.openCookieClickerGame = async function() {
@@ -6370,6 +6451,9 @@ window.openCookieClickerGame = async function() {
   stopRhythm();
   stopCardGacha();
   stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">불러오는 중...</div>`;
   try {
@@ -6401,14 +6485,14 @@ window.openCookieClickerGame = async function() {
       <div style="font-size:13px; color:var(--text-sub); margin-bottom:6px;">쿠키를 눌러서 굽고, 생산 시설을 사서 자동으로 쿠키를 만들어보세요! 누적 쿠키 기록에 따라 포인트도 얻어요</div>
       ${offlineEarned > 0 ? `<div style="font-size:12px; color:var(--cafe-green); margin-bottom:8px;">💤 자리를 비운 동안 쿠키 ${formatCookieNumber(offlineEarned)}개를 자동으로 구웠어요!</div>` : ''}
       <div style="font-size:28px; font-weight:bold; margin-bottom:2px;" id="cookieCount">🍪 ${formatCookieNumber(cookieCount)}</div>
-      <div style="font-size:12px; color:var(--text-sub); margin-bottom:12px;" id="cookieCps">초당 ${computeCookieCps(generators).toFixed(1)}개 생산 중</div>
+      <div style="font-size:12px; color:var(--text-sub); margin-bottom:12px;" id="cookieCps">초당 ${formatCookieCps(Math.round(computeCookieCps(generators) * 10) / 10)}개 생산 중</div>
       <div id="cookieBigButton" onclick="cookieClickerClick()" style="font-size:72px; cursor:pointer; user-select:none; line-height:1; margin-bottom:14px; transition:transform 0.08s;">🍪</div>
       <div style="text-align:left;">
         ${COOKIE_GENERATORS.map(gen => `
           <div id="cookieGenRow-${gen.key}" onclick="buyCookieGenerator('${gen.key}')" style="display:flex; align-items:center; gap:10px; padding:8px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:6px; cursor:pointer;">
             <span style="font-size:22px;">${gen.icon}</span>
             <div style="flex:1;">
-              <div style="font-size:13px; font-weight:bold;">${gen.name} <span style="font-weight:normal; color:var(--text-sub); font-size:11px;">(보유 ${generators[gen.key] || 0}개 · 개당 ${gen.cps}/초)</span></div>
+              <div style="font-size:13px; font-weight:bold;">${gen.name} <span style="font-weight:normal; color:var(--text-sub); font-size:11px;">(보유 ${generators[gen.key] || 0}개 · 개당 ${formatCookieCps(gen.cps)}/초)</span></div>
               <div style="font-size:11px; color:var(--text-sub);" id="cookieGenCost-${gen.key}">비용 ${formatCookieNumber(cookieGeneratorCost(gen, generators[gen.key] || 0))}개</div>
             </div>
           </div>
@@ -6460,7 +6544,7 @@ function updateCookieDisplay() {
   const cpsEl = document.getElementById('cookieCps');
   const totalEl = document.getElementById('cookieTotalBaked');
   if (countEl) countEl.textContent = `🍪 ${formatCookieNumber(cookieState.cookieCount)}`;
-  if (cpsEl) cpsEl.textContent = `초당 ${computeCookieCps(cookieState.generators).toFixed(1)}개 생산 중`;
+  if (cpsEl) cpsEl.textContent = `초당 ${formatCookieCps(Math.round(computeCookieCps(cookieState.generators) * 10) / 10)}개 생산 중`;
   if (totalEl) totalEl.textContent = formatCookieNumber(cookieState.cookieTotalBaked);
   COOKIE_GENERATORS.forEach(gen => {
     const costEl = document.getElementById(`cookieGenCost-${gen.key}`);
@@ -6485,7 +6569,7 @@ window.buyCookieGenerator = function(key) {
   const row = document.getElementById(`cookieGenRow-${key}`);
   if (row) {
     const countLabel = row.querySelector('div > div');
-    if (countLabel) countLabel.innerHTML = `${gen.name} <span style="font-weight:normal; color:var(--text-sub); font-size:11px;">(보유 ${cookieState.generators[key]}개 · 개당 ${gen.cps}/초)</span>`;
+    if (countLabel) countLabel.innerHTML = `${gen.name} <span style="font-weight:normal; color:var(--text-sub); font-size:11px;">(보유 ${cookieState.generators[key]}개 · 개당 ${formatCookieCps(gen.cps)}/초)</span>`;
   }
   updateCookieDisplay();
   saveCookieState();
@@ -6568,6 +6652,9 @@ window.openRhythmGame = function() {
   stopRhythm();
   stopCardGacha();
   stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">공이 초록 구간을 지날 때 TAP(또는 스페이스바)! 한 번만 실수해도 게임 오버, 비트 수만큼 포인트 획득</div>
@@ -6770,6 +6857,9 @@ window.openCardGachaGame = async function() {
   stopRhythm();
   stopCardGacha();
   stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
   cardGachaState = { drawing: false };
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
@@ -6948,6 +7038,9 @@ window.openOmokGame = function() {
   stopRhythm();
   stopCardGacha();
   stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">나는 ⚫, 컴퓨터는 ⚪! 5개를 먼저 이으면 승리. 쉬운 난이도로 조정됐어요. 이기면 40P, 비기면 15P, 지면 0P</div>
@@ -7041,6 +7134,626 @@ async function renderOmokRankTab() {
         ${getAvatarHtml(entry.user, 26)}
         <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
         <span style="font-weight:bold; color:var(--cafe-green);">${entry.wins}승</span>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = `<div class="error-box">리더보드를 불러오지 못했습니다.</div>`;
+  }
+}
+
+// --- 🐍 스네이크 ---
+const SNAKE_COLS = 16;
+const SNAKE_ROWS = 16;
+const SNAKE_BLOCK = 16;
+let snakeState = null;
+
+function stopSnake() {
+  if (snakeState) {
+    clearInterval(snakeState.tickTimer);
+    if (snakeState.keyHandler) document.removeEventListener('keydown', snakeState.keyHandler);
+    snakeState = null;
+  }
+}
+
+window.openSnakeGame = function() {
+  stopTetris();
+  stop2048();
+  stopTtt();
+  stopMinesweeper();
+  stopCookieClicker();
+  stopRhythm();
+  stopCardGacha();
+  stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
+      <span>점수: <b id="snakeScore">0</b></span>
+      <span>최고 기록: <b id="snakeBest">-</b></span>
+    </div>
+    <div id="snakeGameOverBanner" class="hidden" style="font-size:18px; font-weight:bold; padding:10px; border-radius:8px; margin-bottom:10px; background:rgba(248,113,113,0.18); color:#f87171;">💀 게임 오버!</div>
+    <canvas id="snakeCanvas" width="${SNAKE_COLS * SNAKE_BLOCK}" height="${SNAKE_ROWS * SNAKE_BLOCK}" style="background:var(--input-bg); border:1px solid var(--border-color); border-radius:8px; touch-action:none;"></canvas>
+    <div style="display:flex; justify-content:center; margin-top:10px;">
+      <button onclick="snakeSetDirection(0,-1)" style="font-size:18px; padding:10px 16px;">▲</button>
+    </div>
+    <div style="display:flex; justify-content:center; gap:36px; margin-top:6px;">
+      <button onclick="snakeSetDirection(-1,0)" style="font-size:18px; padding:10px 16px;">◀</button>
+      <button onclick="snakeSetDirection(1,0)" style="font-size:18px; padding:10px 16px;">▶</button>
+    </div>
+    <div style="display:flex; justify-content:center; margin-top:6px;">
+      <button onclick="snakeSetDirection(0,1)" style="font-size:18px; padding:10px 16px;">▼</button>
+    </div>
+    <div style="font-size:11px; color:var(--text-sub); margin-top:8px;">PC에서는 방향키로도 조작할 수 있어요</div>
+    <button onclick="startSnake()" id="snakeStartBtn" style="width:100%; margin-top:12px;">시작하기</button>
+    <div id="snakeResult" style="margin-top:10px;"></div>
+  </div>`;
+  loadSnakeBest();
+  drawSnakeFrame({ snake: [{x:7,y:8},{x:6,y:8},{x:5,y:8}], food: {x:11,y:8} });
+};
+
+async function loadSnakeBest() {
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser));
+    const best = snap.exists() ? (snap.data().bestSnakeScore || 0) : 0;
+    const el = document.getElementById('snakeBest');
+    if (el) el.textContent = best > 0 ? `${best}` : '-';
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function randomSnakeFood(snake) {
+  let pos;
+  do {
+    pos = { x: Math.floor(Math.random() * SNAKE_COLS), y: Math.floor(Math.random() * SNAKE_ROWS) };
+  } while (snake.some(seg => seg.x === pos.x && seg.y === pos.y));
+  return pos;
+}
+
+window.startSnake = function() {
+  stopSnake();
+  const snake = [{x:7,y:8},{x:6,y:8},{x:5,y:8}];
+  snakeState = {
+    snake,
+    dir: {x:1,y:0},
+    nextDir: {x:1,y:0},
+    food: randomSnakeFood(snake),
+    score: 0,
+    speed: 170,
+    running: true,
+    tickTimer: null,
+    keyHandler: null
+  };
+  document.getElementById('snakeStartBtn').textContent = '재시작';
+  document.getElementById('snakeResult').innerHTML = '';
+  document.getElementById('snakeGameOverBanner').classList.add('hidden');
+  document.getElementById('snakeScore').textContent = '0';
+  drawSnakeFrame(snakeState);
+  snakeState.keyHandler = event => {
+    if (!snakeState || !snakeState.running) return;
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) event.preventDefault();
+    if (event.key === 'ArrowLeft') snakeSetDirection(-1, 0);
+    else if (event.key === 'ArrowRight') snakeSetDirection(1, 0);
+    else if (event.key === 'ArrowUp') snakeSetDirection(0, -1);
+    else if (event.key === 'ArrowDown') snakeSetDirection(0, 1);
+  };
+  document.addEventListener('keydown', snakeState.keyHandler);
+  scheduleSnakeTick();
+};
+
+function scheduleSnakeTick() {
+  if (!snakeState) return;
+  clearInterval(snakeState.tickTimer);
+  snakeState.tickTimer = setInterval(snakeTick, snakeState.speed);
+}
+
+window.snakeSetDirection = function(dx, dy) {
+  if (!snakeState || !snakeState.running) return;
+  // 현재 이동 방향의 정반대로는 갈 수 없음 (자기 몸으로 즉시 충돌 방지)
+  if (snakeState.dir.x === -dx && snakeState.dir.y === -dy) return;
+  snakeState.nextDir = { x: dx, y: dy };
+};
+
+function snakeTick() {
+  if (!snakeState || !snakeState.running) return;
+  snakeState.dir = snakeState.nextDir;
+  const head = snakeState.snake[0];
+  const newHead = { x: head.x + snakeState.dir.x, y: head.y + snakeState.dir.y };
+  const hitsWall = newHead.x < 0 || newHead.x >= SNAKE_COLS || newHead.y < 0 || newHead.y >= SNAKE_ROWS;
+  const hitsSelf = snakeState.snake.some(seg => seg.x === newHead.x && seg.y === newHead.y);
+  if (hitsWall || hitsSelf) {
+    finishSnakeGame();
+    return;
+  }
+  snakeState.snake.unshift(newHead);
+  if (newHead.x === snakeState.food.x && newHead.y === snakeState.food.y) {
+    snakeState.score++;
+    document.getElementById('snakeScore').textContent = String(snakeState.score);
+    snakeState.food = randomSnakeFood(snakeState.snake);
+    snakeState.speed = Math.max(70, 170 - snakeState.score * 4);
+    scheduleSnakeTick();
+  } else {
+    snakeState.snake.pop();
+  }
+  drawSnakeFrame(snakeState);
+}
+
+function drawSnakeFrame(state) {
+  const canvas = document.getElementById('snakeCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#ef4444';
+  ctx.fillRect(state.food.x * SNAKE_BLOCK + 1, state.food.y * SNAKE_BLOCK + 1, SNAKE_BLOCK - 2, SNAKE_BLOCK - 2);
+  state.snake.forEach((seg, idx) => {
+    ctx.fillStyle = idx === 0 ? '#03c75a' : '#4ade80';
+    ctx.fillRect(seg.x * SNAKE_BLOCK + 1, seg.y * SNAKE_BLOCK + 1, SNAKE_BLOCK - 2, SNAKE_BLOCK - 2);
+  });
+}
+
+async function finishSnakeGame() {
+  if (!snakeState || !snakeState.running) return;
+  snakeState.running = false;
+  clearInterval(snakeState.tickTimer);
+  if (snakeState.keyHandler) document.removeEventListener('keydown', snakeState.keyHandler);
+  const banner = document.getElementById('snakeGameOverBanner');
+  if (banner) banner.classList.remove('hidden');
+  const score = snakeState.score;
+  const points = score * 8;
+  await awardGamePoints('snake', '스네이크', points, `스네이크에서 먹이 ${score}개를 먹어서 ${points}P 획득!`);
+  const isNewBest = await updateBestSnake(score);
+  const resultText = `스네이크에서 먹이 ${score}개를 먹었어요! (${points}P 획득)`;
+  const resultBox = document.getElementById('snakeResult');
+  if (resultBox) {
+    resultBox.innerHTML = `
+      <div style="font-size:14px; margin-bottom:4px;">점수 <b>${score}</b> → <b>${points}P</b> 획득!</div>
+      ${isNewBest ? `<div style="font-size:12px; color:var(--cafe-green); margin-bottom:6px;">🎉 개인 최고 기록 갱신!</div>` : ''}
+      ${renderGameResultActions(resultText)}
+    `;
+  }
+  loadSnakeBest();
+}
+
+async function updateBestSnake(score) {
+  try {
+    const userRef = doc(db, 'users', currentUser);
+    const snap = await getDoc(userRef);
+    const currentBest = snap.exists() ? (snap.data().bestSnakeScore || 0) : 0;
+    if (score > currentBest) {
+      await updateDoc(userRef, { bestSnakeScore: score, bestSnakeAt: Date.now() });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}
+
+// --- 🐍 스네이크 리더보드 ---
+async function renderSnakeRankTab() {
+  const container = document.getElementById('gameSnakeRankTab');
+  container.innerHTML = '불러오는 중...';
+  try {
+    const querySnapshot = await getDocs(collection(db, 'users'));
+    const ranked = querySnapshot.docs
+      .map(docSnap => ({ user: docSnap.id, score: docSnap.data().bestSnakeScore || 0 }))
+      .filter(entry => entry.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 30);
+    if (!ranked.length) {
+      container.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">아직 스네이크에 도전한 회원이 없어요. 첫 기록을 남겨보세요!</div>`;
+      return;
+    }
+    container.innerHTML = ranked.map((entry, idx) => `
+      <div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-color);">
+        <span style="width:24px; font-weight:bold; color:${idx < 3 ? 'var(--cafe-green)' : 'var(--text-sub)'};">${idx + 1}</span>
+        ${getAvatarHtml(entry.user, 26)}
+        <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
+        <span style="font-weight:bold; color:var(--cafe-green);">${entry.score}점</span>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = `<div class="error-box">리더보드를 불러오지 못했습니다.</div>`;
+  }
+}
+
+// --- 🏓 핑퐁 ---
+const PONG_WIDTH = 280;
+const PONG_HEIGHT = 360;
+const PONG_PLAYER_W = 64;
+const PONG_AI_W = 54;
+const PONG_PADDLE_H = 10;
+let pongState = null;
+
+function stopPong() {
+  if (pongState) {
+    if (pongState.rafId) cancelAnimationFrame(pongState.rafId);
+    if (pongState.keyDownHandler) document.removeEventListener('keydown', pongState.keyDownHandler);
+    if (pongState.keyUpHandler) document.removeEventListener('keyup', pongState.keyUpHandler);
+    pongState = null;
+  }
+}
+
+window.openPongGame = function() {
+  stopTetris();
+  stop2048();
+  stopTtt();
+  stopMinesweeper();
+  stopCookieClicker();
+  stopRhythm();
+  stopCardGacha();
+  stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:8px;">컴퓨터(위쪽 파란 막대)를 상대로 공을 튕겨내며 점수를 쌓아보세요. 공을 놓치면 게임 종료!</div>
+    <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
+      <span>점수: <b id="pongScore">0</b></span>
+      <span>최고 기록: <b id="pongBest">-</b></span>
+    </div>
+    <div id="pongGameOverBanner" class="hidden" style="font-size:18px; font-weight:bold; padding:10px; border-radius:8px; margin-bottom:10px; background:rgba(248,113,113,0.18); color:#f87171;">💀 게임 오버!</div>
+    <canvas id="pongCanvas" width="${PONG_WIDTH}" height="${PONG_HEIGHT}" style="background:var(--input-bg); border:1px solid var(--border-color); border-radius:8px; touch-action:none;"></canvas>
+    <div style="display:flex; justify-content:center; gap:24px; margin-top:10px;">
+      <button id="pongLeftBtn" style="font-size:18px; padding:12px 22px;">◀</button>
+      <button id="pongRightBtn" style="font-size:18px; padding:12px 22px;">▶</button>
+    </div>
+    <div style="font-size:11px; color:var(--text-sub); margin-top:8px;">PC에서는 방향키(◀▶)로도 조작할 수 있어요</div>
+    <button onclick="startPong()" id="pongStartBtn" style="width:100%; margin-top:12px;">시작하기</button>
+    <div id="pongResult" style="margin-top:10px;"></div>
+  </div>`;
+  loadPongBest();
+  drawPongFrame({
+    playerX: PONG_WIDTH / 2 - PONG_PLAYER_W / 2,
+    aiX: PONG_WIDTH / 2 - PONG_AI_W / 2,
+    ballX: PONG_WIDTH / 2,
+    ballY: PONG_HEIGHT / 2
+  });
+};
+
+async function loadPongBest() {
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser));
+    const best = snap.exists() ? (snap.data().bestPongScore || 0) : 0;
+    const el = document.getElementById('pongBest');
+    if (el) el.textContent = best > 0 ? `${best}` : '-';
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function servePongBall(state, towardPlayer) {
+  state.ballX = PONG_WIDTH / 2;
+  state.ballY = PONG_HEIGHT / 2;
+  const angle = Math.random() * 0.6 - 0.3;
+  const dir = towardPlayer ? 1 : -1;
+  state.ballVX = Math.sin(angle) * state.ballSpeed;
+  state.ballVY = Math.cos(angle) * state.ballSpeed * dir;
+}
+
+window.startPong = function() {
+  stopPong();
+  pongState = {
+    playerX: PONG_WIDTH / 2 - PONG_PLAYER_W / 2,
+    aiX: PONG_WIDTH / 2 - PONG_AI_W / 2,
+    ballX: PONG_WIDTH / 2,
+    ballY: PONG_HEIGHT / 2,
+    ballVX: 0,
+    ballVY: 0,
+    ballSpeed: 3.4,
+    aiSpeed: 2.6,
+    playerSpeed: 5.5,
+    score: 0,
+    running: true,
+    rafId: null,
+    keys: { left: false, right: false },
+    keyDownHandler: null,
+    keyUpHandler: null
+  };
+  servePongBall(pongState, false);
+  document.getElementById('pongStartBtn').textContent = '재시작';
+  document.getElementById('pongResult').innerHTML = '';
+  document.getElementById('pongGameOverBanner').classList.add('hidden');
+  document.getElementById('pongScore').textContent = '0';
+  pongState.keyDownHandler = event => {
+    if (!pongState || !pongState.running) return;
+    if (event.key === 'ArrowLeft') { event.preventDefault(); pongState.keys.left = true; }
+    else if (event.key === 'ArrowRight') { event.preventDefault(); pongState.keys.right = true; }
+  };
+  pongState.keyUpHandler = event => {
+    if (!pongState) return;
+    if (event.key === 'ArrowLeft') pongState.keys.left = false;
+    else if (event.key === 'ArrowRight') pongState.keys.right = false;
+  };
+  document.addEventListener('keydown', pongState.keyDownHandler);
+  document.addEventListener('keyup', pongState.keyUpHandler);
+  setupPongHoldButton('pongLeftBtn', 'left');
+  setupPongHoldButton('pongRightBtn', 'right');
+  pongAnimFrame();
+};
+
+function setupPongHoldButton(id, dirKey) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  const start = event => { event.preventDefault(); if (pongState) pongState.keys[dirKey] = true; };
+  const end = () => { if (pongState) pongState.keys[dirKey] = false; };
+  btn.addEventListener('pointerdown', start);
+  btn.addEventListener('pointerup', end);
+  btn.addEventListener('pointerleave', end);
+  btn.addEventListener('pointercancel', end);
+}
+
+function pongAnimFrame() {
+  if (!pongState || !pongState.running) return;
+  const state = pongState;
+  if (state.keys.left) state.playerX -= state.playerSpeed;
+  if (state.keys.right) state.playerX += state.playerSpeed;
+  state.playerX = Math.max(0, Math.min(PONG_WIDTH - PONG_PLAYER_W, state.playerX));
+  const aiCenter = state.aiX + PONG_AI_W / 2;
+  if (aiCenter < state.ballX - 4) state.aiX += state.aiSpeed;
+  else if (aiCenter > state.ballX + 4) state.aiX -= state.aiSpeed;
+  state.aiX = Math.max(0, Math.min(PONG_WIDTH - PONG_AI_W, state.aiX));
+  state.ballX += state.ballVX;
+  state.ballY += state.ballVY;
+  if (state.ballX <= 5 || state.ballX >= PONG_WIDTH - 5) {
+    state.ballX = Math.max(5, Math.min(PONG_WIDTH - 5, state.ballX));
+    state.ballVX *= -1;
+  }
+  const playerPaddleY = PONG_HEIGHT - 24;
+  const aiPaddleY = 14;
+  if (state.ballVY > 0 && state.ballY >= playerPaddleY - 6 && state.ballY <= playerPaddleY + 6 && state.ballX >= state.playerX && state.ballX <= state.playerX + PONG_PLAYER_W) {
+    const hitPos = (state.ballX - (state.playerX + PONG_PLAYER_W / 2)) / (PONG_PLAYER_W / 2);
+    state.ballSpeed = Math.min(state.ballSpeed + 0.15, 8);
+    state.ballVX = hitPos * state.ballSpeed;
+    state.ballVY = -Math.sqrt(Math.max(state.ballSpeed * state.ballSpeed - state.ballVX * state.ballVX, 1));
+  } else if (state.ballY > PONG_HEIGHT + 10) {
+    finishPongGame();
+    return;
+  } else if (state.ballVY < 0 && state.ballY <= aiPaddleY + 6 && state.ballY >= aiPaddleY - 6 && state.ballX >= state.aiX && state.ballX <= state.aiX + PONG_AI_W) {
+    const hitPos = (state.ballX - (state.aiX + PONG_AI_W / 2)) / (PONG_AI_W / 2);
+    state.ballVX = hitPos * state.ballSpeed;
+    state.ballVY = Math.sqrt(Math.max(state.ballSpeed * state.ballSpeed - state.ballVX * state.ballVX, 1));
+  } else if (state.ballY < -10) {
+    state.score++;
+    document.getElementById('pongScore').textContent = String(state.score);
+    state.ballSpeed = Math.min(state.ballSpeed + 0.25, 8);
+    servePongBall(state, true);
+  }
+  drawPongFrame(state);
+  state.rafId = requestAnimationFrame(pongAnimFrame);
+}
+
+function drawPongFrame(state) {
+  const canvas = document.getElementById('pongCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, PONG_WIDTH, PONG_HEIGHT);
+  ctx.strokeStyle = 'rgba(148,163,184,0.25)';
+  ctx.setLineDash([6, 8]);
+  ctx.beginPath();
+  ctx.moveTo(0, PONG_HEIGHT / 2);
+  ctx.lineTo(PONG_WIDTH, PONG_HEIGHT / 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#60a5fa';
+  ctx.fillRect(state.aiX, 14 - PONG_PADDLE_H / 2, PONG_AI_W, PONG_PADDLE_H);
+  ctx.fillStyle = '#03c75a';
+  ctx.fillRect(state.playerX, PONG_HEIGHT - 24 - PONG_PADDLE_H / 2, PONG_PLAYER_W, PONG_PADDLE_H);
+  ctx.fillStyle = '#f8fafc';
+  ctx.beginPath();
+  ctx.arc(state.ballX, state.ballY, 6, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+async function finishPongGame() {
+  if (!pongState || !pongState.running) return;
+  pongState.running = false;
+  if (pongState.rafId) cancelAnimationFrame(pongState.rafId);
+  if (pongState.keyDownHandler) document.removeEventListener('keydown', pongState.keyDownHandler);
+  if (pongState.keyUpHandler) document.removeEventListener('keyup', pongState.keyUpHandler);
+  const banner = document.getElementById('pongGameOverBanner');
+  if (banner) banner.classList.remove('hidden');
+  const score = pongState.score;
+  const points = score * 10;
+  await awardGamePoints('pong', '핑퐁', points, `핑퐁에서 ${score}점을 기록해서 ${points}P 획득!`);
+  const isNewBest = await updateBestPong(score);
+  const resultText = `핑퐁에서 ${score}점을 기록했어요! (${points}P 획득)`;
+  const resultBox = document.getElementById('pongResult');
+  if (resultBox) {
+    resultBox.innerHTML = `
+      <div style="font-size:14px; margin-bottom:4px;">점수 <b>${score}</b> → <b>${points}P</b> 획득!</div>
+      ${isNewBest ? `<div style="font-size:12px; color:var(--cafe-green); margin-bottom:6px;">🎉 개인 최고 기록 갱신!</div>` : ''}
+      ${renderGameResultActions(resultText)}
+    `;
+  }
+  loadPongBest();
+}
+
+async function updateBestPong(score) {
+  try {
+    const userRef = doc(db, 'users', currentUser);
+    const snap = await getDoc(userRef);
+    const currentBest = snap.exists() ? (snap.data().bestPongScore || 0) : 0;
+    if (score > currentBest) {
+      await updateDoc(userRef, { bestPongScore: score, bestPongAt: Date.now() });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}
+
+// --- 🏓 핑퐁 리더보드 ---
+async function renderPongRankTab() {
+  const container = document.getElementById('gamePongRankTab');
+  container.innerHTML = '불러오는 중...';
+  try {
+    const querySnapshot = await getDocs(collection(db, 'users'));
+    const ranked = querySnapshot.docs
+      .map(docSnap => ({ user: docSnap.id, score: docSnap.data().bestPongScore || 0 }))
+      .filter(entry => entry.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 30);
+    if (!ranked.length) {
+      container.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">아직 핑퐁에 도전한 회원이 없어요. 첫 기록을 남겨보세요!</div>`;
+      return;
+    }
+    container.innerHTML = ranked.map((entry, idx) => `
+      <div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-color);">
+        <span style="width:24px; font-weight:bold; color:${idx < 3 ? 'var(--cafe-green)' : 'var(--text-sub)'};">${idx + 1}</span>
+        ${getAvatarHtml(entry.user, 26)}
+        <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
+        <span style="font-weight:bold; color:var(--cafe-green);">${entry.score}점</span>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = `<div class="error-box">리더보드를 불러오지 못했습니다.</div>`;
+  }
+}
+
+// --- ⚡ 반응속도 테스트 ---
+let reactionState = null;
+
+function stopReaction() {
+  if (reactionState) {
+    if (reactionState.timeoutId) clearTimeout(reactionState.timeoutId);
+    reactionState = null;
+  }
+}
+
+window.openReactionGame = function() {
+  stopTetris();
+  stop2048();
+  stopTtt();
+  stopMinesweeper();
+  stopCookieClicker();
+  stopRhythm();
+  stopCardGacha();
+  stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">아래 박스를 누르면 대기가 시작돼요. 초록색으로 바뀌는 순간 최대한 빠르게 탭하세요! 너무 빨리 누르면 실패해요.</div>
+    <div style="display:flex; justify-content:center; gap:14px; font-size:12px; margin-bottom:10px; color:var(--text-sub);">
+      <span>최고 기록: <b id="reactionBest" style="color:var(--text-main);">-</b></span>
+    </div>
+    <div id="reactionBox" onclick="reactionBoxClick()" style="width:100%; min-height:200px; box-sizing:border-box; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:bold; cursor:pointer; background:var(--input-bg); color:var(--text-main); border:1px solid var(--border-color); user-select:none; transition:background 0.1s;">눌러서 시작</div>
+    <div id="reactionResult" style="margin-top:10px;"></div>
+  </div>`;
+  loadReactionBest();
+  reactionState = { phase: 'idle', timeoutId: null, startTime: 0 };
+};
+
+async function loadReactionBest() {
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser));
+    const best = snap.exists() ? (snap.data().bestReactionMs || 0) : 0;
+    const el = document.getElementById('reactionBest');
+    if (el) el.textContent = best > 0 ? `${best}ms` : '-';
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+window.reactionBoxClick = function() {
+  if (!reactionState) return;
+  const box = document.getElementById('reactionBox');
+  if (!box) return;
+  if (reactionState.phase === 'idle' || reactionState.phase === 'tooSoon' || reactionState.phase === 'result') {
+    reactionState.phase = 'waiting';
+    box.style.background = '#ef4444';
+    box.style.color = '#fff';
+    box.textContent = '기다리세요...';
+    document.getElementById('reactionResult').innerHTML = '';
+    const delay = 1200 + Math.random() * 2800;
+    reactionState.timeoutId = setTimeout(() => {
+      if (!reactionState || reactionState.phase !== 'waiting') return;
+      reactionState.phase = 'ready';
+      reactionState.startTime = performance.now();
+      box.style.background = '#03c75a';
+      box.textContent = '지금 클릭!';
+    }, delay);
+  } else if (reactionState.phase === 'waiting') {
+    clearTimeout(reactionState.timeoutId);
+    reactionState.phase = 'tooSoon';
+    box.style.background = '#f59e0b';
+    box.style.color = '#fff';
+    box.textContent = '너무 빨라요! 다시 눌러서 재도전';
+  } else if (reactionState.phase === 'ready') {
+    const ms = Math.round(performance.now() - reactionState.startTime);
+    reactionState.phase = 'result';
+    box.style.background = 'var(--input-bg)';
+    box.style.color = 'var(--text-main)';
+    box.textContent = `${ms}ms! 다시 누르면 재도전`;
+    finishReaction(ms);
+  }
+};
+
+async function finishReaction(ms) {
+  const clamped = Math.min(Math.max(ms, 50), 520);
+  const points = Math.max(1, Math.round((520 - clamped) / 5));
+  await awardGamePoints('reaction', '반응속도 테스트', points, `반응속도 테스트에서 ${ms}ms를 기록해서 ${points}P 획득!`);
+  const isNewBest = await updateBestReaction(ms);
+  const resultText = `반응속도 테스트에서 ${ms}ms를 기록했어요! (${points}P 획득)`;
+  const resultBox = document.getElementById('reactionResult');
+  if (resultBox) {
+    resultBox.innerHTML = `
+      <div style="font-size:14px; margin-bottom:4px;">반응속도 <b>${ms}ms</b> → <b>${points}P</b> 획득!</div>
+      ${isNewBest ? `<div style="font-size:12px; color:var(--cafe-green); margin-bottom:6px;">🎉 개인 최고 기록 갱신!</div>` : ''}
+      ${renderGameResultActions(resultText)}
+    `;
+  }
+  loadReactionBest();
+}
+
+async function updateBestReaction(ms) {
+  try {
+    const userRef = doc(db, 'users', currentUser);
+    const snap = await getDoc(userRef);
+    const currentBest = snap.exists() ? (snap.data().bestReactionMs || 0) : 0;
+    if (currentBest === 0 || ms < currentBest) {
+      await updateDoc(userRef, { bestReactionMs: ms, bestReactionAt: Date.now() });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}
+
+// --- ⚡ 반응속도 리더보드 (빠를수록 상위) ---
+async function renderReactionRankTab() {
+  const container = document.getElementById('gameReactionRankTab');
+  container.innerHTML = '불러오는 중...';
+  try {
+    const querySnapshot = await getDocs(collection(db, 'users'));
+    const ranked = querySnapshot.docs
+      .map(docSnap => ({ user: docSnap.id, ms: docSnap.data().bestReactionMs || 0 }))
+      .filter(entry => entry.ms > 0)
+      .sort((a, b) => a.ms - b.ms)
+      .slice(0, 30);
+    if (!ranked.length) {
+      container.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">아직 반응속도 테스트에 도전한 회원이 없어요. 첫 기록을 남겨보세요!</div>`;
+      return;
+    }
+    container.innerHTML = ranked.map((entry, idx) => `
+      <div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-color);">
+        <span style="width:24px; font-weight:bold; color:${idx < 3 ? 'var(--cafe-green)' : 'var(--text-sub)'};">${idx + 1}</span>
+        ${getAvatarHtml(entry.user, 26)}
+        <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
+        <span style="font-weight:bold; color:var(--cafe-green);">${entry.ms}ms</span>
       </div>
     `).join('');
   } catch (error) {
