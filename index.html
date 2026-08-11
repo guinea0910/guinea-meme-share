@@ -865,8 +865,8 @@ button:hover { background-color: var(--cafe-green-hover); }
 </div>
 <div class="profile-stats-row" style="display:flex; gap:16px; margin-bottom:16px; font-size:13px; color:var(--text-sub); flex-wrap:wrap;">
 <span>게시글 <b id="profilePostCount" style="color:var(--text-main);">0</b></span>
-<span>팔로워 <b id="profileFollowerCount" style="color:var(--text-main);">0</b></span>
-<span>팔로잉 <b id="profileFollowingCount" style="color:var(--text-main);">0</b></span>
+<span style="cursor:pointer;" onclick="openFollowListModal('followers')">팔로워 <b id="profileFollowerCount" style="color:var(--text-main);">0</b></span>
+<span style="cursor:pointer;" onclick="openFollowListModal('following')">팔로잉 <b id="profileFollowingCount" style="color:var(--text-main);">0</b></span>
 </div>
 <h3 style="margin-top:0;">작성한 게시글</h3>
 <div id="profilePostsContainer">불러오는 중...</div>
@@ -961,6 +961,15 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div class="chat-modal-actions">
 <button class="danger-btn" onclick="closeChatNotice()">닫기</button>
 <button onclick="saveChatNotice()">공지 등록</button>
+</div>
+</div>
+</div>
+<div id="followListModal" class="chat-modal hidden" role="dialog" aria-modal="true" aria-labelledby="followListModalTitle" onclick="if (event.target === this) closeFollowListModal();">
+<div class="chat-modal-card">
+<h3 id="followListModalTitle">팔로워</h3>
+<div id="followListContainer">불러오는 중...</div>
+<div class="chat-modal-actions">
+<button class="danger-btn" onclick="closeFollowListModal()">닫기</button>
 </div>
 </div>
 </div>
@@ -3209,6 +3218,59 @@ window.toggleFollowUser = async function(targetUser) {
     await updateDoc(doc(db, 'users', currentUser), { following: isFollowing ? arrayRemove(targetUser) : arrayUnion(targetUser) });
     currentUserFollowing = isFollowing ? currentUserFollowing.filter(user => user !== targetUser) : [...currentUserFollowing, targetUser];
     loadProfileView(targetUser);
+  } catch (error) {
+    console.error(error);
+    alert('팔로우 처리에 실패했습니다.');
+  }
+};
+
+window.openFollowListModal = async function(type) {
+  const username = profileViewUser;
+  if (!username) return;
+  const modal = document.getElementById('followListModal');
+  const title = document.getElementById('followListModalTitle');
+  const container = document.getElementById('followListContainer');
+  title.textContent = type === 'following' ? '팔로잉' : '팔로워';
+  container.innerHTML = '불러오는 중...';
+  modal.classList.remove('hidden');
+  try {
+    let usernames = [];
+    if (type === 'following') {
+      const snap = await getDoc(doc(db, 'users', username));
+      usernames = snap.exists() ? (snap.data().following || []) : [];
+    } else {
+      const snap = await getDocs(query(collection(db, 'users'), where('following', 'array-contains', username)));
+      usernames = snap.docs.map(item => item.id);
+    }
+    if (!usernames.length) {
+      container.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">${type === 'following' ? '아직 팔로우한 사람이 없어요.' : '아직 팔로워가 없어요.'}</div>`;
+      return;
+    }
+    container.innerHTML = usernames.map(user => `
+      <div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-color); cursor:pointer;" onclick="closeFollowListModal(); openProfile('${user}')">
+        ${getAvatarHtml(user, 32)}
+        <span style="flex:1;">${escapeHtml(user)}</span>
+        ${currentUser && currentUser !== user ? `<button onclick="event.stopPropagation(); followListToggleFollow('${user}', '${type}')" style="padding:4px 10px; font-size:11px; ${currentUserFollowing.includes(user) ? 'background: var(--border-color);' : ''}">${currentUserFollowing.includes(user) ? '팔로잉' : '+ 팔로우'}</button>` : ''}
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = `<div class="error-box">목록을 불러오지 못했습니다.</div>`;
+  }
+};
+
+window.closeFollowListModal = function() {
+  document.getElementById('followListModal').classList.add('hidden');
+};
+
+window.followListToggleFollow = async function(targetUser, type) {
+  if (!currentUser || currentUser === targetUser) return;
+  try {
+    const isFollowing = currentUserFollowing.includes(targetUser);
+    await updateDoc(doc(db, 'users', currentUser), { following: isFollowing ? arrayRemove(targetUser) : arrayUnion(targetUser) });
+    currentUserFollowing = isFollowing ? currentUserFollowing.filter(user => user !== targetUser) : [...currentUserFollowing, targetUser];
+    openFollowListModal(type);
+    if (profileViewUser) loadProfileView(profileViewUser);
   } catch (error) {
     console.error(error);
     alert('팔로우 처리에 실패했습니다.');
