@@ -40,6 +40,13 @@ body.black-mode {
   --border-color: #262626;
   --input-bg: #0a0a0a;
 }
+html {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  touch-action: pan-y;
+  overscroll-behavior-x: none;
+}
 body {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
   background-color: var(--bg-color);
@@ -47,7 +54,11 @@ body {
   margin: 0;
   min-height: 100vh;
   transition: background-color 0.2s, color 0.2s;
-  touch-action: manipulation;
+  touch-action: pan-y;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  overscroll-behavior-x: none;
 }
 .app-shell { display: flex; min-height: 100vh; }
 .sidebar {
@@ -1033,16 +1044,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// 더블탭/더블클릭 시 화면이 확대되는 것 방지 (touch-action:manipulation의 폴백)
-(function preventDoubleTapZoom() {
-  let lastTouchEnd = 0;
-  document.addEventListener('touchend', event => {
-    const now = Date.now();
-    if (now - lastTouchEnd <= 300) event.preventDefault();
-    lastTouchEnd = now;
-  }, { passive: false });
-  document.addEventListener('dblclick', event => event.preventDefault());
-})();
+// 더블클릭(마우스) 시 화면이 확대되는 것 방지
+// 모바일 더블탭 확대는 위의 touch-action:pan-y + 뷰포트 user-scalable=no 로 이미 차단됨
+// (참고: touchend를 가로채는 방식은 CPS 챌린지 등 빠른 연속 탭이 필요한 게임의 클릭을 막아버려서 사용하지 않음)
+document.addEventListener('dblclick', event => event.preventDefault());
 
 
 const SHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwTbIl8ZzOBQu_wEDiZB4NRe9Lh_RMAgh0odSi1n0xJcx6VTXHGpS3i2eVH-9RTYBx1hg/exec';
