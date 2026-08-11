@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>기니 짤방 웹버전</title>
 <meta name="theme-color" content="#03c75a">
 <meta name="description" content="기니 짤방 웹버전 - 카페형 커뮤니티">
@@ -47,6 +47,7 @@ body {
   margin: 0;
   min-height: 100vh;
   transition: background-color 0.2s, color 0.2s;
+  touch-action: manipulation;
 }
 .app-shell { display: flex; min-height: 100vh; }
 .sidebar {
@@ -1019,6 +1020,18 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
+// 더블탭/더블클릭 시 화면이 확대되는 것 방지 (touch-action:manipulation의 폴백)
+(function preventDoubleTapZoom() {
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', event => {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) event.preventDefault();
+    lastTouchEnd = now;
+  }, { passive: false });
+  document.addEventListener('dblclick', event => event.preventDefault());
+})();
+
 
 const SHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwTbIl8ZzOBQu_wEDiZB4NRe9Lh_RMAgh0odSi1n0xJcx6VTXHGpS3i2eVH-9RTYBx1hg/exec';
 
@@ -4981,75 +4994,75 @@ function renderGameHub() {
   const rouletteKey = `cafe_roulette_${currentUser}`;
   const roulettePlayedToday = localStorage.getItem(rouletteKey) === getTodayDateKey();
   container.innerHTML = `
-    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px;">
-      <div class="box" style="margin:0; padding:14px;">
-        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🎰 럭키 룰렛</div>
-        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">하루 한 번, 랜덤 포인트에 도전해 보세요</div>
+    <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;">
+      <div class="box" style="margin:0; padding:12px;">
+        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🎰 럭키 룰렛</div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">하루 한 번, 랜덤 포인트에 도전해 보세요</div>
         <button onclick="openGameDetail('roulette', '🎰 럭키 룰렛')" ${roulettePlayedToday ? 'disabled' : ''} style="width:100%; ${roulettePlayedToday ? 'background:var(--border-color); color:var(--text-sub); cursor:not-allowed;' : ''}">${roulettePlayedToday ? '오늘 완료' : '돌리러 가기'}</button>
       </div>
-      <div class="box" style="margin:0; padding:14px;">
-        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⚡ CPS 챌린지</div>
-        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">원하는 시간 동안 초당 클릭 수(CPS) 겨루기</div>
+      <div class="box" style="margin:0; padding:12px;">
+        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">⚡ CPS 챌린지</div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">원하는 시간 동안 초당 클릭 수(CPS) 겨루기</div>
         <button onclick="openGameDetail('cps', '⚡ CPS 챌린지')" style="width:100%;">도전하기</button>
       </div>
-      <div class="box" style="margin:0; padding:14px;">
-        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⭕❌ 틱택토</div>
-        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">컴퓨터와 한 판! 이기면 포인트 획득</div>
+      <div class="box" style="margin:0; padding:12px;">
+        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">⭕❌ 틱택토</div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">컴퓨터와 한 판! 이기면 포인트 획득</div>
         <button onclick="openGameDetail('ttt', '⭕❌ 틱택토')" style="width:100%;">한 판 하기</button>
       </div>
-      <div class="box" style="margin:0; padding:14px;">
-        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🧱 테트리스</div>
-        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">클래식 테트리스! 점수만큼 포인트 획득</div>
+      <div class="box" style="margin:0; padding:12px;">
+        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🧱 테트리스</div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">클래식 테트리스! 점수만큼 포인트 획득</div>
         <button onclick="openGameDetail('tetris', '🧱 테트리스')" style="width:100%;">플레이하기</button>
       </div>
-      <div class="box" style="margin:0; padding:14px;">
-        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🔢 2048</div>
-        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">타일을 합쳐서 2048을 만들어보세요</div>
+      <div class="box" style="margin:0; padding:12px;">
+        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🔢 2048</div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">타일을 합쳐서 2048을 만들어보세요</div>
         <button onclick="openGameDetail('2048', '🔢 2048')" style="width:100%;">플레이하기</button>
       </div>
-      <div class="box" style="margin:0; padding:14px;">
-        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">💣 지뢰찾기</div>
-        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">빠르게 클리어할수록 포인트 UP</div>
+      <div class="box" style="margin:0; padding:12px;">
+        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">💣 지뢰찾기</div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">빠르게 클리어할수록 포인트 UP</div>
         <button onclick="openGameDetail('mine', '💣 지뢰찾기')" style="width:100%;">플레이하기</button>
       </div>
-      <div class="box" style="margin:0; padding:14px;">
-        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🍪 쿠키 클리커</div>
-        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">쿠키를 굽고 생산 시설을 늘려서 누적 기록에 도전!</div>
+      <div class="box" style="margin:0; padding:12px;">
+        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🍪 쿠키 클리커</div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">쿠키를 굽고 생산 시설을 늘려서 누적 기록에 도전!</div>
         <button onclick="openGameDetail('cookie', '🍪 쿠키 클리커')" style="width:100%;">플레이하기</button>
       </div>
-      <div class="box" style="margin:0; padding:14px;">
-        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🕹️ 얼불춤</div>
-        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">박자에 맞춰 탭! 한 번 실수하면 끝, 원터치 리듬게임</div>
+      <div class="box" style="margin:0; padding:12px;">
+        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🕹️ 얼불춤</div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">박자에 맞춰 탭! 한 번 실수하면 끝, 원터치 리듬게임</div>
         <button onclick="openGameDetail('rhythm', '🕹️ 얼불춤')" style="width:100%;">플레이하기</button>
       </div>
-      <div class="box" style="margin:0; padding:14px;">
-        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🃏 카드깡</div>
-        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">1P로 카드 한 장 뽑기! 0.5P·1P가 가장 잘 나오고, 높거나 낮을수록 희귀해요</div>
+      <div class="box" style="margin:0; padding:12px;">
+        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🃏 카드깡</div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">1P로 카드 한 장 뽑기! 0.5P·1P가 가장 잘 나오고, 높거나 낮을수록 희귀해요</div>
         <button onclick="openGameDetail('cardgacha', '🃏 카드깡')" style="width:100%;">카드 뽑으러 가기</button>
       </div>
-      <div class="box" style="margin:0; padding:14px;">
-        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⚫⚪ 오목</div>
-        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">컴퓨터와 5목 대결! 쉬운 난이도로 조정됐어요. 이기면 포인트 획득</div>
+      <div class="box" style="margin:0; padding:12px;">
+        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">⚫⚪ 오목</div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">컴퓨터와 5목 대결! 쉬운 난이도로 조정됐어요. 이기면 포인트 획득</div>
         <button onclick="openGameDetail('omok', '⚫⚪ 오목')" style="width:100%;">한 판 하기</button>
       </div>
-      <div class="box" style="margin:0; padding:14px;">
-        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🐍 스네이크</div>
-        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">방향키로 먹이를 먹고 몸을 키우세요! 길수록 포인트 UP</div>
+      <div class="box" style="margin:0; padding:12px;">
+        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🐍 스네이크</div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">방향키로 먹이를 먹고 몸을 키우세요! 길수록 포인트 UP</div>
         <button onclick="openGameDetail('snake', '🐍 스네이크')" style="width:100%;">플레이하기</button>
       </div>
-      <div class="box" style="margin:0; padding:14px;">
-        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🏓 핑퐁</div>
-        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">컴퓨터를 상대로 공을 튕겨내며 랠리를 이어가 보세요</div>
+      <div class="box" style="margin:0; padding:12px;">
+        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🏓 핑퐁</div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">컴퓨터를 상대로 공을 튕겨내며 랠리를 이어가 보세요</div>
         <button onclick="openGameDetail('pong', '🏓 핑퐁')" style="width:100%;">플레이하기</button>
       </div>
-      <div class="box" style="margin:0; padding:14px;">
-        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">⚡ 반응속도 테스트</div>
-        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">화면이 초록색으로 바뀌는 순간 탭! 빠를수록 포인트 UP</div>
+      <div class="box" style="margin:0; padding:12px;">
+        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">⚡ 반응속도 테스트</div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">화면이 초록색으로 바뀌는 순간 탭! 빠를수록 포인트 UP</div>
         <button onclick="openGameDetail('reaction', '⚡ 반응속도 테스트')" style="width:100%;">도전하기</button>
       </div>
-      <div class="box" style="margin:0; padding:14px;">
-        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🧠 메모리 게임</div>
-        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">카드를 뒤집어 짝을 맞춰보세요! 초급·중급·고급 난이도 지원</div>
+      <div class="box" style="margin:0; padding:12px;">
+        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🧠 메모리 게임</div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">카드를 뒤집어 짝을 맞춰보세요! 초급·중급·고급 난이도 지원</div>
         <button onclick="openGameDetail('memory', '🧠 메모리 게임')" style="width:100%;">플레이하기</button>
       </div>
     </div>
