@@ -158,6 +158,9 @@ body {
 .chat-room-row.pinned { background: rgba(3, 199, 90, 0.06); }
 .chat-room-pin-btn { flex: 0 0 auto; background: transparent; border: 0; padding: 6px; margin: -6px -6px -6px 0; font-size: 15px; opacity: .3; cursor: pointer; line-height: 1; }
 .chat-room-pin-btn.pinned { opacity: 1; }
+.game-card { position: relative; }
+.game-pin-btn { position: absolute; top: 6px; right: 6px; background: transparent; border: 0; padding: 4px; font-size: 14px; opacity: .35; cursor: pointer; line-height: 1; z-index: 2; }
+.game-pin-btn.pinned { opacity: 1; }
 .chat-date-divider { align-self: center; margin: 4px 0 10px; padding: 6px 14px; border-radius: 14px; background: var(--card-bg); color: var(--text-sub); font-size: 12px; font-weight: 700; border: 1px solid var(--border-color); }
 .chat-back-btn { display: none; font-size: 16px; }
 .chat-view:not(.list-mode) .chat-back-btn { display: inline-flex; align-items: center; justify-content: center; }
@@ -4989,82 +4992,70 @@ window.setLeaderboardSubTab = function(tab) {
   else renderMemoryRankTab();
 };
 
+function getPinnedGamesKey() {
+  return `cafe_pinned_games_${currentUser || 'guest'}`;
+}
+
+function getPinnedGames() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(getPinnedGamesKey()) || '[]');
+    return Array.isArray(saved) ? saved : [];
+  } catch (error) { return []; }
+}
+
+function savePinnedGames(list) {
+  localStorage.setItem(getPinnedGamesKey(), JSON.stringify(list));
+}
+
+window.togglePinGame = function(gameKey) {
+  const pinned = getPinnedGames();
+  const idx = pinned.indexOf(gameKey);
+  if (idx >= 0) pinned.splice(idx, 1); else pinned.unshift(gameKey);
+  savePinnedGames(pinned);
+  renderGameHub();
+};
+
+function buildGameCard(game, isPinned) {
+  return `<div class="box game-card" style="margin:0; padding:12px;">
+        <button class="game-pin-btn ${isPinned ? 'pinned' : ''}" onclick="togglePinGame('${game.key}')" title="${isPinned ? '고정 해제' : '맨 위에 고정'}">📌</button>
+        <div style="font-size:14px; font-weight:bold; margin-bottom:6px; padding-right:20px;">${game.title}</div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">${game.desc}</div>
+        <button onclick="${game.action}" ${game.disabled ? 'disabled' : ''} style="width:100%; ${game.disabled ? 'background:var(--border-color); color:var(--text-sub); cursor:not-allowed;' : ''}">${game.btnText}</button>
+      </div>`;
+}
+
 function renderGameHub() {
   const container = document.getElementById('gameHubTab');
   const rouletteKey = `cafe_roulette_${currentUser}`;
   const roulettePlayedToday = localStorage.getItem(rouletteKey) === getTodayDateKey();
+  const games = [
+    { key: 'roulette', title: '🎰 럭키 룰렛', desc: '하루 한 번, 랜덤 포인트에 도전해 보세요', action: "openGameDetail('roulette', '🎰 럭키 룰렛')", btnText: roulettePlayedToday ? '오늘 완료' : '돌리러 가기', disabled: roulettePlayedToday },
+    { key: 'cps', title: '⚡ CPS 챌린지', desc: '원하는 시간 동안 초당 클릭 수(CPS) 겨루기', action: "openGameDetail('cps', '⚡ CPS 챌린지')", btnText: '도전하기' },
+    { key: 'ttt', title: '⭕❌ 틱택토', desc: '컴퓨터와 한 판! 이기면 포인트 획득', action: "openGameDetail('ttt', '⭕❌ 틱택토')", btnText: '한 판 하기' },
+    { key: 'tetris', title: '🧱 테트리스', desc: '클래식 테트리스! 점수만큼 포인트 획득', action: "openGameDetail('tetris', '🧱 테트리스')", btnText: '플레이하기' },
+    { key: '2048', title: '🔢 2048', desc: '타일을 합쳐서 2048을 만들어보세요', action: "openGameDetail('2048', '🔢 2048')", btnText: '플레이하기' },
+    { key: 'mine', title: '💣 지뢰찾기', desc: '빠르게 클리어할수록 포인트 UP', action: "openGameDetail('mine', '💣 지뢰찾기')", btnText: '플레이하기' },
+    { key: 'cookie', title: '🍪 쿠키 클리커', desc: '쿠키를 굽고 생산 시설을 늘려서 누적 기록에 도전!', action: "openGameDetail('cookie', '🍪 쿠키 클리커')", btnText: '플레이하기' },
+    { key: 'rhythm', title: '🕹️ 얼불춤', desc: '박자에 맞춰 탭! 한 번 실수하면 끝, 원터치 리듬게임', action: "openGameDetail('rhythm', '🕹️ 얼불춤')", btnText: '플레이하기' },
+    { key: 'cardgacha', title: '🃏 카드깡', desc: '1P로 카드 한 장 뽑기! 0.5P·1P가 가장 잘 나오고, 높거나 낮을수록 희귀해요', action: "openGameDetail('cardgacha', '🃏 카드깡')", btnText: '카드 뽑으러 가기' },
+    { key: 'omok', title: '⚫⚪ 오목', desc: '컴퓨터와 5목 대결! 쉬운 난이도로 조정됐어요. 이기면 포인트 획득', action: "openGameDetail('omok', '⚫⚪ 오목')", btnText: '한 판 하기' },
+    { key: 'snake', title: '🐍 스네이크', desc: '방향키로 먹이를 먹고 몸을 키우세요! 길수록 포인트 UP', action: "openGameDetail('snake', '🐍 스네이크')", btnText: '플레이하기' },
+    { key: 'pong', title: '🏓 핑퐁', desc: '컴퓨터를 상대로 공을 튕겨내며 랠리를 이어가 보세요', action: "openGameDetail('pong', '🏓 핑퐁')", btnText: '플레이하기' },
+    { key: 'reaction', title: '⚡ 반응속도 테스트', desc: '화면이 초록색으로 바뀌는 순간 탭! 빠를수록 포인트 UP', action: "openGameDetail('reaction', '⚡ 반응속도 테스트')", btnText: '도전하기' },
+    { key: 'memory', title: '🧠 메모리 게임', desc: '카드를 뒤집어 짝을 맞춰보세요! 초급·중급·고급 난이도 지원', action: "openGameDetail('memory', '🧠 메모리 게임')", btnText: '플레이하기' }
+  ];
+  const pinnedKeys = getPinnedGames();
+  const pinnedGames = pinnedKeys.map(key => games.find(g => g.key === key)).filter(Boolean);
+  const normalGames = games.filter(g => !pinnedKeys.includes(g.key));
+  const pinnedHtml = pinnedGames.length
+    ? `<div class="list-label" style="grid-column:1/-1; font-size:12px; color:var(--text-sub); margin-bottom:-2px;">📌 고정된 게임</div>` + pinnedGames.map(g => buildGameCard(g, true)).join('')
+    : '';
+  const normalHtml = normalGames.length && pinnedGames.length
+    ? `<div class="list-label" style="grid-column:1/-1; font-size:12px; color:var(--text-sub); margin-bottom:-2px;">전체 게임</div>` + normalGames.map(g => buildGameCard(g, false)).join('')
+    : normalGames.map(g => buildGameCard(g, false)).join('');
   container.innerHTML = `
     <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;">
-      <div class="box" style="margin:0; padding:12px;">
-        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🎰 럭키 룰렛</div>
-        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">하루 한 번, 랜덤 포인트에 도전해 보세요</div>
-        <button onclick="openGameDetail('roulette', '🎰 럭키 룰렛')" ${roulettePlayedToday ? 'disabled' : ''} style="width:100%; ${roulettePlayedToday ? 'background:var(--border-color); color:var(--text-sub); cursor:not-allowed;' : ''}">${roulettePlayedToday ? '오늘 완료' : '돌리러 가기'}</button>
-      </div>
-      <div class="box" style="margin:0; padding:12px;">
-        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">⚡ CPS 챌린지</div>
-        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">원하는 시간 동안 초당 클릭 수(CPS) 겨루기</div>
-        <button onclick="openGameDetail('cps', '⚡ CPS 챌린지')" style="width:100%;">도전하기</button>
-      </div>
-      <div class="box" style="margin:0; padding:12px;">
-        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">⭕❌ 틱택토</div>
-        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">컴퓨터와 한 판! 이기면 포인트 획득</div>
-        <button onclick="openGameDetail('ttt', '⭕❌ 틱택토')" style="width:100%;">한 판 하기</button>
-      </div>
-      <div class="box" style="margin:0; padding:12px;">
-        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🧱 테트리스</div>
-        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">클래식 테트리스! 점수만큼 포인트 획득</div>
-        <button onclick="openGameDetail('tetris', '🧱 테트리스')" style="width:100%;">플레이하기</button>
-      </div>
-      <div class="box" style="margin:0; padding:12px;">
-        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🔢 2048</div>
-        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">타일을 합쳐서 2048을 만들어보세요</div>
-        <button onclick="openGameDetail('2048', '🔢 2048')" style="width:100%;">플레이하기</button>
-      </div>
-      <div class="box" style="margin:0; padding:12px;">
-        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">💣 지뢰찾기</div>
-        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">빠르게 클리어할수록 포인트 UP</div>
-        <button onclick="openGameDetail('mine', '💣 지뢰찾기')" style="width:100%;">플레이하기</button>
-      </div>
-      <div class="box" style="margin:0; padding:12px;">
-        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🍪 쿠키 클리커</div>
-        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">쿠키를 굽고 생산 시설을 늘려서 누적 기록에 도전!</div>
-        <button onclick="openGameDetail('cookie', '🍪 쿠키 클리커')" style="width:100%;">플레이하기</button>
-      </div>
-      <div class="box" style="margin:0; padding:12px;">
-        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🕹️ 얼불춤</div>
-        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">박자에 맞춰 탭! 한 번 실수하면 끝, 원터치 리듬게임</div>
-        <button onclick="openGameDetail('rhythm', '🕹️ 얼불춤')" style="width:100%;">플레이하기</button>
-      </div>
-      <div class="box" style="margin:0; padding:12px;">
-        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🃏 카드깡</div>
-        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">1P로 카드 한 장 뽑기! 0.5P·1P가 가장 잘 나오고, 높거나 낮을수록 희귀해요</div>
-        <button onclick="openGameDetail('cardgacha', '🃏 카드깡')" style="width:100%;">카드 뽑으러 가기</button>
-      </div>
-      <div class="box" style="margin:0; padding:12px;">
-        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">⚫⚪ 오목</div>
-        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">컴퓨터와 5목 대결! 쉬운 난이도로 조정됐어요. 이기면 포인트 획득</div>
-        <button onclick="openGameDetail('omok', '⚫⚪ 오목')" style="width:100%;">한 판 하기</button>
-      </div>
-      <div class="box" style="margin:0; padding:12px;">
-        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🐍 스네이크</div>
-        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">방향키로 먹이를 먹고 몸을 키우세요! 길수록 포인트 UP</div>
-        <button onclick="openGameDetail('snake', '🐍 스네이크')" style="width:100%;">플레이하기</button>
-      </div>
-      <div class="box" style="margin:0; padding:12px;">
-        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🏓 핑퐁</div>
-        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">컴퓨터를 상대로 공을 튕겨내며 랠리를 이어가 보세요</div>
-        <button onclick="openGameDetail('pong', '🏓 핑퐁')" style="width:100%;">플레이하기</button>
-      </div>
-      <div class="box" style="margin:0; padding:12px;">
-        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">⚡ 반응속도 테스트</div>
-        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">화면이 초록색으로 바뀌는 순간 탭! 빠를수록 포인트 UP</div>
-        <button onclick="openGameDetail('reaction', '⚡ 반응속도 테스트')" style="width:100%;">도전하기</button>
-      </div>
-      <div class="box" style="margin:0; padding:12px;">
-        <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🧠 메모리 게임</div>
-        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">카드를 뒤집어 짝을 맞춰보세요! 초급·중급·고급 난이도 지원</div>
-        <button onclick="openGameDetail('memory', '🧠 메모리 게임')" style="width:100%;">플레이하기</button>
-      </div>
+      ${pinnedHtml}${normalHtml}
     </div>
   `;
 }
