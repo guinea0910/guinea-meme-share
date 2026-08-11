@@ -230,6 +230,7 @@ body {
   .app-content { width: calc(100% - 28px); margin: 24px auto; }
 }
 @media (max-width: 480px) {
+  .admin-sidebar { grid-template-columns: repeat(2, 1fr); }
   .profile-header-row { flex-direction: column; align-items: flex-start; }
   .profile-info-block { min-width: 0; width: 100%; }
   .profile-header-row #profileFollowBtnWrap { width: 100%; }
@@ -537,18 +538,25 @@ button:hover { background-color: var(--cafe-green-hover); }
   .admin-layout { flex-direction: column; gap: 10px; }
   .admin-sidebar {
     width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     overflow-x: visible;
     position: static;
     gap: 6px;
     padding: 6px;
   }
   .admin-sidebar-item {
-    flex: 1 1 calc(50% - 6px);
+    flex: none;
     text-align: center;
-    padding: 12px 6px;
-    font-size: 13px;
+    padding: 8px 4px;
+    font-size: 12px;
+    white-space: normal;
+    word-break: keep-all;
+    line-height: 1.25;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
   }
   .admin-tab-panel.box { padding: 14px 12px; }
   .admin-tab-panel.box h2 { font-size: 16px; }
