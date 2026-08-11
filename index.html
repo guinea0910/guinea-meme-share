@@ -114,7 +114,11 @@ body {
 .app-content { width: min(600px, calc(100% - 40px)); margin: 40px auto; }
 .chat-view { height: min(720px, calc(100vh - 80px)); min-height: 500px; overflow: hidden; border: 1px solid var(--border-color); border-radius: 14px; background: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; }
 .chat-header { padding: 16px 18px; background: var(--card-bg); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); }
-.chat-header h2 { color: var(--text-main); font-size: 17px; margin: 0; }
+.chat-header-title-row { flex: 1; min-width: 0; overflow: hidden; }
+.chat-title-wrap { min-width: 0; overflow: hidden; }
+.chat-header h2 { color: var(--text-main); font-size: 17px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-title-wrap .chat-count { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 100%; }
+.chat-header-actions { flex-shrink: 0; }
 .chat-count { font-size: 12px; color: var(--text-sub); }
 .chat-messages { flex: 1; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 12px; }
 .chat-notice { align-self: center; padding: 6px 11px; border-radius: 14px; background: var(--card-bg); color: var(--text-sub); font-size: 12px; border: 1px solid var(--border-color); }
@@ -674,7 +678,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 </section>
 <section id="chatView" class="chat-view list-mode hidden" aria-live="polite">
 <div class="chat-header">
-<div style="display:flex; align-items:center; gap:8px;"><button id="chatBackBtn" class="chat-create-btn chat-back-btn" onclick="showChatRoomList()">←</button><div><h2 id="chatTitle">채팅</h2><span id="chatStatus" class="chat-count">카페 회원들과 이야기해 보세요</span></div></div>
+<div class="chat-header-title-row" style="display:flex; align-items:center; gap:8px;"><button id="chatBackBtn" class="chat-create-btn chat-back-btn" onclick="showChatRoomList()">←</button><div class="chat-title-wrap"><h2 id="chatTitle">채팅</h2><span id="chatStatus" class="chat-count">카페 회원들과 이야기해 보세요</span></div></div>
 <div class="chat-header-actions"><span id="chatMemberCount" class="chat-count mode-conv-only"></span><button class="chat-create-btn mode-conv-only" onclick="toggleChatMessageSearch()">🔍</button><button class="chat-create-btn mode-conv-only" onclick="openChatNotice()" title="공지">📌</button><button class="chat-create-btn mode-conv-only" onclick="openChatPoll()" title="투표">📊</button><button class="chat-create-btn mode-conv-only" onclick="openChatBoard()" title="게시판">📋</button><button id="teamIntroBtn" class="chat-create-btn hidden mode-conv-only" onclick="openTeamIntro()" title="팀 한줄소개">👤</button><button id="teamManageBtn" class="chat-create-btn hidden mode-conv-only" onclick="openTeamManage()">관리</button><button id="inviteMemberBtn" class="chat-create-btn hidden mode-conv-only" onclick="openInviteMember()">+ 초대</button><button id="leaveChatRoomBtn" class="chat-create-btn danger-btn hidden mode-conv-only" onclick="leaveChatRoom()">나가기</button><button class="chat-create-btn mode-list-only" onclick="openCreateChatRoom()">+ 채팅방 만들기</button></div>
 </div>
 <div id="chatNoticeBar" class="chat-notice-bar hidden mode-conv-only" onclick="openChatNotice()"><span class="chat-notice-bar-icon">📌</span><span id="chatNoticeBarText" class="chat-notice-bar-text"></span></div>
@@ -800,6 +804,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button id="lbSubSnakeBtn" class="page-btn" onclick="setLeaderboardSubTab('snake')" style="padding:5px 10px; font-size:11px;">🐍 스네이크</button>
 <button id="lbSubPongBtn" class="page-btn" onclick="setLeaderboardSubTab('pong')" style="padding:5px 10px; font-size:11px;">🏓 핑퐁</button>
 <button id="lbSubReactionBtn" class="page-btn" onclick="setLeaderboardSubTab('reaction')" style="padding:5px 10px; font-size:11px;">⚡ 반응속도</button>
+<button id="lbSubMemoryBtn" class="page-btn" onclick="setLeaderboardSubTab('memory')" style="padding:5px 10px; font-size:11px;">🧠 메모리</button>
 </div>
 <div id="gameRankTab"></div>
 <div id="gameOmokRankTab" class="hidden"></div>
@@ -812,6 +817,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="gameSnakeRankTab" class="hidden"></div>
 <div id="gamePongRankTab" class="hidden"></div>
 <div id="gameReactionRankTab" class="hidden"></div>
+<div id="gameMemoryRankTab" class="hidden"></div>
 </div>
 </div>
 </section>
@@ -2781,6 +2787,7 @@ window.showAppSection = function(section) {
   if (section !== 'gamePlay' && typeof stopSnake === 'function') stopSnake();
   if (section !== 'gamePlay' && typeof stopPong === 'function') stopPong();
   if (section !== 'gamePlay' && typeof stopReaction === 'function') stopReaction();
+  if (section !== 'gamePlay' && typeof stopMemory === 'function') stopMemory();
   const isCafe = section === 'cafe';
   const isChat = section === 'chat';
   const isSettings = section === 'settings';
@@ -4920,6 +4927,7 @@ window.setGameTab = function(tab) {
   stopSnake();
   stopPong();
   stopReaction();
+  stopMemory();
   document.getElementById('gameTabHubBtn').classList.toggle('active', tab === 'hub');
   document.getElementById('gameTabLeaderboardBtn').classList.toggle('active', tab === 'leaderboard');
   document.getElementById('gameHubTab').classList.toggle('hidden', tab !== 'hub');
@@ -4941,6 +4949,7 @@ window.setLeaderboardSubTab = function(tab) {
   document.getElementById('lbSubSnakeBtn').classList.toggle('active', tab === 'snake');
   document.getElementById('lbSubPongBtn').classList.toggle('active', tab === 'pong');
   document.getElementById('lbSubReactionBtn').classList.toggle('active', tab === 'reaction');
+  document.getElementById('lbSubMemoryBtn').classList.toggle('active', tab === 'memory');
   document.getElementById('gameRankTab').classList.toggle('hidden', tab !== 'total');
   document.getElementById('gameOmokRankTab').classList.toggle('hidden', tab !== 'omok');
   document.getElementById('gameCpsRankTab').classList.toggle('hidden', tab !== 'cps');
@@ -4952,6 +4961,7 @@ window.setLeaderboardSubTab = function(tab) {
   document.getElementById('gameSnakeRankTab').classList.toggle('hidden', tab !== 'snake');
   document.getElementById('gamePongRankTab').classList.toggle('hidden', tab !== 'pong');
   document.getElementById('gameReactionRankTab').classList.toggle('hidden', tab !== 'reaction');
+  document.getElementById('gameMemoryRankTab').classList.toggle('hidden', tab !== 'memory');
   if (tab === 'total') renderGameRankTab();
   else if (tab === 'omok') renderOmokRankTab();
   else if (tab === 'cps') renderCpsRankTab();
@@ -4962,7 +4972,8 @@ window.setLeaderboardSubTab = function(tab) {
   else if (tab === 'rhythm') renderRhythmRankTab();
   else if (tab === 'snake') renderSnakeRankTab();
   else if (tab === 'pong') renderPongRankTab();
-  else renderReactionRankTab();
+  else if (tab === 'reaction') renderReactionRankTab();
+  else renderMemoryRankTab();
 };
 
 function renderGameHub() {
@@ -5036,6 +5047,11 @@ function renderGameHub() {
         <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">화면이 초록색으로 바뀌는 순간 탭! 빠를수록 포인트 UP</div>
         <button onclick="openGameDetail('reaction', '⚡ 반응속도 테스트')" style="width:100%;">도전하기</button>
       </div>
+      <div class="box" style="margin:0; padding:14px;">
+        <div style="font-size:15px; font-weight:bold; margin-bottom:6px;">🧠 메모리 게임</div>
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">카드를 뒤집어 짝을 맞춰보세요! 초급·중급·고급 난이도 지원</div>
+        <button onclick="openGameDetail('memory', '🧠 메모리 게임')" style="width:100%;">플레이하기</button>
+      </div>
     </div>
   `;
 }
@@ -5053,7 +5069,8 @@ const GAME_OPEN_FUNC_NAMES = {
   omok: 'openOmokGame',
   snake: 'openSnakeGame',
   pong: 'openPongGame',
-  reaction: 'openReactionGame'
+  reaction: 'openReactionGame',
+  memory: 'openMemoryGame'
 };
 
 function stopAllGames() {
@@ -5068,6 +5085,7 @@ function stopAllGames() {
   stopSnake();
   stopPong();
   stopReaction();
+  stopMemory();
 }
 
 // 게임 목록 화면 하단이 아닌, 게시글 상세보기처럼 별도의 전용 화면(탭)으로 게임을 연다
@@ -5151,6 +5169,7 @@ window.openRouletteGame = async function() {
   stopSnake();
   stopPong();
   stopReaction();
+  stopMemory();
   const area = document.getElementById('gamePlayArea');
   const key = `cafe_roulette_${currentUser}`;
   const lastPlayed = localStorage.getItem(key);
@@ -5206,6 +5225,7 @@ window.openClickChallenge = function() {
   stopSnake();
   stopPong();
   stopReaction();
+  stopMemory();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:8px;">측정 시간을 고른 뒤 시작하면 3초 카운트다운 후 CPS(초당 클릭 수)를 측정해요</div>
@@ -5350,6 +5370,7 @@ window.openTicTacToeGame = function() {
   stopSnake();
   stopPong();
   stopReaction();
+  stopMemory();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">나는 ❌, 컴퓨터는 ⭕! 이기면 20P, 비기면 8P, 지면 0P</div>
@@ -5480,6 +5501,7 @@ window.openMinesweeperGame = function() {
   stopSnake();
   stopPong();
   stopReaction();
+  stopMemory();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">지뢰를 피해서 다 찾아내면 포인트 획득! 빠를수록, 난이도가 높을수록 포인트 UP</div>
@@ -5844,6 +5866,7 @@ window.openTetrisGame = function() {
   stopSnake();
   stopPong();
   stopReaction();
+  stopMemory();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
@@ -6167,6 +6190,7 @@ window.openGame2048 = function() {
   stopSnake();
   stopPong();
   stopReaction();
+  stopMemory();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
@@ -6222,6 +6246,7 @@ window.start2048 = function() {
   stopSnake();
   stopPong();
   stopReaction();
+  stopMemory();
   const board = create2048Board();
   spawn2048Tile(board);
   spawn2048Tile(board);
@@ -6454,6 +6479,7 @@ window.openCookieClickerGame = async function() {
   stopSnake();
   stopPong();
   stopReaction();
+  stopMemory();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">불러오는 중...</div>`;
   try {
@@ -6655,6 +6681,7 @@ window.openRhythmGame = function() {
   stopSnake();
   stopPong();
   stopReaction();
+  stopMemory();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">공이 초록 구간을 지날 때 TAP(또는 스페이스바)! 한 번만 실수해도 게임 오버, 비트 수만큼 포인트 획득</div>
@@ -6860,6 +6887,7 @@ window.openCardGachaGame = async function() {
   stopSnake();
   stopPong();
   stopReaction();
+  stopMemory();
   cardGachaState = { drawing: false };
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
@@ -7041,6 +7069,7 @@ window.openOmokGame = function() {
   stopSnake();
   stopPong();
   stopReaction();
+  stopMemory();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">나는 ⚫, 컴퓨터는 ⚪! 5개를 먼저 이으면 승리. 쉬운 난이도로 조정됐어요. 이기면 40P, 비기면 15P, 지면 0P</div>
@@ -7168,6 +7197,7 @@ window.openSnakeGame = function() {
   stopSnake();
   stopPong();
   stopReaction();
+  stopMemory();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
@@ -7391,6 +7421,7 @@ window.openPongGame = function() {
   stopSnake();
   stopPong();
   stopReaction();
+  stopMemory();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:8px;">컴퓨터(위쪽 파란 막대)를 상대로 공을 튕겨내며 점수를 쌓아보세요. 공을 놓치면 게임 종료!</div>
@@ -7642,6 +7673,7 @@ window.openReactionGame = function() {
   stopSnake();
   stopPong();
   stopReaction();
+  stopMemory();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">아래 박스를 누르면 대기가 시작돼요. 초록색으로 바뀌는 순간 최대한 빠르게 탭하세요! 너무 빨리 누르면 실패해요.</div>
@@ -7759,6 +7791,255 @@ async function renderReactionRankTab() {
   } catch (error) {
     console.error(error);
     container.innerHTML = `<div class="error-box">리더보드를 불러오지 못했습니다.</div>`;
+  }
+}
+
+// --- 🧠 메모리 게임 (카드 짝맞추기) ---
+const MEMORY_DIFFICULTIES = {
+  easy:   { key: 'easy',   label: '초급', cols: 4, rows: 3, pairs: 6,  base: 90,  field: 'bestMemoryEasy' },
+  medium: { key: 'medium', label: '중급', cols: 4, rows: 4, pairs: 8,  base: 150, field: 'bestMemoryMedium' },
+  hard:   { key: 'hard',   label: '고급', cols: 6, rows: 4, pairs: 12, base: 260, field: 'bestMemoryHard' }
+};
+const MEMORY_SYMBOLS = ['🍎', '🍌', '🍇', '🍉', '🍓', '🍒', '🍑', '🥝', '🍍', '🥥', '🍋', '🥭'];
+let memorySelectedDifficulty = 'easy';
+let memoryState = null;
+
+function stopMemory() {
+  if (memoryState) {
+    if (memoryState.timer) clearInterval(memoryState.timer);
+    if (memoryState.flipBackTimeout) clearTimeout(memoryState.flipBackTimeout);
+    memoryState = null;
+  }
+}
+
+window.openMemoryGame = function() {
+  stopTetris();
+  stop2048();
+  stopTtt();
+  stopMinesweeper();
+  stopCookieClicker();
+  stopRhythm();
+  stopCardGacha();
+  stopOmok();
+  stopSnake();
+  stopPong();
+  stopReaction();
+  stopMemory();
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">카드를 두 장씩 뒤집어 같은 그림끼리 짝을 맞춰보세요! 시도 횟수가 적을수록 포인트 UP</div>
+    <div style="display:flex; gap:6px; margin-bottom:10px; justify-content:center;">
+      <button onclick="selectMemoryDifficulty('easy')" id="memoryDiffEasyBtn" style="flex:1; max-width:100px; font-size:12px; padding:6px;">초급</button>
+      <button onclick="selectMemoryDifficulty('medium')" id="memoryDiffMediumBtn" style="flex:1; max-width:100px; font-size:12px; padding:6px;">중급</button>
+      <button onclick="selectMemoryDifficulty('hard')" id="memoryDiffHardBtn" style="flex:1; max-width:100px; font-size:12px; padding:6px;">고급</button>
+    </div>
+    <div id="memoryDiffInfo" style="font-size:11px; color:var(--text-sub); margin-bottom:8px;"></div>
+    <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
+      <span>🔄 <b id="memoryMoves">0</b>회</span>
+      <span>⏱ <b id="memoryTimer">0</b>초</span>
+    </div>
+    <div id="memoryGameOverBanner" class="hidden" style="font-size:16px; font-weight:bold; padding:10px; border-radius:8px; margin-bottom:10px;"></div>
+    <div id="memoryBoard" style="display:grid; gap:6px; width:100%; margin:0 auto;"></div>
+    <button onclick="startMemoryGame()" style="width:100%; margin-top:12px;">새 게임 시작</button>
+    <div id="memoryResult" style="margin-top:10px;"></div>
+  </div>`;
+  updateMemoryDifficultyButtons();
+  startMemoryGame();
+};
+
+window.selectMemoryDifficulty = function(diffKey) {
+  memorySelectedDifficulty = diffKey;
+  updateMemoryDifficultyButtons();
+  startMemoryGame();
+};
+
+function updateMemoryDifficultyButtons() {
+  const diff = MEMORY_DIFFICULTIES[memorySelectedDifficulty];
+  ['easy', 'medium', 'hard'].forEach(key => {
+    const btn = document.getElementById(`memoryDiff${key[0].toUpperCase()}${key.slice(1)}Btn`);
+    if (!btn) return;
+    const active = key === memorySelectedDifficulty;
+    btn.style.background = active ? 'var(--cafe-green)' : 'var(--input-bg)';
+    btn.style.color = active ? '#fff' : 'var(--text-main)';
+  });
+  const infoEl = document.getElementById('memoryDiffInfo');
+  if (infoEl) infoEl.textContent = `${diff.label} · ${diff.cols}x${diff.rows} · 짝 ${diff.pairs}쌍 · 최대 ${diff.base}P`;
+}
+
+function buildMemoryDeck(pairs) {
+  const symbols = MEMORY_SYMBOLS.slice(0, pairs);
+  const deck = [...symbols, ...symbols].map(symbol => ({ symbol, revealed: false, matched: false }));
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+}
+
+window.startMemoryGame = function() {
+  stopMemory();
+  const diff = MEMORY_DIFFICULTIES[memorySelectedDifficulty];
+  memoryState = {
+    difficulty: diff.key,
+    cards: buildMemoryDeck(diff.pairs),
+    flipped: [],
+    matchedCount: 0,
+    moves: 0,
+    elapsed: 0,
+    running: true,
+    locked: false,
+    timer: null,
+    flipBackTimeout: null
+  };
+  document.getElementById('memoryGameOverBanner').classList.add('hidden');
+  document.getElementById('memoryResult').innerHTML = '';
+  document.getElementById('memoryMoves').textContent = '0';
+  document.getElementById('memoryTimer').textContent = '0';
+  document.getElementById('memoryBoard').style.gridTemplateColumns = `repeat(${diff.cols}, 1fr)`;
+  updateMemoryDifficultyButtons();
+  drawMemoryBoard();
+  memoryState.timer = setInterval(() => {
+    if (!memoryState || !memoryState.running) return;
+    memoryState.elapsed++;
+    const el = document.getElementById('memoryTimer');
+    if (el) el.textContent = memoryState.elapsed;
+  }, 1000);
+};
+
+window.memoryCardClick = function(idx) {
+  if (!memoryState || !memoryState.running || memoryState.locked) return;
+  const card = memoryState.cards[idx];
+  if (card.revealed || card.matched) return;
+  card.revealed = true;
+  memoryState.flipped.push(idx);
+  drawMemoryBoard();
+  if (memoryState.flipped.length === 2) {
+    memoryState.moves++;
+    const movesEl = document.getElementById('memoryMoves');
+    if (movesEl) movesEl.textContent = String(memoryState.moves);
+    const [i1, i2] = memoryState.flipped;
+    const c1 = memoryState.cards[i1], c2 = memoryState.cards[i2];
+    if (c1.symbol === c2.symbol) {
+      c1.matched = true;
+      c2.matched = true;
+      memoryState.matchedCount++;
+      memoryState.flipped = [];
+      drawMemoryBoard();
+      const diff = MEMORY_DIFFICULTIES[memoryState.difficulty];
+      if (memoryState.matchedCount === diff.pairs) {
+        finishMemoryGame();
+      }
+    } else {
+      memoryState.locked = true;
+      memoryState.flipBackTimeout = setTimeout(() => {
+        if (!memoryState) return;
+        c1.revealed = false;
+        c2.revealed = false;
+        memoryState.flipped = [];
+        memoryState.locked = false;
+        drawMemoryBoard();
+      }, 700);
+    }
+  }
+};
+
+function drawMemoryBoard() {
+  const board = document.getElementById('memoryBoard');
+  if (!board || !memoryState) return;
+  board.innerHTML = memoryState.cards.map((card, idx) => {
+    const shown = card.revealed || card.matched;
+    return `<div onclick="memoryCardClick(${idx})" style="aspect-ratio:1; background:${shown ? 'var(--card-bg)' : 'var(--cafe-green)'}; border:1px solid var(--border-color); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:22px; cursor:${shown || !memoryState.running ? 'default' : 'pointer'}; opacity:${card.matched ? '0.4' : '1'}; transition:background 0.15s;">${shown ? card.symbol : ''}</div>`;
+  }).join('');
+}
+
+async function finishMemoryGame() {
+  if (!memoryState || !memoryState.running) return;
+  memoryState.running = false;
+  if (memoryState.timer) clearInterval(memoryState.timer);
+  const diff = MEMORY_DIFFICULTIES[memoryState.difficulty];
+  const banner = document.getElementById('memoryGameOverBanner');
+  const points = Math.min(diff.base, Math.max(20, Math.round(diff.base - (memoryState.moves - diff.pairs) * 6)));
+  if (banner) {
+    banner.textContent = `🎉 ${diff.label} 클리어! (${memoryState.moves}회 시도, ${memoryState.elapsed}초)`;
+    banner.style.cssText += 'background:rgba(3,199,90,0.18); color:var(--cafe-green);';
+    banner.classList.remove('hidden');
+  }
+  await awardGamePoints('memory', '메모리 게임', points, `메모리 게임(${diff.label})을 ${memoryState.moves}회 만에 클리어해서 ${points}P 획득!`);
+  const isNewBest = await updateBestMemory(diff.key, memoryState.moves);
+  const resultText = `메모리 게임 ${diff.label}을 ${memoryState.moves}회 시도(${memoryState.elapsed}초)만에 클리어했어요! (${points}P 획득)`;
+  const resultBox = document.getElementById('memoryResult');
+  if (resultBox) {
+    resultBox.innerHTML = `
+      <div style="font-size:13px; margin-bottom:4px;">+${points}P 획득</div>
+      ${isNewBest ? `<div style="font-size:12px; color:var(--cafe-green); margin-bottom:6px;">🎉 ${diff.label} 개인 최고 기록 갱신!</div>` : ''}
+      ${renderGameResultActions(resultText)}
+    `;
+  }
+}
+
+async function updateBestMemory(difficultyKey, moves) {
+  try {
+    const diff = MEMORY_DIFFICULTIES[difficultyKey];
+    const userRef = doc(db, 'users', currentUser);
+    const snap = await getDoc(userRef);
+    const currentBest = snap.exists() ? (snap.data()[diff.field] || 0) : 0;
+    if (!currentBest || moves < currentBest) {
+      await updateDoc(userRef, { [diff.field]: moves, [`${diff.field}At`]: Date.now() });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}
+
+// --- 🧠 메모리 게임 리더보드 (시도 횟수가 적을수록 상위) ---
+let memoryRankDifficulty = 'easy';
+async function renderMemoryRankTab() {
+  const container = document.getElementById('gameMemoryRankTab');
+  container.innerHTML = `
+    <div style="display:flex; gap:6px; margin-bottom:12px;">
+      <button onclick="setMemoryRankDifficulty('easy')" class="page-btn ${memoryRankDifficulty === 'easy' ? 'active' : ''}" style="padding:5px 10px; font-size:12px;">초급</button>
+      <button onclick="setMemoryRankDifficulty('medium')" class="page-btn ${memoryRankDifficulty === 'medium' ? 'active' : ''}" style="padding:5px 10px; font-size:12px;">중급</button>
+      <button onclick="setMemoryRankDifficulty('hard')" class="page-btn ${memoryRankDifficulty === 'hard' ? 'active' : ''}" style="padding:5px 10px; font-size:12px;">고급</button>
+    </div>
+    <div id="memoryRankList">불러오는 중...</div>
+  `;
+  await loadMemoryRankList();
+}
+
+window.setMemoryRankDifficulty = function(diffKey) {
+  memoryRankDifficulty = diffKey;
+  renderMemoryRankTab();
+};
+
+async function loadMemoryRankList() {
+  const listEl = document.getElementById('memoryRankList');
+  if (!listEl) return;
+  try {
+    const diff = MEMORY_DIFFICULTIES[memoryRankDifficulty];
+    const querySnapshot = await getDocs(collection(db, 'users'));
+    const ranked = querySnapshot.docs
+      .map(docSnap => ({ user: docSnap.id, moves: docSnap.data()[diff.field] || 0 }))
+      .filter(entry => entry.moves > 0)
+      .sort((a, b) => a.moves - b.moves)
+      .slice(0, 30);
+    if (!ranked.length) {
+      listEl.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">아직 ${diff.label} 난이도를 클리어한 회원이 없어요. 첫 기록을 남겨보세요!</div>`;
+      return;
+    }
+    listEl.innerHTML = ranked.map((entry, idx) => `
+      <div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-color);">
+        <span style="width:24px; font-weight:bold; color:${idx < 3 ? 'var(--cafe-green)' : 'var(--text-sub)'};">${idx + 1}</span>
+        ${getAvatarHtml(entry.user, 26)}
+        <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
+        <span style="font-weight:bold; color:var(--cafe-green);">${entry.moves}회</span>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error(error);
+    listEl.innerHTML = `<div class="error-box">리더보드를 불러오지 못했습니다.</div>`;
   }
 }
 
