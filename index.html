@@ -2220,12 +2220,21 @@ window.askAiForPost = async function(postId) {
     const postData = postSnap.data();
     if (postData.aiAnswered) { openDetail(postId); return; }
     const questionText = postData.content || '';
-    const prompt = `너는 친절한 수학 선생님이야. 아래 학생의 수학 질문에 대해 풀이 과정을 단계별로 알기 쉽게 한국어로 설명하고, 마지막에 최종 답을 명확히 정리해줘. 너무 길지 않게, 핵심 위주로 답변해줘.\n\n[학생 질문]\n${questionText}`;
+    const postImages = getPostImages(postData); // data URL 배열 (예: data:image/jpeg;base64,....)
+    const promptParts = [{
+      text: `너는 친절한 수학 선생님이야. 아래 학생의 수학 질문에 대해 풀이 과정을 단계별로 알기 쉽게 한국어로 설명하고, 마지막에 최종 답을 명확히 정리해줘. 이미지가 첨부되어 있다면 이미지 속 문제도 함께 참고해서 풀어줘. 너무 길지 않게, 핵심 위주로 답변해줘.\n\n[학생 질문]\n${questionText || '(첨부된 이미지의 문제를 풀어주세요)'}`
+    }];
+    for (const imgSrc of postImages) {
+      const match = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/.exec(imgSrc);
+      if (match) {
+        promptParts.push({ inline_data: { mime_type: match[1], data: match[2] } });
+      }
+    }
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
+        contents: [{ parts: promptParts }]
       })
     });
     if (!response.ok) {
