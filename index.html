@@ -770,22 +770,22 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="sidebarOrderList" style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden; margin-top:6px;"></div>
 </div>
 <div style="margin-bottom: 20px;">
-<label style="font-size: 13px; color: var(--text-sub);">홈 화면 앱 아이콘 색상</label>
+<label style="font-size: 13px; color: var(--text-sub);">홈 화면 앱 아이콘</label>
 <div style="display:flex; gap:14px; align-items:center; margin-top:8px; flex-wrap:wrap;">
 <canvas id="pwaIconPreview" width="64" height="64" style="border-radius:14px; flex-shrink:0;"></canvas>
 <div style="display:flex; flex-direction:column; gap:8px;">
 <div style="display:flex; align-items:center; gap:8px;">
-<input type="color" id="pwaIconBgColor" value="#03c75a" oninput="previewPwaIcon()" style="width:40px; height:32px; padding:2px; margin:0;">
-<span style="font-size:12px; color: var(--text-sub);">배경색</span>
+<input type="color" id="pwaIconBgColor" value="#ffffff" oninput="previewPwaIcon()" style="width:40px; height:32px; padding:2px; margin:0;">
+<span style="font-size:12px; color: var(--text-sub);">배경색 (기본 도안일 때만 적용)</span>
 </div>
 <div style="display:flex; align-items:center; gap:8px;">
-<input type="color" id="pwaIconCloverColor" value="#ffffff" oninput="previewPwaIcon()" style="width:40px; height:32px; padding:2px; margin:0;">
-<span style="font-size:12px; color: var(--text-sub);">클로버 색</span>
+<label for="pwaIconImageInput" style="cursor:pointer; background: var(--input-bg); border:1px solid var(--border-color); padding:6px 12px; border-radius:6px; font-size:12px;">🖼️ 내 사진으로 설정</label>
+<input type="file" id="pwaIconImageInput" accept="image/*" onchange="handlePwaIconImageUpload(event)" style="display:none;">
 </div>
 </div>
 <button onclick="resetPwaIconColors()" style="flex:0 0 auto; background: var(--border-color); padding:8px 12px; font-size:12px;">기본값으로</button>
 </div>
-<div style="font-size:11px; color: var(--text-sub); margin-top:6px;">색을 바꾼 뒤 '설정 저장'을 누르고, 홈 화면에서 아이콘을 삭제 후 다시 추가해야 새 색이 적용돼요.</div>
+<div style="font-size:11px; color: var(--text-sub); margin-top:6px;">색을 바꾸거나 사진을 올린 뒤 '설정 저장'을 누르고, 홈 화면에서 아이콘을 삭제 후 다시 추가해야 반영돼요.</div>
 </div>
 <button onclick="saveSettingsView()" style="width: 100%; margin-bottom: 10px;">설정 저장</button>
 <button onclick="requestPushPermission()" style="width: 100%; margin-bottom: 10px; background: var(--border-color);">브라우저 알림 켜기</button>
@@ -3676,14 +3676,13 @@ window.saveSettingsView = async function() {
   const newAccent = document.getElementById('settingsAccentColor').value;
   const newCustomBg = document.getElementById('settingsCustomBg').value;
   const newIconBg = document.getElementById('pwaIconBgColor').value;
-  const newIconClover = document.getElementById('pwaIconCloverColor').value;
   try {
     const updateData = { theme: newTheme, accentColor: newAccent, customBg: newCustomBg };
     if (newPw) updateData.password = newPw;
     await updateDoc(doc(db, 'users', currentUser), updateData);
     userProfiles[currentUser] = { ...(userProfiles[currentUser] || {}), ...updateData };
     applyCustomBg(newCustomBg);
-    savePwaIconColors(newIconBg, newIconClover);
+    savePwaIconColors(newIconBg);
     setupPwaManifest();
     alert('설정이 성공적으로 저장되었습니다!');
     document.getElementById('settingsViewPw').value = '';
@@ -8302,91 +8301,140 @@ document.addEventListener('visibilitychange', () => {
 function getPwaIconColors() {
   try {
     const saved = JSON.parse(localStorage.getItem('pwa_icon_colors') || 'null');
-    if (saved && saved.bg && saved.clover) return saved;
+    if (saved && saved.bg) return saved;
   } catch (error) { /* 무시 */ }
-  return { bg: '#03c75a', clover: '#ffffff' };
+  return { bg: '#ffffff' };
 }
 
-function savePwaIconColors(bg, clover) {
-  localStorage.setItem('pwa_icon_colors', JSON.stringify({ bg, clover }));
+function savePwaIconColors(bg) {
+  localStorage.setItem('pwa_icon_colors', JSON.stringify({ bg }));
 }
 
-function drawCloverShape(ctx, cx, cy, leafSize, color) {
-  ctx.fillStyle = color;
-  const offsets = [
-    [-leafSize * 0.62, -leafSize * 0.62],
-    [leafSize * 0.62, -leafSize * 0.62],
-    [-leafSize * 0.62, leafSize * 0.62],
-    [leafSize * 0.62, leafSize * 0.62]
-  ];
-  offsets.forEach(([ox, oy]) => {
-    ctx.beginPath();
-    ctx.ellipse(cx + ox, cy + oy, leafSize * 0.62, leafSize * 0.46, Math.atan2(oy, ox) + Math.PI / 4, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  // 줄기
-  ctx.strokeStyle = color;
-  ctx.lineWidth = leafSize * 0.16;
-  ctx.lineCap = 'round';
+function getPwaCustomIconImage() {
+  try { return localStorage.getItem('pwa_icon_custom_image') || null; } catch (error) { return null; }
+}
+
+function drawRoundedRectPath(ctx, x, y, w, h, r) {
   ctx.beginPath();
-  ctx.moveTo(cx, cy + leafSize * 0.3);
-  ctx.lineTo(cx, cy + leafSize * 1.5);
-  ctx.stroke();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
 }
 
-function generateAppIconDataUrl(size, colorsOverride) {
-  const colors = colorsOverride || getPwaIconColors();
+// 독자적인 4엽 풍차(pinwheel) 도안 - 특정 브랜드 로고를 모사하지 않은 자체 디자인
+function drawPinwheelIcon(ctx, size, bgColor) {
+  drawRoundedRectPath(ctx, 0, 0, size, size, size * 0.2);
+  ctx.fillStyle = bgColor;
+  ctx.fill();
+  const cx = size / 2;
+  const cy = size / 2;
+  const bladeColors = ['#03c75a', '#22b8cf', '#845ef7', '#fab005'];
+  const bladeWidth = size * 0.30;
+  const bladeHeight = size * 0.34;
+  const gap = size * 0.03;
+  const cornerR = size * 0.07;
+  for (let i = 0; i < 4; i++) {
+    const angle = (Math.PI / 2) * i;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    drawRoundedRectPath(ctx, -bladeWidth / 2, -gap - bladeHeight, bladeWidth, bladeHeight, cornerR);
+    ctx.fillStyle = bladeColors[i];
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.beginPath();
+  ctx.arc(cx, cy, size * 0.045, 0, Math.PI * 2);
+  ctx.fillStyle = bgColor;
+  ctx.fill();
+}
+
+function generateAppIconDataUrl(size) {
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d');
-  const radius = size * 0.2;
-  ctx.fillStyle = colors.bg;
-  ctx.beginPath();
-  ctx.moveTo(radius, 0);
-  ctx.arcTo(size, 0, size, size, radius);
-  ctx.arcTo(size, size, 0, size, radius);
-  ctx.arcTo(0, size, 0, 0, radius);
-  ctx.arcTo(0, 0, size, 0, radius);
-  ctx.closePath();
-  ctx.fill();
-  drawCloverShape(ctx, size / 2, size * 0.44, size * 0.19, colors.clover);
+  const customImage = getPwaCustomIconImage();
+  if (customImage) {
+    return customImage; // 업로드 시 이미 정사각형으로 잘라 저장해둔 데이터
+  }
+  const colors = getPwaIconColors();
+  drawPinwheelIcon(ctx, size, colors.bg);
   return canvas.toDataURL('image/png');
 }
 
+window.handlePwaIconImageUpload = function(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const size = 512;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      // 정사각형으로 가운데 크롭 (cover)
+      const srcSize = Math.min(img.width, img.height);
+      const srcX = (img.width - srcSize) / 2;
+      const srcY = (img.height - srcSize) / 2;
+      drawRoundedRectPath(ctx, 0, 0, size, size, size * 0.2);
+      ctx.save();
+      ctx.clip();
+      ctx.drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, size, size);
+      ctx.restore();
+      const dataUrl = canvas.toDataURL('image/png');
+      try {
+        localStorage.setItem('pwa_icon_custom_image', dataUrl);
+      } catch (error) {
+        alert('이미지 용량이 너무 커서 저장하지 못했어요. 더 작은 이미지로 시도해주세요.');
+        return;
+      }
+      previewPwaIcon();
+    };
+    img.onerror = function() { alert('이미지를 불러오지 못했어요.'); };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
 window.previewPwaIcon = function() {
-  const bg = document.getElementById('pwaIconBgColor')?.value || '#03c75a';
-  const clover = document.getElementById('pwaIconCloverColor')?.value || '#ffffff';
   const canvas = document.getElementById('pwaIconPreview');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   const size = canvas.width;
   ctx.clearRect(0, 0, size, size);
-  const radius = size * 0.2;
-  ctx.fillStyle = bg;
-  ctx.beginPath();
-  ctx.moveTo(radius, 0);
-  ctx.arcTo(size, 0, size, size, radius);
-  ctx.arcTo(size, size, 0, size, radius);
-  ctx.arcTo(0, size, 0, 0, radius);
-  ctx.arcTo(0, 0, size, 0, radius);
-  ctx.closePath();
-  ctx.fill();
-  drawCloverShape(ctx, size / 2, size * 0.44, size * 0.19, clover);
+  const customImage = getPwaCustomIconImage();
+  if (customImage) {
+    const img = new Image();
+    img.onload = function() { ctx.drawImage(img, 0, 0, size, size); };
+    img.src = customImage;
+    return;
+  }
+  const bg = document.getElementById('pwaIconBgColor')?.value || '#ffffff';
+  drawPinwheelIcon(ctx, size, bg);
 };
 
 window.resetPwaIconColors = function() {
-  document.getElementById('pwaIconBgColor').value = '#03c75a';
-  document.getElementById('pwaIconCloverColor').value = '#ffffff';
+  document.getElementById('pwaIconBgColor').value = '#ffffff';
+  try { localStorage.removeItem('pwa_icon_custom_image'); } catch (error) { /* 무시 */ }
+  const fileInput = document.getElementById('pwaIconImageInput');
+  if (fileInput) fileInput.value = '';
   previewPwaIcon();
 };
 
 function loadPwaIconColorInputs() {
   const colors = getPwaIconColors();
   const bgInput = document.getElementById('pwaIconBgColor');
-  const cloverInput = document.getElementById('pwaIconCloverColor');
   if (bgInput) bgInput.value = colors.bg;
-  if (cloverInput) cloverInput.value = colors.clover;
   previewPwaIcon();
 }
 
