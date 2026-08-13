@@ -123,7 +123,7 @@ body {
 .sidebar-item-icon { display: inline-block; margin-right: 6px; }
 .sidebar-item-label { display: inline-block; white-space: nowrap; }
 .sidebar-bottom { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-color); }
-.app-content { width: min(600px, calc(100% - 40px)); margin: 40px auto; }
+.app-content { flex: 1; min-width: 0; width: min(600px, calc(100vw - 280px)); margin: 40px auto; box-sizing: border-box; }
 .chat-view { height: min(720px, calc(100vh - 80px)); min-height: 500px; overflow: hidden; border: 1px solid var(--border-color); border-radius: 14px; background: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; }
 .chat-header { padding: 16px 18px; background: var(--card-bg); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); }
 .chat-header-title-row { flex: 1; min-width: 0; overflow: hidden; }
@@ -227,7 +227,7 @@ body {
   .sidebar-item-icon { margin-right: 0; font-size: 18px; line-height: 1; }
   .sidebar-item-label { font-size: 10px; line-height: 1.15; }
   .sidebar-item .unread-badge { position: absolute; top: 4px; right: 6px; min-width: 15px; height: 15px; font-size: 9px; margin-left: 0; border-width: 1px; }
-  .app-content { width: calc(100% - 28px); margin: 24px auto; }
+  .app-content { flex: 1; min-width: 0; width: calc(100vw - 90px); max-width: 100%; margin: 24px auto; box-sizing: border-box; }
 }
 @media (max-width: 480px) {
   .admin-sidebar { grid-template-columns: repeat(2, 1fr); }
@@ -377,6 +377,9 @@ button:hover { background-color: var(--cafe-green-hover); }
   gap: 12px;
   cursor: pointer;
   transition: background-color 0.2s, border-color 0.2s;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .post-list-item:hover {
   border-color: var(--cafe-green);
@@ -765,6 +768,24 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div style="margin-bottom: 20px;">
 <label style="font-size: 13px; color: var(--text-sub);">사이드바 메뉴 순서 (화살표 버튼으로 순서 변경)</label>
 <div id="sidebarOrderList" style="border:1px solid var(--border-color); border-radius:8px; overflow:hidden; margin-top:6px;"></div>
+</div>
+<div style="margin-bottom: 20px;">
+<label style="font-size: 13px; color: var(--text-sub);">홈 화면 앱 아이콘 색상</label>
+<div style="display:flex; gap:14px; align-items:center; margin-top:8px; flex-wrap:wrap;">
+<canvas id="pwaIconPreview" width="64" height="64" style="border-radius:14px; flex-shrink:0;"></canvas>
+<div style="display:flex; flex-direction:column; gap:8px;">
+<div style="display:flex; align-items:center; gap:8px;">
+<input type="color" id="pwaIconBgColor" value="#03c75a" oninput="previewPwaIcon()" style="width:40px; height:32px; padding:2px; margin:0;">
+<span style="font-size:12px; color: var(--text-sub);">배경색</span>
+</div>
+<div style="display:flex; align-items:center; gap:8px;">
+<input type="color" id="pwaIconCloverColor" value="#ffffff" oninput="previewPwaIcon()" style="width:40px; height:32px; padding:2px; margin:0;">
+<span style="font-size:12px; color: var(--text-sub);">클로버 색</span>
+</div>
+</div>
+<button onclick="resetPwaIconColors()" style="flex:0 0 auto; background: var(--border-color); padding:8px 12px; font-size:12px;">기본값으로</button>
+</div>
+<div style="font-size:11px; color: var(--text-sub); margin-top:6px;">색을 바꾼 뒤 '설정 저장'을 누르고, 홈 화면에서 아이콘을 삭제 후 다시 추가해야 새 색이 적용돼요.</div>
 </div>
 <button onclick="saveSettingsView()" style="width: 100%; margin-bottom: 10px;">설정 저장</button>
 <button onclick="requestPushPermission()" style="width: 100%; margin-bottom: 10px; background: var(--border-color);">브라우저 알림 켜기</button>
@@ -2222,7 +2243,7 @@ window.askAiForPost = async function(postId) {
     const questionText = postData.content || '';
     const postImages = getPostImages(postData); // data URL 배열 (예: data:image/jpeg;base64,....)
     const promptParts = [{
-      text: `너는 친절한 수학 선생님이야. 아래 학생의 수학 질문에 대해 풀이 과정을 단계별로 알기 쉽게 한국어로 설명하고, 마지막에 최종 답을 명확히 정리해줘. 이미지가 첨부되어 있다면 이미지 속 문제도 함께 참고해서 풀어줘. 너무 길지 않게, 핵심 위주로 답변해줘.\n\n[학생 질문]\n${questionText || '(첨부된 이미지의 문제를 풀어주세요)'}`
+      text: `너는 친절한 수학 선생님이야. 아래 학생의 수학 질문에 대해 풀이 과정을 단계별로 알기 쉽게 한국어로 설명하고, 마지막에 최종 답을 명확히 정리해줘. 이미지가 첨부되어 있다면 이미지 속 문제도 함께 참고해서 풀어줘. 너무 길지 않게, 핵심 위주로 답변해줘.\n\n[표기법 규칙 - 반드시 지켜줘]\n- LaTeX 문법(\\frac, \\times, \\sqrt, $...$, \\left, \\right 등)을 절대 쓰지 마.\n- 분수는 "a/b" 형태로, 제곱근은 "√" 기호로, 곱셈은 "×", 나눗셈은 "÷"로 표기해.\n- 지수는 "x^2"처럼 캐럿(^)으로 표기해.\n- 특수 마크업 없이 순수 텍스트와 이모지, 일반 기호만 사용해서 사람이 채팅으로 읽기 편하게 작성해.\n\n[학생 질문]\n${questionText || '(첨부된 이미지의 문제를 풀어주세요)'}`
     }];
     for (const imgSrc of postImages) {
       const match = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/.exec(imgSrc);
@@ -3631,6 +3652,7 @@ window.openSettingsFromSidebar = async function() {
   document.getElementById('settingsViewId').value = currentUser;
   document.getElementById('settingsViewPw').value = '';
   renderSidebarOrderEditor();
+  loadPwaIconColorInputs();
   try {
     const userSnap = await getDoc(doc(db, 'users', currentUser));
     if (userSnap.exists()) {
@@ -3653,12 +3675,16 @@ window.saveSettingsView = async function() {
   const newTheme = document.getElementById('settingsViewTheme').value;
   const newAccent = document.getElementById('settingsAccentColor').value;
   const newCustomBg = document.getElementById('settingsCustomBg').value;
+  const newIconBg = document.getElementById('pwaIconBgColor').value;
+  const newIconClover = document.getElementById('pwaIconCloverColor').value;
   try {
     const updateData = { theme: newTheme, accentColor: newAccent, customBg: newCustomBg };
     if (newPw) updateData.password = newPw;
     await updateDoc(doc(db, 'users', currentUser), updateData);
     userProfiles[currentUser] = { ...(userProfiles[currentUser] || {}), ...updateData };
     applyCustomBg(newCustomBg);
+    savePwaIconColors(newIconBg, newIconClover);
+    setupPwaManifest();
     alert('설정이 성공적으로 저장되었습니다!');
     document.getElementById('settingsViewPw').value = '';
   } catch (error) {
@@ -8273,13 +8299,49 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ===== PWA 설치 지원 =====
-function generateAppIconDataUrl(size) {
+function getPwaIconColors() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('pwa_icon_colors') || 'null');
+    if (saved && saved.bg && saved.clover) return saved;
+  } catch (error) { /* 무시 */ }
+  return { bg: '#03c75a', clover: '#ffffff' };
+}
+
+function savePwaIconColors(bg, clover) {
+  localStorage.setItem('pwa_icon_colors', JSON.stringify({ bg, clover }));
+}
+
+function drawCloverShape(ctx, cx, cy, leafSize, color) {
+  ctx.fillStyle = color;
+  const offsets = [
+    [-leafSize * 0.62, -leafSize * 0.62],
+    [leafSize * 0.62, -leafSize * 0.62],
+    [-leafSize * 0.62, leafSize * 0.62],
+    [leafSize * 0.62, leafSize * 0.62]
+  ];
+  offsets.forEach(([ox, oy]) => {
+    ctx.beginPath();
+    ctx.ellipse(cx + ox, cy + oy, leafSize * 0.62, leafSize * 0.46, Math.atan2(oy, ox) + Math.PI / 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  // 줄기
+  ctx.strokeStyle = color;
+  ctx.lineWidth = leafSize * 0.16;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy + leafSize * 0.3);
+  ctx.lineTo(cx, cy + leafSize * 1.5);
+  ctx.stroke();
+}
+
+function generateAppIconDataUrl(size, colorsOverride) {
+  const colors = colorsOverride || getPwaIconColors();
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d');
   const radius = size * 0.2;
-  ctx.fillStyle = '#03c75a';
+  ctx.fillStyle = colors.bg;
   ctx.beginPath();
   ctx.moveTo(radius, 0);
   ctx.arcTo(size, 0, size, size, radius);
@@ -8288,11 +8350,44 @@ function generateAppIconDataUrl(size) {
   ctx.arcTo(0, 0, size, 0, radius);
   ctx.closePath();
   ctx.fill();
-  ctx.font = `${Math.round(size * 0.58)}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('🍀', size / 2, size / 2 + size * 0.04);
+  drawCloverShape(ctx, size / 2, size * 0.44, size * 0.19, colors.clover);
   return canvas.toDataURL('image/png');
+}
+
+window.previewPwaIcon = function() {
+  const bg = document.getElementById('pwaIconBgColor')?.value || '#03c75a';
+  const clover = document.getElementById('pwaIconCloverColor')?.value || '#ffffff';
+  const canvas = document.getElementById('pwaIconPreview');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const size = canvas.width;
+  ctx.clearRect(0, 0, size, size);
+  const radius = size * 0.2;
+  ctx.fillStyle = bg;
+  ctx.beginPath();
+  ctx.moveTo(radius, 0);
+  ctx.arcTo(size, 0, size, size, radius);
+  ctx.arcTo(size, size, 0, size, radius);
+  ctx.arcTo(0, size, 0, 0, radius);
+  ctx.arcTo(0, 0, size, 0, radius);
+  ctx.closePath();
+  ctx.fill();
+  drawCloverShape(ctx, size / 2, size * 0.44, size * 0.19, clover);
+};
+
+window.resetPwaIconColors = function() {
+  document.getElementById('pwaIconBgColor').value = '#03c75a';
+  document.getElementById('pwaIconCloverColor').value = '#ffffff';
+  previewPwaIcon();
+};
+
+function loadPwaIconColorInputs() {
+  const colors = getPwaIconColors();
+  const bgInput = document.getElementById('pwaIconBgColor');
+  const cloverInput = document.getElementById('pwaIconCloverColor');
+  if (bgInput) bgInput.value = colors.bg;
+  if (cloverInput) cloverInput.value = colors.clover;
+  previewPwaIcon();
 }
 
 function setupPwaManifest() {
