@@ -795,8 +795,17 @@ button:hover { background-color: var(--cafe-green-hover); }
 </div>
 </div>
 </section>
-<section id="popularView" class="hidden">
+<section id="rankingView" class="hidden">
 <div class="box">
+<div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;">
+<button id="rankingTabMembersBtn" class="page-btn active" onclick="setRankingTab('members')" style="padding:6px 12px; font-size:12px;">회원 조회수 랭킹</button>
+<button id="rankingTabPopularBtn" class="page-btn" onclick="setRankingTab('popular')" style="padding:6px 12px; font-size:12px;">🔥 인기 짤</button>
+</div>
+<div id="rankingMembersTab">
+<h2 style="margin-top: 0;">회원 조회수 랭킹</h2>
+<div id="rankingContainer">불러오는 중...</div>
+</div>
+<div id="rankingPopularTab" class="hidden">
 <h2 style="margin-top: 0;">인기 짤</h2>
 <div class="popular-sort" id="popularPeriodBar">
 <button id="periodTodayBtn" onclick="setPopularPeriod('today')">오늘</button>
@@ -810,15 +819,10 @@ button:hover { background-color: var(--cafe-green-hover); }
 </div>
 <div id="popularPostsContainer">인기 짤을 불러오는 중...</div>
 </div>
-<div class="box">
+</div>
+<div id="hotRoomsBox" class="box hidden">
 <h2 style="margin-top: 0;">🔥 핫한 채팅방</h2>
 <div id="hotRoomsContainer">불러오는 중...</div>
-</div>
-</section>
-<section id="rankingView" class="hidden">
-<div class="box">
-<h2 style="margin-top: 0;">회원 조회수 랭킹</h2>
-<div id="rankingContainer">불러오는 중...</div>
 </div>
 </section>
 <section id="gameView" class="hidden">
@@ -1274,7 +1278,6 @@ async function recordDailyVisit() {
 // ===== 사이드바 메뉴 순서 커스터마이징 =====
 const SIDEBAR_ITEMS = [
   { key: 'cafe', icon: '☕', label: '카페' },
-  { key: 'popular', icon: '🔥', label: '인기 짤' },
   { key: 'ranking', icon: '🏆', label: '랭킹' },
   { key: 'game', icon: '🎮', label: '미니게임' },
   { key: 'aiChat', icon: '✨', label: 'AI 채팅' },
@@ -1284,7 +1287,7 @@ const SIDEBAR_ITEMS = [
   { key: 'notifications', icon: '🔔', label: '알림' },
   { key: 'settings', icon: '⚙️', label: '설정' }
 ];
-const SIDEBAR_ITEM_IDS = { cafe: 'cafeNavBtn', popular: 'popularNavBtn', ranking: 'rankingNavBtn', game: 'gameNavBtn', aiChat: 'aiChatNavBtn', bookmarks: 'bookmarksNavBtn', profile: 'profileNavBtn', chat: 'chatNavBtn', notifications: 'notificationsNavBtn', settings: 'settingsNavBtn' };
+const SIDEBAR_ITEM_IDS = { cafe: 'cafeNavBtn', ranking: 'rankingNavBtn', game: 'gameNavBtn', aiChat: 'aiChatNavBtn', bookmarks: 'bookmarksNavBtn', profile: 'profileNavBtn', chat: 'chatNavBtn', notifications: 'notificationsNavBtn', settings: 'settingsNavBtn' };
 
 function getSidebarOrderKey() {
   return `cafe_sidebar_order_${currentUser || 'guest'}`;
@@ -1322,7 +1325,7 @@ function renderSidebarNav() {
     return `<button id="${id}" class="sidebar-item" onclick="${onclick}"><span class="sidebar-item-icon">${item.icon}</span><span class="sidebar-item-label">${item.label}</span>${badge}</button>`;
   }).join('');
   // 재렌더링 후에도 현재 보고 있는 화면의 활성 표시를 유지
-  const activeSection = ['cafe', 'popular', 'ranking', 'game', 'aiChat', 'bookmarks', 'chat', 'notifications', 'settings', 'admin'].find(sec => !document.getElementById(`${sec}View`)?.classList.contains('hidden'));
+  const activeSection = ['cafe', 'ranking', 'game', 'aiChat', 'bookmarks', 'chat', 'notifications', 'settings', 'admin'].find(sec => !document.getElementById(`${sec}View`)?.classList.contains('hidden'));
   if (activeSection && SIDEBAR_ITEM_IDS[activeSection]) {
     document.getElementById(SIDEBAR_ITEM_IDS[activeSection])?.classList.add('active');
   }
@@ -3208,7 +3211,6 @@ window.showAppSection = function(section) {
   const isCafe = section === 'cafe';
   const isChat = section === 'chat';
   const isSettings = section === 'settings';
-  const isPopular = section === 'popular';
   const isNotifications = section === 'notifications';
   const isRanking = section === 'ranking';
   const isGame = section === 'game';
@@ -3220,7 +3222,6 @@ window.showAppSection = function(section) {
   document.getElementById('cafeView').classList.toggle('hidden', !isCafe);
   document.getElementById('chatView').classList.toggle('hidden', !isChat);
   document.getElementById('settingsView').classList.toggle('hidden', !isSettings);
-  document.getElementById('popularView').classList.toggle('hidden', !isPopular);
   document.getElementById('notificationsView').classList.toggle('hidden', !isNotifications);
   document.getElementById('rankingView').classList.toggle('hidden', !isRanking);
   document.getElementById('gameView').classList.toggle('hidden', !isGame);
@@ -3232,7 +3233,6 @@ window.showAppSection = function(section) {
   document.getElementById('cafeNavBtn').classList.toggle('active', isCafe);
   document.getElementById('chatNavBtn').classList.toggle('active', isChat);
   document.getElementById('settingsNavBtn').classList.toggle('active', isSettings);
-  document.getElementById('popularNavBtn').classList.toggle('active', isPopular);
   document.getElementById('notificationsNavBtn').classList.toggle('active', isNotifications);
   document.getElementById('rankingNavBtn').classList.toggle('active', isRanking);
   document.getElementById('gameNavBtn').classList.toggle('active', isGame || isGamePlay);
@@ -3242,9 +3242,8 @@ window.showAppSection = function(section) {
   document.getElementById('adminNavBtn').classList.toggle('active', isAdmin);
   if (isChat) openChat();
   if (isAiChat) openAiChatView();
-  if (isPopular) { loadPopularPosts(); loadHotRooms(); }
   if (isNotifications) openNotifications();
-  if (isRanking) loadRankingView();
+  if (isRanking) { loadRankingView(); setRankingTab('members'); }
   if (isGame) loadGameView();
   if (isGamePlay) loadGamePlayDetail();
   if (isBookmarks) loadBookmarksView();
@@ -3384,6 +3383,16 @@ window.openPopularPost = function(postId) {
   openDetail(postId);
 }
 
+window.setRankingTab = function(tab) {
+  const isMembers = tab === 'members';
+  document.getElementById('rankingTabMembersBtn').classList.toggle('active', isMembers);
+  document.getElementById('rankingTabPopularBtn').classList.toggle('active', !isMembers);
+  document.getElementById('rankingMembersTab').classList.toggle('hidden', !isMembers);
+  document.getElementById('rankingPopularTab').classList.toggle('hidden', isMembers);
+  document.getElementById('hotRoomsBox').classList.toggle('hidden', isMembers);
+  if (!isMembers) { loadPopularPosts(); loadHotRooms(); }
+};
+
 async function loadRankingView() {
   const container = document.getElementById('rankingContainer');
   container.innerHTML = '불러오는 중...';
@@ -3461,7 +3470,7 @@ async function loadBookmarksView() {
 // ===== 회원 프로필 페이지 =====
 window.openProfile = function(username) {
   if (!username) return;
-  const current = ['cafe', 'popular', 'ranking', 'bookmarks', 'chat', 'notifications', 'settings', 'admin'].find(sec => !document.getElementById(`${sec}View`)?.classList.contains('hidden'));
+  const current = ['cafe', 'ranking', 'bookmarks', 'chat', 'notifications', 'settings', 'admin'].find(sec => !document.getElementById(`${sec}View`)?.classList.contains('hidden'));
   if (current) profileViewPreviousSection = current;
   if (profileViewUser !== username) profileEditMode = false;
   profileViewUser = username;
