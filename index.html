@@ -883,10 +883,14 @@ button:hover { background-color: var(--cafe-green-hover); }
 </section>
 <section id="aiChatView" class="hidden">
 <div class="box" style="display:flex; flex-direction:column; height: calc(100dvh - 100px); max-height: 720px; padding-bottom: 10px;">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px; flex-wrap:wrap;">
 <h2 style="margin:0;">✨ AI와 대화하기</h2>
-<button onclick="clearAiChat()" style="padding:6px 10px; font-size:12px;">🗑️ 대화 초기화</button>
+<div style="display:flex; gap:6px;">
+<button onclick="createNewAiChat()" style="padding:6px 10px; font-size:12px;">➕ 새 대화</button>
+<button onclick="deleteCurrentAiChat()" style="padding:6px 10px; font-size:12px;">🗑️ 삭제</button>
 </div>
+</div>
+<select id="aiChatSelector" onchange="switchAiChat(this.value)" style="width:100%; margin-bottom:10px; box-sizing:border-box;"></select>
 <div id="aiChatMessages" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding:4px 2px; margin-bottom:10px;"></div>
 <div style="display:flex; gap:8px; flex-shrink:0;">
 <textarea id="aiChatInput" rows="1" placeholder="메시지를 입력하세요..." style="flex:1; resize:none; box-sizing:border-box;" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendAiChatMessage(); }"></textarea>
@@ -2301,26 +2305,74 @@ window.askAiForPost = async function(postId) {
   }
 };
 
-function getAiChatStorageKey() {
-  return `ai_chat_history_${currentUser || 'guest'}`;
+function getAiChatsKey() {
+  return `ai_chats_${currentUser || 'guest'}`;
 }
 
-function getAiChatHistory() {
+function getActiveAiChatKey() {
+  return `ai_chat_active_${currentUser || 'guest'}`;
+}
+
+function getAiChats() {
   try {
-    const saved = JSON.parse(localStorage.getItem(getAiChatStorageKey()) || 'null');
+    const saved = JSON.parse(localStorage.getItem(getAiChatsKey()) || 'null');
     if (Array.isArray(saved)) return saved;
   } catch (error) { /* 무시 */ }
   return [];
 }
 
-function saveAiChatHistory(history) {
-  try { localStorage.setItem(getAiChatStorageKey(), JSON.stringify(history)); } catch (error) { console.error(error); }
+function saveAiChats(chats) {
+  try { localStorage.setItem(getAiChatsKey(), JSON.stringify(chats)); } catch (error) { console.error(error); }
+}
+
+function getActiveAiChatId() {
+  try { return localStorage.getItem(getActiveAiChatKey()) || null; } catch (error) { return null; }
+}
+
+function setActiveAiChatId(id) {
+  try { localStorage.setItem(getActiveAiChatKey(), id); } catch (error) { console.error(error); }
+}
+
+function makeNewAiChat() {
+  return { id: 'chat_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6), title: '새 대화', messages: [], updatedAt: Date.now() };
+}
+
+// 대화 목록이 비어있으면 기본 대화를 만들고, 활성 대화 id가 유효하지 않으면 첫 대화로 보정
+function ensureAiChats() {
+  let chats = getAiChats();
+  if (chats.length === 0) {
+    const newChat = makeNewAiChat();
+    chats = [newChat];
+    saveAiChats(chats);
+    setActiveAiChatId(newChat.id);
+  }
+  const activeId = getActiveAiChatId();
+  if (!activeId || !chats.find(c => c.id === activeId)) {
+    setActiveAiChatId(chats[0].id);
+  }
+  return chats;
+}
+
+function getCurrentAiChat() {
+  const chats = ensureAiChats();
+  const activeId = getActiveAiChatId();
+  return chats.find(c => c.id === activeId) || chats[0];
+}
+
+function renderAiChatSelector() {
+  const select = document.getElementById('aiChatSelector');
+  if (!select) return;
+  const chats = ensureAiChats();
+  const activeId = getActiveAiChatId();
+  const sorted = [...chats].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  select.innerHTML = sorted.map(c => `<option value="${c.id}" ${c.id === activeId ? 'selected' : ''}>${escapeHtml(c.title || '새 대화')}</option>`).join('');
 }
 
 function renderAiChatMessages() {
   const container = document.getElementById('aiChatMessages');
   if (!container) return;
-  const history = getAiChatHistory();
+  const chat = getCurrentAiChat();
+  const history = chat ? chat.messages : [];
   if (history.length === 0) {
     container.innerHTML = `<div style="text-align:center; color: var(--text-sub); font-size:13px; margin-top:30px;">✨ AI에게 무엇이든 물어보세요!</div>`;
     return;
@@ -2333,12 +2385,36 @@ function renderAiChatMessages() {
 }
 
 window.openAiChatView = function() {
+  ensureAiChats();
+  renderAiChatSelector();
   renderAiChatMessages();
 };
 
-window.clearAiChat = function() {
-  if (!confirm('대화 내용을 모두 지울까요?')) return;
-  saveAiChatHistory([]);
+window.createNewAiChat = function() {
+  const chats = getAiChats();
+  const newChat = makeNewAiChat();
+  chats.push(newChat);
+  saveAiChats(chats);
+  setActiveAiChatId(newChat.id);
+  renderAiChatSelector();
+  renderAiChatMessages();
+  document.getElementById('aiChatInput')?.focus();
+};
+
+window.switchAiChat = function(id) {
+  setActiveAiChatId(id);
+  renderAiChatMessages();
+};
+
+window.deleteCurrentAiChat = function() {
+  if (!confirm('이 대화를 삭제할까요?')) return;
+  let chats = getAiChats();
+  const activeId = getActiveAiChatId();
+  chats = chats.filter(c => c.id !== activeId);
+  if (chats.length === 0) chats = [makeNewAiChat()];
+  saveAiChats(chats);
+  setActiveAiChatId(chats[0].id);
+  renderAiChatSelector();
   renderAiChatMessages();
 };
 
@@ -2350,10 +2426,19 @@ window.sendAiChatMessage = async function() {
     alert('아직 AI 기능이 설정되지 않았어요. (관리자에게 Gemini API 키 설정을 요청하세요)');
     return;
   }
-  const history = getAiChatHistory();
-  history.push({ role: 'user', text });
-  saveAiChatHistory(history);
+  const chats = getAiChats();
+  const activeId = getActiveAiChatId();
+  const chatIndex = chats.findIndex(c => c.id === activeId);
+  if (chatIndex === -1) return;
+  const chat = chats[chatIndex];
+  chat.messages.push({ role: 'user', text });
+  if (!chat.title || chat.title === '새 대화') {
+    chat.title = text.length > 24 ? text.slice(0, 24) + '…' : text;
+  }
+  chat.updatedAt = Date.now();
+  saveAiChats(chats);
   input.value = '';
+  renderAiChatSelector();
   renderAiChatMessages();
   const container = document.getElementById('aiChatMessages');
   const loadingEl = document.createElement('div');
@@ -2365,7 +2450,7 @@ window.sendAiChatMessage = async function() {
   const sendBtn = document.getElementById('aiChatSendBtn');
   if (sendBtn) sendBtn.disabled = true;
   try {
-    const contents = history.map(msg => ({
+    const contents = chat.messages.map(msg => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.text }]
     }));
@@ -2381,9 +2466,14 @@ window.sendAiChatMessage = async function() {
     const data = await response.json();
     const answerText = data?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim();
     if (!answerText) throw new Error('AI가 답변을 생성하지 못했습니다.');
-    const updatedHistory = getAiChatHistory();
-    updatedHistory.push({ role: 'model', text: answerText });
-    saveAiChatHistory(updatedHistory);
+    const freshChats = getAiChats();
+    const freshIndex = freshChats.findIndex(c => c.id === activeId);
+    if (freshIndex !== -1) {
+      freshChats[freshIndex].messages.push({ role: 'model', text: answerText });
+      freshChats[freshIndex].updatedAt = Date.now();
+      saveAiChats(freshChats);
+    }
+    renderAiChatSelector();
     renderAiChatMessages();
   } catch (error) {
     console.error(error);
