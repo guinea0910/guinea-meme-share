@@ -881,6 +881,19 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="bookmarksContainer">불러오는 중...</div>
 </div>
 </section>
+<section id="aiChatView" class="hidden">
+<div class="box" style="display:flex; flex-direction:column; height: calc(100dvh - 100px); max-height: 720px; padding-bottom: 10px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+<h2 style="margin:0;">✨ AI와 대화하기</h2>
+<button onclick="clearAiChat()" style="padding:6px 10px; font-size:12px;">🗑️ 대화 초기화</button>
+</div>
+<div id="aiChatMessages" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding:4px 2px; margin-bottom:10px;"></div>
+<div style="display:flex; gap:8px; flex-shrink:0;">
+<textarea id="aiChatInput" rows="1" placeholder="메시지를 입력하세요..." style="flex:1; resize:none; box-sizing:border-box;" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendAiChatMessage(); }"></textarea>
+<button id="aiChatSendBtn" onclick="sendAiChatMessage()" style="flex-shrink:0; padding:0 16px;">전송</button>
+</div>
+</div>
+</section>
 <section id="profileView" class="hidden">
 <div class="box">
 <div class="profile-top-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
@@ -1252,13 +1265,14 @@ const SIDEBAR_ITEMS = [
   { key: 'popular', icon: '🔥', label: '인기 짤' },
   { key: 'ranking', icon: '🏆', label: '랭킹' },
   { key: 'game', icon: '🎮', label: '미니게임' },
+  { key: 'aiChat', icon: '✨', label: 'AI 채팅' },
   { key: 'bookmarks', icon: '⭐', label: '북마크' },
   { key: 'profile', icon: '👤', label: '프로필' },
   { key: 'chat', icon: '💬', label: '채팅' },
   { key: 'notifications', icon: '🔔', label: '알림' },
   { key: 'settings', icon: '⚙️', label: '설정' }
 ];
-const SIDEBAR_ITEM_IDS = { cafe: 'cafeNavBtn', popular: 'popularNavBtn', ranking: 'rankingNavBtn', game: 'gameNavBtn', bookmarks: 'bookmarksNavBtn', profile: 'profileNavBtn', chat: 'chatNavBtn', notifications: 'notificationsNavBtn', settings: 'settingsNavBtn' };
+const SIDEBAR_ITEM_IDS = { cafe: 'cafeNavBtn', popular: 'popularNavBtn', ranking: 'rankingNavBtn', game: 'gameNavBtn', aiChat: 'aiChatNavBtn', bookmarks: 'bookmarksNavBtn', profile: 'profileNavBtn', chat: 'chatNavBtn', notifications: 'notificationsNavBtn', settings: 'settingsNavBtn' };
 
 function getSidebarOrderKey() {
   return `cafe_sidebar_order_${currentUser || 'guest'}`;
@@ -1296,7 +1310,7 @@ function renderSidebarNav() {
     return `<button id="${id}" class="sidebar-item" onclick="${onclick}"><span class="sidebar-item-icon">${item.icon}</span><span class="sidebar-item-label">${item.label}</span>${badge}</button>`;
   }).join('');
   // 재렌더링 후에도 현재 보고 있는 화면의 활성 표시를 유지
-  const activeSection = ['cafe', 'popular', 'ranking', 'game', 'bookmarks', 'chat', 'notifications', 'settings', 'admin'].find(sec => !document.getElementById(`${sec}View`)?.classList.contains('hidden'));
+  const activeSection = ['cafe', 'popular', 'ranking', 'game', 'aiChat', 'bookmarks', 'chat', 'notifications', 'settings', 'admin'].find(sec => !document.getElementById(`${sec}View`)?.classList.contains('hidden'));
   if (activeSection && SIDEBAR_ITEM_IDS[activeSection]) {
     document.getElementById(SIDEBAR_ITEM_IDS[activeSection])?.classList.add('active');
   }
@@ -2287,6 +2301,99 @@ window.askAiForPost = async function(postId) {
   }
 };
 
+function getAiChatStorageKey() {
+  return `ai_chat_history_${currentUser || 'guest'}`;
+}
+
+function getAiChatHistory() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(getAiChatStorageKey()) || 'null');
+    if (Array.isArray(saved)) return saved;
+  } catch (error) { /* 무시 */ }
+  return [];
+}
+
+function saveAiChatHistory(history) {
+  try { localStorage.setItem(getAiChatStorageKey(), JSON.stringify(history)); } catch (error) { console.error(error); }
+}
+
+function renderAiChatMessages() {
+  const container = document.getElementById('aiChatMessages');
+  if (!container) return;
+  const history = getAiChatHistory();
+  if (history.length === 0) {
+    container.innerHTML = `<div style="text-align:center; color: var(--text-sub); font-size:13px; margin-top:30px;">✨ AI에게 무엇이든 물어보세요!</div>`;
+    return;
+  }
+  container.innerHTML = history.map(msg => {
+    const isUser = msg.role === 'user';
+    return `<div style="align-self:${isUser ? 'flex-end' : 'flex-start'}; max-width:80%; background:${isUser ? 'var(--cafe-green)' : 'var(--card-bg)'}; color:${isUser ? '#fff' : 'var(--text-main)'}; border:${isUser ? 'none' : '1px solid var(--border-color)'}; padding:9px 12px; border-radius:12px; white-space:pre-wrap; line-height:1.5; font-size:14px; word-break:break-word;">${escapeHtml(msg.text)}</div>`;
+  }).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
+window.openAiChatView = function() {
+  renderAiChatMessages();
+};
+
+window.clearAiChat = function() {
+  if (!confirm('대화 내용을 모두 지울까요?')) return;
+  saveAiChatHistory([]);
+  renderAiChatMessages();
+};
+
+window.sendAiChatMessage = async function() {
+  const input = document.getElementById('aiChatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  if (!GEMINI_API_KEY || GEMINI_API_KEY.includes('여기에')) {
+    alert('아직 AI 기능이 설정되지 않았어요. (관리자에게 Gemini API 키 설정을 요청하세요)');
+    return;
+  }
+  const history = getAiChatHistory();
+  history.push({ role: 'user', text });
+  saveAiChatHistory(history);
+  input.value = '';
+  renderAiChatMessages();
+  const container = document.getElementById('aiChatMessages');
+  const loadingEl = document.createElement('div');
+  loadingEl.id = 'aiChatLoadingBubble';
+  loadingEl.style.cssText = 'align-self:flex-start; max-width:80%; background:var(--card-bg); border:1px solid var(--border-color); padding:9px 12px; border-radius:12px; font-size:14px; color: var(--text-sub);';
+  loadingEl.textContent = '✨ 생각하는 중...';
+  container.appendChild(loadingEl);
+  container.scrollTop = container.scrollHeight;
+  const sendBtn = document.getElementById('aiChatSendBtn');
+  if (sendBtn) sendBtn.disabled = true;
+  try {
+    const contents = history.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.text }]
+    }));
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents })
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Gemini API 오류 (${response.status}): ${errText}`);
+    }
+    const data = await response.json();
+    const answerText = data?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('').trim();
+    if (!answerText) throw new Error('AI가 답변을 생성하지 못했습니다.');
+    const updatedHistory = getAiChatHistory();
+    updatedHistory.push({ role: 'model', text: answerText });
+    saveAiChatHistory(updatedHistory);
+    renderAiChatMessages();
+  } catch (error) {
+    console.error(error);
+    loadingEl.remove();
+    alert('AI 응답 실패: ' + error.message);
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
+  }
+};
+
 window.startReply = function(postId, commentId, authorName) {
   replyContext = { postId, parentId: commentId, authorName };
   const label = document.getElementById(`replyLabel_${postId}`);
@@ -2933,6 +3040,7 @@ window.showAppSection = function(section) {
   const isRanking = section === 'ranking';
   const isGame = section === 'game';
   const isGamePlay = section === 'gamePlay';
+  const isAiChat = section === 'aiChat';
   const isBookmarks = section === 'bookmarks';
   const isProfile = section === 'profile';
   const isAdmin = section === 'admin';
@@ -2944,6 +3052,7 @@ window.showAppSection = function(section) {
   document.getElementById('rankingView').classList.toggle('hidden', !isRanking);
   document.getElementById('gameView').classList.toggle('hidden', !isGame);
   document.getElementById('gamePlayView').classList.toggle('hidden', !isGamePlay);
+  document.getElementById('aiChatView').classList.toggle('hidden', !isAiChat);
   document.getElementById('bookmarksView').classList.toggle('hidden', !isBookmarks);
   document.getElementById('profileView').classList.toggle('hidden', !isProfile);
   document.getElementById('adminView').classList.toggle('hidden', !isAdmin);
@@ -2954,10 +3063,12 @@ window.showAppSection = function(section) {
   document.getElementById('notificationsNavBtn').classList.toggle('active', isNotifications);
   document.getElementById('rankingNavBtn').classList.toggle('active', isRanking);
   document.getElementById('gameNavBtn').classList.toggle('active', isGame || isGamePlay);
+  document.getElementById('aiChatNavBtn').classList.toggle('active', isAiChat);
   document.getElementById('bookmarksNavBtn').classList.toggle('active', isBookmarks);
   document.getElementById('profileNavBtn').classList.toggle('active', isProfile && profileViewUser === currentUser);
   document.getElementById('adminNavBtn').classList.toggle('active', isAdmin);
   if (isChat) openChat();
+  if (isAiChat) openAiChatView();
   if (isPopular) { loadPopularPosts(); loadHotRooms(); }
   if (isNotifications) openNotifications();
   if (isRanking) loadRankingView();
