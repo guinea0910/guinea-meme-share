@@ -993,6 +993,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button class="active" onclick="setNotifFilter('all')">전체</button>
 <button onclick="setNotifFilter('transfer')">위임</button>
 <button onclick="setNotifFilter('invite')">초대</button>
+<button onclick="setNotifFilter('game')">대결</button>
 <button onclick="setNotifFilter('chat')">채팅</button>
 <button onclick="setNotifFilter('mention')">멘션</button>
 <button onclick="setNotifFilter('reply')">답글</button>
@@ -1196,6 +1197,16 @@ let unreadChatUnsubscribers = [];
 let unsubscribeNotifications = null;
 let unsubscribeChatInvites = null;
 let unsubscribeOwnerTransfers = null;
+let unsubscribeGamePvpChallenges = null;
+let unsubscribeSentGamePvpChallenges = null;
+let receivedGameChallenges = [];
+let sentGameChallenges = [];
+let pvpState = null;
+let pvpPendingEntry = null;
+const PVP_GAME_CONFIG = {
+  ttt: { size: 3, winLen: 3, label: '틱택토', winPoints: 20, drawPoints: 8 },
+  omok: { size: 13, winLen: 5, label: '오목', winPoints: 40, drawPoints: 15 }
+};
 let mentionNotifications = [];
 let chatInvites = [];
 let ownerTransferRequests = [];
@@ -1752,6 +1763,11 @@ window.handleLogout = function() {
   if (unsubscribeNotifications) { unsubscribeNotifications(); unsubscribeNotifications = null; }
   if (unsubscribeChatInvites) { unsubscribeChatInvites(); unsubscribeChatInvites = null; }
   if (unsubscribeOwnerTransfers) { unsubscribeOwnerTransfers(); unsubscribeOwnerTransfers = null; }
+  if (unsubscribeGamePvpChallenges) { unsubscribeGamePvpChallenges(); unsubscribeGamePvpChallenges = null; }
+  if (unsubscribeSentGamePvpChallenges) { unsubscribeSentGamePvpChallenges(); unsubscribeSentGamePvpChallenges = null; }
+  if (typeof stopPvpSession === 'function') stopPvpSession();
+  receivedGameChallenges = [];
+  sentGameChallenges = [];
   unreadChatUnsubscribers.forEach(unsubscribe => unsubscribe());
   unreadChatUnsubscribers = [];
   chatMessages = [];
@@ -1811,6 +1827,8 @@ async function checkAuthState() {
     subscribeNotifications();
     subscribeChatInvites();
     subscribeOwnerTransfers();
+    subscribeGamePvpChallenges();
+    subscribeSentGamePvpChallenges();
     startPresenceHeartbeat();
     checkDraftNotice();
     try {
@@ -3530,6 +3548,7 @@ window.showAppSection = function(section) {
   if (section !== 'gamePlay' && typeof stopPong === 'function') stopPong();
   if (section !== 'gamePlay' && typeof stopReaction === 'function') stopReaction();
   if (section !== 'gamePlay' && typeof stopMemory === 'function') stopMemory();
+  if (section !== 'gamePlay' && typeof stopPvpSession === 'function') stopPvpSession();
   const isCafe = section === 'cafe';
   const isChat = section === 'chat';
   const isSettings = section === 'settings';
@@ -4363,7 +4382,8 @@ function updateNotificationBadge() {
   const mentionCount = mentionNotifications.filter(item => !item.read).length;
   const transferCount = ownerTransferRequests.filter(item => item.status === 'pending').length;
   const inviteCount = chatInvites.filter(item => item.status === 'pending').length;
-  const total = (chatCount || 0) + (mentionCount || 0) + (transferCount || 0) + (inviteCount || 0);
+  const gameChallengeCount = receivedGameChallenges.filter(item => item.status === 'pending').length + sentGameChallenges.filter(item => item.status === 'accepted').length;
+  const total = (chatCount || 0) + (mentionCount || 0) + (transferCount || 0) + (inviteCount || 0) + (gameChallengeCount || 0);
   if (pushEnabled && total > lastKnownNotifTotal && 'Notification' in window && Notification.permission === 'granted') {
     try {
       new Notification('새 알림이 도착했습니다', { body: `읽지 않은 알림이 ${total}개 있습니다.` });
@@ -4406,6 +4426,26 @@ function subscribeOwnerTransfers() {
   }, error => console.error(error));
 }
 
+// 받은 실시간 대결 도전장 (다른 회원이 나에게 신청한 것)
+function subscribeGamePvpChallenges() {
+  if (!currentUser || unsubscribeGamePvpChallenges) return;
+  unsubscribeGamePvpChallenges = onSnapshot(query(collection(db, 'gamePvpChallenges'), where('toUser', '==', currentUser)), snapshot => {
+    receivedGameChallenges = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    updateNotificationBadge();
+    if (!document.getElementById('notificationsView')?.classList.contains('hidden')) openNotifications();
+  }, error => console.error(error));
+}
+
+// 내가 보낸 실시간 대결 도전장 (상대가 수락했는지 확인용)
+function subscribeSentGamePvpChallenges() {
+  if (!currentUser || unsubscribeSentGamePvpChallenges) return;
+  unsubscribeSentGamePvpChallenges = onSnapshot(query(collection(db, 'gamePvpChallenges'), where('fromUser', '==', currentUser)), snapshot => {
+    sentGameChallenges = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    updateNotificationBadge();
+    if (!document.getElementById('notificationsView')?.classList.contains('hidden')) openNotifications();
+  }, error => console.error(error));
+}
+
 async function notifyMentions(content, source) {
   const matches = [...String(content || '').matchAll(/@\(([^)]+)\)|@([^\s@]+)/g)].map(match => (match[1] || match[2] || '').trim());
   if (!matches.length) return;
@@ -4418,7 +4458,7 @@ window.setNotifFilter = function(filter) {
   notifFilter = filter;
   const bar = document.getElementById('notifFilterBar');
   if (bar) {
-    const order = ['all', 'transfer', 'invite', 'chat', 'mention', 'reply'];
+    const order = ['all', 'transfer', 'invite', 'game', 'chat', 'mention', 'reply'];
     Array.from(bar.children).forEach((btn, index) => btn.classList.toggle('active', order[index] === filter));
   }
   openNotifications();
@@ -4476,6 +4516,29 @@ window.openNotifications = async function() {
         </div>
       </div>
     `).join('') : `<div style="padding:10px 14px; color:var(--text-sub); font-size:13px;">받은 채팅방 초대 요청이 없습니다.</div>`;
+  }
+  if (notifFilter === 'all' || notifFilter === 'game') {
+    const pendingChallenges = receivedGameChallenges.filter(item => item.status === 'pending');
+    const acceptedSentChallenges = sentGameChallenges.filter(item => item.status === 'accepted');
+    html += `<div style="font-weight:bold; margin:16px 0 8px; color: var(--text-sub); font-size: 13px;">실시간 대결 도전장</div>`;
+    const gameRows = [
+      ...pendingChallenges.map(item => `
+        <div class="comment-item">
+          <div class="comment-body"><b>${escapeHtml(item.fromUser || '')}</b>님이 ${escapeHtml(PVP_GAME_CONFIG[item.gameType]?.label || '게임')} 실시간 대결을 신청했습니다.</div>
+          <div style="display:flex; gap:6px; flex-shrink:0;">
+            <button onclick="pvpAcceptChallenge('${item.id}', '${item.gameType}', '${escapeHtml(item.fromUser || '')}')" style="padding:4px 8px; font-size:11px;">수락</button>
+            <button class="danger-btn" onclick="pvpDeclineChallenge('${item.id}')" style="padding:4px 8px; font-size:11px;">거절</button>
+          </div>
+        </div>
+      `),
+      ...acceptedSentChallenges.map(item => `
+        <div class="comment-item">
+          <div class="comment-body"><b>${escapeHtml(item.toUser || '')}</b>님이 ${escapeHtml(PVP_GAME_CONFIG[item.gameType]?.label || '게임')} 도전을 수락했습니다!</div>
+          <button onclick="pvpEnterAcceptedChallenge('${item.id}', '${item.matchId}', '${item.gameType}')" style="padding:4px 8px; font-size:11px; flex-shrink:0;">입장하기</button>
+        </div>
+      `)
+    ].join('');
+    html += gameRows || `<div style="padding:10px 14px; color:var(--text-sub); font-size:13px;">받은 대결 신청이 없습니다.</div>`;
   }
   if (notifFilter === 'all' || notifFilter === 'chat') {
     html += `<div style="font-weight:bold; margin:16px 0 8px; color: var(--text-sub); font-size: 13px;">나에게 온 채팅</div>`;
@@ -5814,6 +5877,7 @@ function buildGameCard(game, isPinned) {
         <div style="font-size:14px; font-weight:bold; margin-bottom:6px; padding-right:20px;">${game.title}</div>
         <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">${game.desc}</div>
         <button onclick="${game.action}" ${game.disabled ? 'disabled' : ''} style="width:100%; ${game.disabled ? 'background:var(--border-color); color:var(--text-sub); cursor:not-allowed;' : ''}">${game.btnText}</button>
+        ${game.pvpAction ? `<button onclick="${game.pvpAction}" style="width:100%; margin-top:6px; background:var(--input-bg); color:var(--cafe-green); border:1px solid var(--cafe-green);">⚡ 실시간 대결</button>` : ''}
       </div>`;
 }
 
@@ -5824,14 +5888,14 @@ function renderGameHub() {
   const games = [
     { key: 'roulette', title: '🎰 럭키 룰렛', desc: '하루 한 번, 랜덤 포인트에 도전해 보세요', action: "openGameDetail('roulette', '🎰 럭키 룰렛')", btnText: roulettePlayedToday ? '오늘 완료' : '돌리러 가기', disabled: roulettePlayedToday },
     { key: 'cps', title: '⚡ CPS 챌린지', desc: '원하는 시간 동안 초당 클릭 수(CPS) 겨루기', action: "openGameDetail('cps', '⚡ CPS 챌린지')", btnText: '도전하기' },
-    { key: 'ttt', title: '⭕❌ 틱택토', desc: '컴퓨터와 한 판! 이기면 포인트 획득', action: "openGameDetail('ttt', '⭕❌ 틱택토')", btnText: '한 판 하기' },
+    { key: 'ttt', title: '⭕❌ 틱택토', desc: '컴퓨터와 한 판! 이기면 포인트 획득', action: "openGameDetail('ttt', '⭕❌ 틱택토')", btnText: '한 판 하기', pvpAction: "openGameDetail('tttPvp', '⭕❌ 틱택토 - 실시간 대결')" },
     { key: 'tetris', title: '🧱 테트리스', desc: '클래식 테트리스! 점수만큼 포인트 획득', action: "openGameDetail('tetris', '🧱 테트리스')", btnText: '플레이하기' },
     { key: '2048', title: '🔢 2048', desc: '타일을 합쳐서 2048을 만들어보세요', action: "openGameDetail('2048', '🔢 2048')", btnText: '플레이하기' },
     { key: 'mine', title: '💣 지뢰찾기', desc: '빠르게 클리어할수록 포인트 UP', action: "openGameDetail('mine', '💣 지뢰찾기')", btnText: '플레이하기' },
     { key: 'cookie', title: '🍪 쿠키 클리커', desc: '쿠키를 굽고 생산 시설을 늘려서 누적 기록에 도전!', action: "openGameDetail('cookie', '🍪 쿠키 클리커')", btnText: '플레이하기' },
     { key: 'rhythm', title: '🕹️ 얼불춤', desc: '박자에 맞춰 탭! 한 번 실수하면 끝, 원터치 리듬게임', action: "openGameDetail('rhythm', '🕹️ 얼불춤')", btnText: '플레이하기' },
     { key: 'cardgacha', title: '🃏 카드깡', desc: '1P로 카드 한 장 뽑기! 0.5P·1P가 가장 잘 나오고, 높거나 낮을수록 희귀해요', action: "openGameDetail('cardgacha', '🃏 카드깡')", btnText: '카드 뽑으러 가기' },
-    { key: 'omok', title: '⚫⚪ 오목', desc: '컴퓨터와 5목 대결! 쉬운 난이도로 조정됐어요. 이기면 포인트 획득', action: "openGameDetail('omok', '⚫⚪ 오목')", btnText: '한 판 하기' },
+    { key: 'omok', title: '⚫⚪ 오목', desc: '컴퓨터와 5목 대결! 쉬운 난이도로 조정됐어요. 이기면 포인트 획득', action: "openGameDetail('omok', '⚫⚪ 오목')", btnText: '한 판 하기', pvpAction: "openGameDetail('omokPvp', '⚫⚪ 오목 - 실시간 대결')" },
     { key: 'snake', title: '🐍 스네이크', desc: '방향키로 먹이를 먹고 몸을 키우세요! 길수록 포인트 UP', action: "openGameDetail('snake', '🐍 스네이크')", btnText: '플레이하기' },
     { key: 'pong', title: '🏓 핑퐁', desc: '컴퓨터를 상대로 공을 튕겨내며 랠리를 이어가 보세요', action: "openGameDetail('pong', '🏓 핑퐁')", btnText: '플레이하기' },
     { key: 'reaction', title: '⚡ 반응속도 테스트', desc: '화면이 초록색으로 바뀌는 순간 탭! 빠를수록 포인트 UP', action: "openGameDetail('reaction', '⚡ 반응속도 테스트')", btnText: '도전하기' },
@@ -5867,7 +5931,9 @@ const GAME_OPEN_FUNC_NAMES = {
   snake: 'openSnakeGame',
   pong: 'openPongGame',
   reaction: 'openReactionGame',
-  memory: 'openMemoryGame'
+  memory: 'openMemoryGame',
+  tttPvp: 'openTttPvpLobby',
+  omokPvp: 'openOmokPvpLobby'
 };
 
 function stopAllGames() {
@@ -5883,6 +5949,7 @@ function stopAllGames() {
   stopPong();
   stopReaction();
   stopMemory();
+  if (typeof stopPvpSession === 'function') stopPvpSession();
 }
 
 // 게임 목록 화면 하단이 아닌, 게시글 상세보기처럼 별도의 전용 화면(탭)으로 게임을 연다
@@ -7938,6 +8005,307 @@ function drawOmokBoard() {
     <div onclick="omokPlaceMark(${idx})" style="width:26px; height:26px; background:var(--card-bg); display:flex; align-items:center; justify-content:center; font-size:18px; cursor:${cell || !omokState.running ? 'default' : 'pointer'};">${cell === 'X' ? '⚫' : (cell === 'O' ? '⚪' : '')}</div>
   `).join('');
 }
+
+// ===== ⚡ 실시간 대결 (틱택토 / 오목 PvP) =====
+// Firestore 컬렉션: gamePvpQueue(대기열), gamePvpMatches(진행 중인 대국), gamePvpChallenges(도전장)
+
+function pvpWinCheck(gameType, board, idx, player) {
+  const cfg = PVP_GAME_CONFIG[gameType];
+  const size = cfg.size, winLen = cfg.winLen;
+  const r0 = Math.floor(idx / size), c0 = idx % size;
+  const inBounds = (r, c) => r >= 0 && r < size && c >= 0 && c < size;
+  for (const [dr, dc] of [[0,1],[1,0],[1,1],[1,-1]]) {
+    let count = 1;
+    let r = r0 + dr, c = c0 + dc;
+    while (inBounds(r, c) && board[r * size + c] === player) { count++; r += dr; c += dc; }
+    r = r0 - dr; c = c0 - dc;
+    while (inBounds(r, c) && board[r * size + c] === player) { count++; r -= dr; c -= dc; }
+    if (count >= winLen) return true;
+  }
+  return false;
+}
+
+function stopPvpSession() {
+  if (!pvpState) return;
+  if (pvpState.unsubMatch) { pvpState.unsubMatch(); }
+  if (pvpState.unsubQueue) { pvpState.unsubQueue(); }
+  if (pvpState.mode === 'queue' && pvpState.queueDocId) {
+    deleteDoc(doc(db, 'gamePvpQueue', pvpState.queueDocId)).catch(() => {});
+  }
+  pvpState = null;
+}
+
+function pvpResetLocalGameStates() {
+  stopTetris(); stop2048(); stopTtt(); stopMinesweeper(); stopCookieClicker(); stopRhythm();
+  stopCardGacha(); stopOmok(); stopSnake(); stopPong(); stopReaction(); stopMemory();
+}
+
+async function pvpCreateMatch(gameType, playerFirst, playerSecond) {
+  const cfg = PVP_GAME_CONFIG[gameType];
+  const board = Array(cfg.size * cfg.size).fill(null);
+  return await addDoc(collection(db, 'gamePvpMatches'), {
+    gameType,
+    players: [playerFirst, playerSecond],
+    symbols: { [playerFirst]: 'X', [playerSecond]: 'O' },
+    board,
+    turn: playerFirst,
+    status: 'active',
+    winner: null,
+    pointsAwarded: {},
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  });
+}
+
+async function pvpOpenLobby(gameType) {
+  stopPvpSession();
+  pvpState = { mode: 'lobby', gameType };
+  if (!allUsers.length) { try { await fetchUsersAndRanking(); } catch (error) { console.error(error); } }
+  renderPvpLobby(gameType);
+}
+
+function renderPvpLobby(gameType) {
+  const cfg = PVP_GAME_CONFIG[gameType];
+  const area = document.getElementById('gamePlayArea');
+  if (!area || !cfg) return;
+  const queueing = pvpState && pvpState.mode === 'queue';
+  const otherUsers = (allUsers || []).filter(user => user !== currentUser);
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:14px;">다른 회원과 실시간으로 ${escapeHtml(cfg.label)} 대결을 펼쳐보세요! 이기면 ${cfg.winPoints}P, 비기면 ${cfg.drawPoints}P 획득</div>
+    ${queueing ? `
+      <div style="padding:20px 0;">
+        <div style="font-size:14px; margin-bottom:12px;">🔎 상대를 찾는 중...</div>
+        <button class="danger-btn" onclick="pvpCancelQueue()">매칭 취소</button>
+      </div>
+    ` : `
+      <button onclick="pvpJoinQueue('${gameType}')" style="width:100%; margin-bottom:14px;">🎲 랜덤 매칭으로 대결하기</button>
+      <div style="border-top:1px solid var(--border-color); padding-top:14px;">
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:8px;">특정 회원에게 도전장 보내기</div>
+        <select id="pvpChallengeTarget" style="width:100%; margin-bottom:8px;">
+          <option value="">상대 선택</option>
+          ${otherUsers.map(user => `<option value="${escapeHtml(user)}">${escapeHtml(user)}</option>`).join('')}
+        </select>
+        <button onclick="pvpSendChallenge('${gameType}')" style="width:100%;">📨 도전장 보내기</button>
+      </div>
+    `}
+  </div>`;
+}
+
+window.openTttPvpLobby = function() {
+  if (pvpPendingEntry && pvpPendingEntry.gameType === 'ttt') {
+    const entry = pvpPendingEntry; pvpPendingEntry = null;
+    pvpEnterMatch(entry.matchId, 'ttt');
+    return;
+  }
+  pvpResetLocalGameStates();
+  pvpOpenLobby('ttt');
+};
+
+window.openOmokPvpLobby = function() {
+  if (pvpPendingEntry && pvpPendingEntry.gameType === 'omok') {
+    const entry = pvpPendingEntry; pvpPendingEntry = null;
+    pvpEnterMatch(entry.matchId, 'omok');
+    return;
+  }
+  pvpResetLocalGameStates();
+  pvpOpenLobby('omok');
+};
+
+window.pvpJoinQueue = async function(gameType) {
+  if (!currentUser) { alert('로그인 후 이용할 수 있습니다.'); return; }
+  try {
+    const snap = await getDocs(query(collection(db, 'gamePvpQueue'), where('gameType', '==', gameType), where('status', '==', 'waiting')));
+    const candidates = snap.docs
+      .map(item => ({ id: item.id, ...item.data() }))
+      .filter(item => item.user !== currentUser)
+      .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    if (candidates.length) {
+      const opponent = candidates[0];
+      const matchRef = await pvpCreateMatch(gameType, opponent.user, currentUser);
+      await updateDoc(doc(db, 'gamePvpQueue', opponent.id), { status: 'matched', matchId: matchRef.id }).catch(() => {});
+      await pvpEnterMatch(matchRef.id, gameType);
+      return;
+    }
+    const queueDocId = `${gameType}_${currentUser}`;
+    const myQueueRef = doc(db, 'gamePvpQueue', queueDocId);
+    await setDoc(myQueueRef, { gameType, user: currentUser, status: 'waiting', matchId: null, createdAt: Date.now() });
+    pvpState = { mode: 'queue', gameType, queueDocId };
+    renderPvpLobby(gameType);
+    pvpState.unsubQueue = onSnapshot(myQueueRef, docSnap => {
+      if (!docSnap.exists() || !pvpState || pvpState.queueDocId !== queueDocId) return;
+      const data = docSnap.data();
+      if (data.status === 'matched' && data.matchId) {
+        if (pvpState.unsubQueue) pvpState.unsubQueue();
+        deleteDoc(myQueueRef).catch(() => {});
+        pvpEnterMatch(data.matchId, gameType);
+      }
+    }, error => console.error(error));
+  } catch (error) {
+    console.error(error);
+    alert('매칭에 실패했습니다.');
+  }
+};
+
+window.pvpCancelQueue = async function() {
+  if (!pvpState || pvpState.mode !== 'queue') return;
+  const gameType = pvpState.gameType;
+  stopPvpSession();
+  renderPvpLobby(gameType);
+};
+
+window.pvpSendChallenge = async function(gameType) {
+  if (!currentUser) { alert('로그인 후 이용할 수 있습니다.'); return; }
+  const select = document.getElementById('pvpChallengeTarget');
+  const target = select ? select.value : '';
+  if (!target) { alert('도전할 상대를 선택해주세요.'); return; }
+  if (target === currentUser) { alert('본인에게는 도전할 수 없습니다.'); return; }
+  try {
+    await addDoc(collection(db, 'gamePvpChallenges'), {
+      gameType, fromUser: currentUser, toUser: target, status: 'pending', matchId: null, createdAt: Date.now()
+    });
+    alert(`${target}님에게 도전장을 보냈어요. 상대가 수락하면 알림에서 확인할 수 있어요.`);
+  } catch (error) {
+    console.error(error);
+    alert('도전장 전송에 실패했습니다.');
+  }
+};
+
+window.pvpAcceptChallenge = async function(challengeId, gameType, fromUser) {
+  try {
+    const matchRef = await pvpCreateMatch(gameType, fromUser, currentUser);
+    await updateDoc(doc(db, 'gamePvpChallenges', challengeId), { status: 'accepted', matchId: matchRef.id });
+    pvpPendingEntry = { gameType, matchId: matchRef.id };
+    window.openGameDetail(gameType + 'Pvp', (PVP_GAME_CONFIG[gameType]?.label || '게임') + ' - 실시간 대결');
+  } catch (error) {
+    console.error(error);
+    alert('도전 수락에 실패했습니다.');
+  }
+};
+
+window.pvpDeclineChallenge = async function(challengeId) {
+  try { await updateDoc(doc(db, 'gamePvpChallenges', challengeId), { status: 'declined' }); }
+  catch (error) { console.error(error); }
+};
+
+window.pvpEnterAcceptedChallenge = async function(challengeId, matchId, gameType) {
+  try { await updateDoc(doc(db, 'gamePvpChallenges', challengeId), { status: 'consumed' }); } catch (error) { console.error(error); }
+  pvpPendingEntry = { gameType, matchId };
+  window.openGameDetail(gameType + 'Pvp', (PVP_GAME_CONFIG[gameType]?.label || '게임') + ' - 실시간 대결');
+};
+
+async function pvpEnterMatch(matchId, gameType) {
+  if (pvpState && pvpState.unsubMatch) pvpState.unsubMatch();
+  currentGamePlayKey = gameType + 'Pvp';
+  currentGamePlayLabel = (PVP_GAME_CONFIG[gameType]?.label || '게임') + ' - 실시간 대결';
+  const titleEl = document.getElementById('gamePlayDetailTitle');
+  if (titleEl) titleEl.textContent = currentGamePlayLabel;
+  pvpState = { mode: 'match', gameType, matchId, submitting: false, unsubMatch: null, lastData: null };
+  pvpState.unsubMatch = onSnapshot(doc(db, 'gamePvpMatches', matchId), snap => {
+    if (!snap.exists()) return;
+    pvpRenderMatch(matchId, { id: snap.id, ...snap.data() });
+  }, error => console.error(error));
+}
+
+function pvpRenderMatch(matchId, data) {
+  if (!pvpState || pvpState.mode !== 'match' || pvpState.matchId !== matchId) return;
+  pvpState.lastData = data;
+  const cfg = PVP_GAME_CONFIG[data.gameType];
+  const area = document.getElementById('gamePlayArea');
+  if (!area || !cfg) return;
+  const opponent = data.players.find(user => user !== currentUser) || '상대';
+  const mySymbol = data.symbols ? data.symbols[currentUser] : null;
+  const isMyTurn = data.status === 'active' && data.turn === currentUser;
+  let statusLine;
+  if (data.status === 'finished') {
+    if (data.winner === 'draw') statusLine = '🤝 무승부로 종료됐어요.';
+    else if (data.winner === currentUser) statusLine = '🎉 승리했어요!';
+    else statusLine = '💀 패배했어요.';
+  } else {
+    statusLine = isMyTurn ? '✅ 내 차례예요!' : `⏳ ${escapeHtml(opponent)}님의 차례를 기다리는 중...`;
+  }
+  const canClick = data.status === 'active' && isMyTurn;
+  const boardHtml = data.gameType === 'omok'
+    ? `<div style="width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;">
+         <div style="display:grid; grid-template-columns:repeat(${cfg.size}, 26px); grid-auto-rows:26px; gap:1px; width:max-content; margin:0 auto; background:var(--border-color); padding:2px; border-radius:6px;">
+           ${data.board.map((cell, idx) => `<div onclick="pvpPlaceMark(${idx})" style="width:26px; height:26px; background:var(--card-bg); display:flex; align-items:center; justify-content:center; font-size:18px; cursor:${cell || !canClick ? 'default' : 'pointer'};">${cell === 'X' ? '⚫' : (cell === 'O' ? '⚪' : '')}</div>`).join('')}
+         </div>
+       </div>`
+    : `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; width:100%; max-width:240px; margin:0 auto;">
+         ${data.board.map((cell, idx) => `<div onclick="pvpPlaceMark(${idx})" style="aspect-ratio:1; background:var(--input-bg); border:1px solid var(--border-color); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:bold; cursor:${cell || !canClick ? 'default' : 'pointer'}; color:${cell === 'X' ? 'var(--cafe-green)' : '#f87171'};">${cell === 'X' ? '❌' : (cell === 'O' ? '⭕' : '')}</div>`).join('')}
+       </div>`;
+  const mySymbolIcon = mySymbol === 'X' ? (data.gameType === 'omok' ? '⚫' : '❌') : (data.gameType === 'omok' ? '⚪' : '⭕');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px; font-size:13px; color:var(--text-sub);">
+      <span>${escapeHtml(currentUser)} (${mySymbolIcon})</span><span>VS</span><span>${escapeHtml(opponent)}</span>
+    </div>
+    <div style="font-size:14px; font-weight:bold; margin-bottom:10px;">${statusLine}</div>
+    ${boardHtml}
+    <div id="pvpResult" style="margin-top:10px;"></div>
+    <button class="danger-btn" onclick="pvpLeaveMatch()" style="width:100%; margin-top:12px;">${data.status === 'finished' ? '나가기' : '기권하고 나가기'}</button>
+  </div>`;
+  if (data.status === 'finished') pvpMaybeAwardPoints(data, matchId);
+}
+
+window.pvpPlaceMark = async function(idx) {
+  if (!pvpState || pvpState.mode !== 'match' || pvpState.submitting) return;
+  const data = pvpState.lastData;
+  if (!data || data.status !== 'active' || data.turn !== currentUser || data.board[idx] !== null) return;
+  const mySymbol = data.symbols ? data.symbols[currentUser] : null;
+  if (!mySymbol) return;
+  pvpState.submitting = true;
+  try {
+    const newBoard = [...data.board];
+    newBoard[idx] = mySymbol;
+    const won = pvpWinCheck(data.gameType, newBoard, idx, mySymbol);
+    const isDraw = !won && newBoard.every(cell => cell !== null);
+    const opponent = data.players.find(user => user !== currentUser);
+    const updates = { board: newBoard, updatedAt: Date.now() };
+    if (won) { updates.status = 'finished'; updates.winner = currentUser; }
+    else if (isDraw) { updates.status = 'finished'; updates.winner = 'draw'; }
+    else { updates.turn = opponent; }
+    await updateDoc(doc(db, 'gamePvpMatches', pvpState.matchId), updates);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    if (pvpState) pvpState.submitting = false;
+  }
+};
+
+async function pvpMaybeAwardPoints(data, matchId) {
+  if (data.status !== 'finished' || (data.pointsAwarded && data.pointsAwarded[currentUser])) return;
+  const cfg = PVP_GAME_CONFIG[data.gameType];
+  let outcome, points;
+  if (data.winner === 'draw') { outcome = '무승부'; points = cfg.drawPoints; }
+  else if (data.winner === currentUser) { outcome = '승리'; points = cfg.winPoints; }
+  else { outcome = '패배'; points = 0; }
+  try {
+    await updateDoc(doc(db, 'gamePvpMatches', matchId), { [`pointsAwarded.${currentUser}`]: true });
+  } catch (error) { console.error(error); return; }
+  if (points > 0) {
+    await awardGamePoints(data.gameType, `${cfg.label} 실시간대결`, points, `${cfg.label} 실시간 대결 ${outcome}! (${points}P)`);
+  }
+  if (data.gameType === 'omok' && data.winner === currentUser) {
+    try { await updateDoc(doc(db, 'users', currentUser), { omokWins: increment(1) }); } catch (error) { console.error(error); }
+  }
+  const resultText = `${cfg.label} 실시간 대결에서 ${outcome}했어요! (${points}P 획득)`;
+  const resultEl = document.getElementById('pvpResult');
+  if (resultEl) resultEl.innerHTML = `<div style="font-size:13px; margin-bottom:6px;">+${points}P 획득</div>${renderGameResultActions(resultText)}`;
+}
+
+window.pvpLeaveMatch = async function() {
+  if (!pvpState || pvpState.mode !== 'match') { window.closeGameDetail(); return; }
+  const data = pvpState.lastData;
+  try {
+    if (data && data.status === 'active') {
+      if (!confirm('정말 기권하고 나가시겠습니까? 상대가 승리 처리됩니다.')) return;
+      const opponent = data.players.find(user => user !== currentUser);
+      await updateDoc(doc(db, 'gamePvpMatches', pvpState.matchId), { status: 'finished', winner: opponent || 'draw', updatedAt: Date.now() });
+    }
+  } catch (error) {
+    console.error(error);
+  }
+  window.closeGameDetail();
+};
 
 // --- ⚫⚪ 오목 리더보드 (이긴 횟수 기준) ---
 async function renderOmokRankTab() {
