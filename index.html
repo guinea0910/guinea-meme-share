@@ -1045,11 +1045,22 @@ button:hover { background-color: var(--cafe-green-hover); }
 </div>
 <div id="curiousFactModal" class="chat-modal hidden" role="dialog" aria-modal="true" aria-labelledby="curiousFactModalTitle" onclick="if (event.target === this) closeCuriousFact();">
 <div class="chat-modal-card">
-<h3 id="curiousFactModalTitle">🎲 신기한 사실</h3>
+<h3 id="curiousFactModalTitle">🎲 I'm Feeling Curious</h3>
 <div id="curiousFactBody" style="min-height: 60px;">불러오는 중...</div>
 <div class="chat-modal-actions">
 <button id="curiousFactNextBtn" onclick="generateCuriousFact()">🔄 다른 사실 보기</button>
 <button class="danger-btn" onclick="closeCuriousFact()">닫기</button>
+</div>
+</div>
+</div>
+<div id="webBrowseModal" class="chat-modal hidden" role="dialog" aria-modal="true" aria-labelledby="webBrowseModalTitle" onclick="if (event.target === this) closeWebBrowse();">
+<div class="chat-modal-card">
+<h3 id="webBrowseModalTitle">🌐 웹 브라우징</h3>
+<p style="font-size:12px; color:var(--text-sub); margin-top:-6px;">주소를 입력하거나 검색어를 입력하세요. 기본 브라우저는 Chrome입니다.</p>
+<input id="webBrowseInput" type="text" placeholder="URL 또는 검색어 입력" onkeydown="handleWebBrowseKeydown(event)" style="width:100%; box-sizing:border-box;">
+<div class="chat-modal-actions">
+<button onclick="goToWebBrowse()">🌐 Chrome으로 열기</button>
+<button class="danger-btn" onclick="closeWebBrowse()">닫기</button>
 </div>
 </div>
 </div>
@@ -1291,14 +1302,15 @@ const SIDEBAR_ITEMS = [
   { key: 'ranking', icon: '🏆', label: '랭킹' },
   { key: 'game', icon: '🎮', label: '미니게임' },
   { key: 'aiChat', icon: '✨', label: 'AI 채팅' },
-  { key: 'curious', icon: '🎲', label: '신기한 사실' },
+  { key: 'curious', icon: '🎲', label: "I'm Feeling Curious" },
+  { key: 'browse', icon: '🌐', label: '웹 브라우징' },
   { key: 'bookmarks', icon: '⭐', label: '북마크' },
   { key: 'profile', icon: '👤', label: '프로필' },
   { key: 'chat', icon: '💬', label: '채팅' },
   { key: 'notifications', icon: '🔔', label: '알림' },
   { key: 'settings', icon: '⚙️', label: '설정' }
 ];
-const SIDEBAR_ITEM_IDS = { cafe: 'cafeNavBtn', ranking: 'rankingNavBtn', game: 'gameNavBtn', aiChat: 'aiChatNavBtn', curious: 'curiousNavBtn', bookmarks: 'bookmarksNavBtn', profile: 'profileNavBtn', chat: 'chatNavBtn', notifications: 'notificationsNavBtn', settings: 'settingsNavBtn' };
+const SIDEBAR_ITEM_IDS = { cafe: 'cafeNavBtn', ranking: 'rankingNavBtn', game: 'gameNavBtn', aiChat: 'aiChatNavBtn', curious: 'curiousNavBtn', browse: 'browseNavBtn', bookmarks: 'bookmarksNavBtn', profile: 'profileNavBtn', chat: 'chatNavBtn', notifications: 'notificationsNavBtn', settings: 'settingsNavBtn' };
 
 function getSidebarOrderKey() {
   return `cafe_sidebar_order_${currentUser || 'guest'}`;
@@ -1329,7 +1341,7 @@ function renderSidebarNav() {
     const item = SIDEBAR_ITEMS.find(sidebarItem => sidebarItem.key === key);
     if (!item) return '';
     const id = SIDEBAR_ITEM_IDS[key];
-    const onclick = key === 'profile' ? 'openMyProfile()' : (key === 'settings' ? 'openSettingsFromSidebar()' : (key === 'curious' ? 'openCuriousFact()' : `showAppSection('${key}')`));
+    const onclick = key === 'profile' ? 'openMyProfile()' : (key === 'settings' ? 'openSettingsFromSidebar()' : (key === 'curious' ? 'openCuriousFact()' : (key === 'browse' ? 'openWebBrowse()' : `showAppSection('${key}')`)));
     let badge = '';
     if (key === 'chat') badge = '<span id="unreadBadge" class="unread-badge hidden"></span>';
     if (key === 'notifications') badge = '<span id="notificationBadge" class="unread-badge hidden"></span>';
@@ -1370,7 +1382,7 @@ window.moveSidebarItem = function(key, direction) {
   renderSidebarOrderEditor();
 };
 
-// ===== 신기한 사실 (구글 "I'm feeling curious" 스타일) =====
+// ===== I'm Feeling Curious (구글 스타일 신기한 사실 AI 생성) =====
 const CURIOUS_FACT_TOPICS = ['과학', '우주', '동물', '역사', '지리', '인체', '음식', '기술', '심리', '문화', '수학', '자연현상'];
 let curiousFactHistory = [];
 
@@ -1428,6 +1440,56 @@ window.generateCuriousFact = async function() {
     if (btn) btn.disabled = false;
   }
 };
+
+// ===== 웹 브라우징 (기본 브라우저: 크롬) =====
+window.openWebBrowse = function() {
+  const modal = document.getElementById('webBrowseModal');
+  const input = document.getElementById('webBrowseInput');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  if (input) { input.value = ''; setTimeout(() => input.focus(), 50); }
+};
+
+window.closeWebBrowse = function() {
+  document.getElementById('webBrowseModal')?.classList.add('hidden');
+};
+
+window.handleWebBrowseKeydown = function(event) {
+  if (event.key === 'Enter') goToWebBrowse();
+};
+
+window.goToWebBrowse = function() {
+  const input = document.getElementById('webBrowseInput');
+  const raw = (input?.value || '').trim();
+  if (!raw) { input?.focus(); return; }
+  let targetUrl = raw;
+  const looksLikeUrl = /^https?:\/\//i.test(raw) || /^[\w-]+(\.[\w-]+)+([\/?#].*)?$/i.test(raw);
+  if (!/^https?:\/\//i.test(targetUrl)) {
+    targetUrl = looksLikeUrl ? `https://${targetUrl}` : `https://www.google.com/search?q=${encodeURIComponent(raw)}`;
+  }
+  openInChrome(targetUrl);
+};
+
+// 가능하면 크롬으로, 크롬을 열 수 없는 환경(데스크톱 등)이면 기본 브라우저 새 탭으로 연다.
+function openInChrome(url) {
+  const ua = navigator.userAgent || '';
+  if (/Android/i.test(ua)) {
+    // 안드로이드: intent 스킴으로 크롬 앱을 명시적으로 지정
+    const scheme = url.startsWith('https') ? 'https' : 'http';
+    const withoutScheme = url.replace(/^https?:\/\//, '');
+    const intentUrl = `intent://${withoutScheme}#Intent;scheme=${scheme};package=com.android.chrome;end`;
+    window.location.href = intentUrl;
+  } else if (/iPhone|iPad|iPod/i.test(ua)) {
+    // iOS: 크롬 앱이 설치돼 있으면 googlechrome(s):// 스킴으로 열리고, 없으면 사파리로 자동 대체됨
+    const chromeUrl = url.replace(/^https:\/\//i, 'googlechromes://').replace(/^http:\/\//i, 'googlechrome://');
+    const fallbackTimer = setTimeout(() => { window.open(url, '_blank'); }, 1200);
+    window.addEventListener('pagehide', () => clearTimeout(fallbackTimer), { once: true });
+    window.location.href = chromeUrl;
+  } else {
+    // 데스크톱 등: 웹페이지에서 특정 브라우저를 강제로 지정할 수는 없어 기본 브라우저의 새 탭으로 연다.
+    window.open(url, '_blank', 'noopener');
+  }
+}
 
 window.switchTab = function(type) {
   const loginForm = document.getElementById('loginForm');
