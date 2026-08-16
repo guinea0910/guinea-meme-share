@@ -582,6 +582,15 @@ button:hover { background-color: var(--cafe-green-hover); }
   width: auto;
 }
 </style>
+<style id="tetris-pong-pvp-extra-style">
+.pvp-scoreboard{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.pvp-score-card{padding:10px;border:1px solid var(--border-color);border-radius:8px;background:var(--input-bg)}
+.pvp-score-card.me{border-color:var(--cafe-green)}
+.pvp-score-name{font-size:11px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pvp-score-value{font-size:20px;font-weight:800;color:var(--cafe-green);margin-top:3px}
+.pvp-status{padding:8px 10px;border-radius:8px;background:rgba(3,199,90,.10);border:1px solid var(--border-color);font-size:12px;margin-bottom:10px}
+.pvp-challenge-box{margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color)}
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -9517,6 +9526,488 @@ window.addEventListener('appinstalled', () => {
   }
   showAppSection(savedSection);
 })();
+
+/* ===== 추가 기능: 테트리스 / 핑퐁 실시간 대결 =====
+   기존 게임 코드는 수정하지 않고, 기존 PvP/게임 시스템에 확장 기능만 덧붙입니다. */
+(function(){
+  PVP_GAME_CONFIG.tetris = { label:'테트리스', winPoints:30, drawPoints:10 };
+  PVP_GAME_CONFIG.pong = { label:'핑퐁', winPoints:30, drawPoints:10 };
+
+  GAME_OPEN_FUNC_NAMES.tetrisPvp = 'openTetrisPvpLobby';
+  GAME_OPEN_FUNC_NAMES.pongPvp = 'openPongPvpLobby';
+
+  let customPvpCleanup = null;
+  let pongHostLoop = null;
+
+  function isCustomPvpType(gameType){ return gameType === 'tetris' || gameType === 'pong'; }
+
+  function stopCustomPvp(){
+    if (typeof customPvpCleanup === 'function') {
+      try { customPvpCleanup(); } catch(e) { console.error(e); }
+    }
+    customPvpCleanup = null;
+  }
+
+  /* 기존 stopPvpSession은 그대로 두고, 새 대결의 RAF/타이머/리스너만 추가 정리 */
+  const originalStopPvpSession = stopPvpSession;
+  stopPvpSession = function(){
+    stopCustomPvp();
+    originalStopPvpSession();
+  };
+
+  function getPvpPlayersHtml(data, scores){
+    const players = data.players || [];
+    return `<div class="pvp-scoreboard">
+      ${players.map(user => `<div class="pvp-score-card ${user===currentUser?'me':''}">
+        <div class="pvp-score-name">${escapeHtml(user)}${user===currentUser?' (나)':''}</div>
+        <div class="pvp-score-value">${Number(scores?.[user] || 0)}</div>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  async function createCustomMatch(gameType, playerFirst, playerSecond){
+    const base = {
+      gameType,
+      players:[playerFirst, playerSecond],
+      status:'active',
+      winner:null,
+      pointsAwarded:{},
+      createdAt:Date.now()
+    };
+    if(gameType==='tetris'){
+      base.scores = {[playerFirst]:0,[playerSecond]:0};
+      base.lines = {[playerFirst]:0,[playerSecond]:0};
+      base.alive = {[playerFirst]:true,[playerSecond]:true};
+    }else{
+      base.scores = {[playerFirst]:0,[playerSecond]:0};
+      base.paddles = {[playerFirst]:0.5,[playerSecond]:0.5};
+      base.ball = {x:0.5,y:0.5,vx:0.005,vy:0.004};
+      base.host = playerFirst;
+      base.lastTick = Date.now();
+    }
+    return await addDoc(collection(db,'gamePvpMatches'),base);
+  }
+
+  function customLobby(gameType){
+    pvpResetLocalGameStates();
+    stopCustomPvp();
+    const area=document.getElementById('gamePlayArea');
+    if(!area) return;
+    const label=PVP_GAME_CONFIG[gameType].label;
+    const users=(allUsers||[]).filter(u=>u!==currentUser);
+    area.innerHTML=`<div class="box" style="margin:0;text-align:center;">
+      <div style="font-size:14px;font-weight:bold;margin-bottom:6px;">⚡ ${label} 실시간 대결</div>
+      <div style="font-size:12px;color:var(--text-sub);line-height:1.5;">
+        다른 회원에게 도전장을 보내고, 상대가 수락하면 같은 경기방에서 실시간으로 대결합니다.
+      </div>
+      <div class="pvp-challenge-box">
+        <select id="pvpChallengeTarget" style="margin-bottom:8px;">
+          <option value="">대결할 회원 선택</option>
+          ${users.map(u=>`<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('')}
+        </select>
+        <button onclick="pvpSendChallenge('${gameType}')" style="width:100%;">📨 ${label} 도전장 보내기</button>
+      </div>
+      ${!users.length?`<div style="font-size:12px;color:var(--text-sub);margin-top:10px;">현재 도전할 다른 회원이 없습니다.</div>`:''}
+    </div>`;
+  }
+
+  window.openTetrisPvpLobby=function(){
+    if(pvpPendingEntry && pvpPendingEntry.gameType==='tetris'){
+      const e=pvpPendingEntry; pvpPendingEntry=null; customEnterMatch(e.matchId,'tetris'); return;
+    }
+    customLobby('tetris');
+  };
+  window.openPongPvpLobby=function(){
+    if(pvpPendingEntry && pvpPendingEntry.gameType==='pong'){
+      const e=pvpPendingEntry; pvpPendingEntry=null; customEnterMatch(e.matchId,'pong'); return;
+    }
+    customLobby('pong');
+  };
+
+  async function customEnterMatch(matchId, gameType){
+    stopCustomPvp();
+    pvpState={mode:'match',gameType,matchId,submitting:false,unsubMatch:null,lastData:null,custom:true};
+    currentGamePlayKey=gameType+'Pvp';
+    currentGamePlayLabel=PVP_GAME_CONFIG[gameType].label+' - 실시간 대결';
+    const titleEl=document.getElementById('gamePlayDetailTitle');
+    if(titleEl) titleEl.textContent=currentGamePlayLabel;
+    const ref=doc(db,'gamePvpMatches',matchId);
+    pvpState.unsubMatch=onSnapshot(ref,snap=>{
+      if(!snap.exists()) return;
+      const data={id:snap.id,...snap.data()};
+      pvpState.lastData=data;
+      if(gameType==='tetris') renderTetrisPvpMatch(data);
+      else renderPongPvpMatch(data);
+      if(data.status==='finished') finishCustomLocalView(data);
+    },err=>console.error('커스텀 PvP 구독 오류:',err));
+    customPvpCleanup=()=>{ if(pvpState?.unsubMatch) pvpState.unsubMatch(); stopCustomPvpGameLoop(); };
+    if(gameType==='tetris') renderTetrisPvpMatch({id:matchId,gameType,players:[],scores:{},lines:{},alive:{},status:'active'});
+    else renderPongPvpMatch({id:matchId,gameType,players:[],scores:{},paddles:{},ball:{x:.5,y:.5},status:'active'});
+  }
+
+  function stopCustomPvpGameLoop(){
+    if(window.__customTetrisPvp?.timer) clearInterval(window.__customTetrisPvp.timer);
+    if(window.__customTetrisPvp?.keyHandler) document.removeEventListener('keydown',window.__customTetrisPvp.keyHandler);
+    window.__customTetrisPvp=null;
+    if(window.__customPongPvp?.raf) cancelAnimationFrame(window.__customPongPvp.raf);
+    if(window.__customPongPvp?.keyDown) document.removeEventListener('keydown',window.__customPongPvp.keyDown);
+    if(window.__customPongPvp?.keyUp) document.removeEventListener('keyup',window.__customPongPvp.keyUp);
+    if(window.__customPongPvp?.sendTimer) clearInterval(window.__customPongPvp.sendTimer);
+    if(pongHostLoop) { clearInterval(pongHostLoop); pongHostLoop=null; }
+    window.__customPongPvp=null;
+  }
+
+  async function awardCustomResult(data){
+    if(!currentUser || data.status!=='finished' || (data.pointsAwarded&&data.pointsAwarded[currentUser])) return;
+    const cfg=PVP_GAME_CONFIG[data.gameType];
+    let points=0,outcome='패배';
+    if(data.winner==='draw'){points=cfg.drawPoints;outcome='무승부';}
+    else if(data.winner===currentUser){points=cfg.winPoints;outcome='승리';}
+    try{
+      await updateDoc(doc(db,'gamePvpMatches',data.id),{
+        [`pointsAwarded.${currentUser}`]:true
+      });
+      await awardGamePoints(data.gameType+'Pvp',cfg.label+' 실시간 대결',points,`${cfg.label} 실시간 대결 ${outcome}! (${points}P)`);
+    }catch(e){console.error(e);}
+  }
+
+  function finishCustomLocalView(data){
+    stopCustomPvpGameLoop();
+    const me=data.winner===currentUser, draw=data.winner==='draw';
+    const msg=draw?'🤝 무승부!':(me?'🎉 승리!':'💀 패배!');
+    const result=document.getElementById('customPvpResult');
+    if(result) result.innerHTML=`<div style="font-size:18px;font-weight:bold;margin-top:8px;">${msg}</div>`;
+    awardCustomResult(data);
+  }
+
+  async function finishCustomMatch(matchId, myScore, extra){
+    const ref=doc(db,'gamePvpMatches',matchId);
+    try{
+      const snap=await getDoc(ref);
+      if(!snap.exists()) return;
+      const data=snap.data();
+      if(data.status==='finished') return;
+      const scores={...(data.scores||{}),[currentUser]:myScore};
+      const alive={...(data.alive||{}),...(extra?.alive!==undefined?{[currentUser]:extra.alive}:{})};
+      let winner=null;
+      const players=data.players||[];
+      if(data.gameType==='tetris'){
+        const other=players.find(u=>u!==currentUser);
+        if(alive[currentUser]===false && alive[other]===false){
+          winner=(scores[currentUser]||0)===(scores[other]||0)?'draw':((scores[currentUser]||0)>(scores[other]||0)?currentUser:other);
+        }else if(alive[currentUser]===false && alive[other]!==false) winner=other;
+        else if(alive[other]===false && alive[currentUser]!==false) winner=currentUser;
+      }
+      if(winner){
+        await updateDoc(ref,{scores,alive,status:'finished',winner,finishedAt:Date.now()});
+      }else{
+        await updateDoc(ref,{scores,alive});
+      }
+    }catch(e){console.error('대결 결과 저장 실패:',e);}
+  }
+
+  /* ---------- 테트리스 PvP ---------- */
+  function createPvpTetrisPiece(){
+    const keys=Object.keys(TETRIS_SHAPES), key=keys[Math.floor(Math.random()*keys.length)], s=TETRIS_SHAPES[key];
+    return {key,color:s.color,cells:s.cells.map(c=>[...c]),x:3,y:-1};
+  }
+  function pvpTetrisCollides(board,piece,dx,dy,cells){
+    const cs=cells||piece.cells;
+    return cs.some(([cx,cy])=>{
+      const x=piece.x+cx+dx,y=piece.y+cy+dy;
+      if(x<0||x>=TETRIS_COLS||y>=TETRIS_ROWS) return true;
+      if(y<0) return false;
+      return board[y][x]!==null;
+    });
+  }
+  function drawPvpTetris(st){
+    const c=document.getElementById('tetrisPvpCanvas'); if(!c) return;
+    const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
+    for(let y=0;y<TETRIS_ROWS;y++) for(let x=0;x<TETRIS_COLS;x++){
+      const color=st.board[y][x];
+      if(color){ctx.fillStyle=color;ctx.fillRect(x*TETRIS_BLOCK+1,y*TETRIS_BLOCK+1,TETRIS_BLOCK-2,TETRIS_BLOCK-2);}
+    }
+    if(st.piece){ctx.fillStyle=st.piece.color;st.piece.cells.forEach(([cx,cy])=>{const x=st.piece.x+cx,y=st.piece.y+cy;if(y>=0)ctx.fillRect(x*TETRIS_BLOCK+1,y*TETRIS_BLOCK+1,TETRIS_BLOCK-2,TETRIS_BLOCK-2);});}
+  }
+  function syncPvpTetrisScore(){
+    const st=window.__customTetrisPvp; if(!st||!pvpState?.lastData) return;
+    const el=document.getElementById('tetrisPvpMyScore'); if(el) el.textContent=st.score;
+    const le=document.getElementById('tetrisPvpMyLines'); if(le) le.textContent=st.lines;
+  }
+  async function pvpTetrisStep(hard){
+    const st=window.__customTetrisPvp; if(!st||!st.running) return;
+    let moved=false;
+    if(hard){
+      while(!pvpTetrisCollides(st.board,st.piece,0,1)) st.piece.y++;
+      pvpTetrisLock();
+      return;
+    }
+    if(!pvpTetrisCollides(st.board,st.piece,0,1)){st.piece.y++;moved=true;}
+    if(!moved) pvpTetrisLock();
+    drawPvpTetris(st);
+  }
+  function pvpTetrisLock(){
+    const st=window.__customTetrisPvp;if(!st||!st.running)return;
+    st.piece.cells.forEach(([cx,cy])=>{const x=st.piece.x+cx,y=st.piece.y+cy;if(y>=0&&y<TETRIS_ROWS&&x>=0&&x<TETRIS_COLS)st.board[y][x]=st.piece.color;});
+    let cleared=0;
+    for(let y=TETRIS_ROWS-1;y>=0;y--){
+      if(st.board[y].every(Boolean)){st.board.splice(y,1);st.board.unshift(Array(TETRIS_COLS).fill(null));cleared++;y++;}
+    }
+    if(cleared){st.lines+=cleared;st.score+=( {1:40,2:100,3:300,4:1200}[cleared]||1200)*Math.max(1,Math.floor(st.lines/10)+1);}
+    st.piece=createPvpTetrisPiece();
+    if(pvpTetrisCollides(st.board,st.piece,0,0)){
+      st.running=false; drawPvpTetris(st);
+      finishCustomMatch(pvpState.matchId,st.score,{alive:false});
+      const b=document.getElementById('tetrisPvpGameOver');if(b)b.classList.remove('hidden');
+    }else drawPvpTetris(st);
+    syncPvpTetrisScore();
+  }
+  window.tetrisPvpAction=function(action){
+    const st=window.__customTetrisPvp;if(!st||!st.running)return;
+    if(action==='left'&&!pvpTetrisCollides(st.board,st.piece,-1,0))st.piece.x--;
+    else if(action==='right'&&!pvpTetrisCollides(st.board,st.piece,1,0))st.piece.x++;
+    else if(action==='down')pvpTetrisStep(false);
+    else if(action==='hard')pvpTetrisStep(true);
+    else if(action==='rotate'){
+      const cells=rotateCells(st.piece.cells);
+      if(!pvpTetrisCollides(st.board,st.piece,0,0,cells))st.piece.cells=cells;
+    }
+    drawPvpTetris(st);syncPvpTetrisScore();
+  };
+  window.startTetrisPvp=function(){
+    stopCustomPvpGameLoop();
+    const st={board:createEmptyTetrisBoard(),piece:createPvpTetrisPiece(),score:0,lines:0,running:true,timer:null,keyHandler:null};
+    window.__customTetrisPvp=st;
+    document.getElementById('tetrisPvpStartBtn').textContent='재시작';
+    document.getElementById('tetrisPvpGameOver').classList.add('hidden');
+    st.keyHandler=e=>{
+      if(!st.running)return;
+      if(['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' '].includes(e.key))e.preventDefault();
+      if(e.key==='ArrowLeft')tetrisPvpAction('left'); else if(e.key==='ArrowRight')tetrisPvpAction('right');
+      else if(e.key==='ArrowDown')tetrisPvpAction('down'); else if(e.key==='ArrowUp')tetrisPvpAction('rotate'); else if(e.key===' ')tetrisPvpAction('hard');
+    };
+    document.addEventListener('keydown',st.keyHandler);
+    st.timer=setInterval(()=>pvpTetrisStep(false),Math.max(120,700-Math.floor(st.lines/5)*55));
+    drawPvpTetris(st);syncPvpTetrisScore();
+  };
+  function renderTetrisPvpMatch(data){
+    const area=document.getElementById('gamePlayArea');if(!area)return;
+    const players=data.players||[]; const scores=data.scores||{}; const lines=data.lines||{};
+    if(!document.getElementById('tetrisPvpCanvas')){
+      area.innerHTML=`<div class="box" style="margin:0;text-align:center;">
+        <div class="pvp-status" id="tetrisPvpStatus">상대와 연결 중...</div>
+        <div class="pvp-scoreboard">
+          <div class="pvp-score-card me"><div class="pvp-score-name">${escapeHtml(currentUser)} (나)</div><div class="pvp-score-value" id="tetrisPvpMyScore">0</div><div style="font-size:10px;color:var(--text-sub);">점수 · <span id="tetrisPvpMyLines">0</span>줄</div></div>
+          <div class="pvp-score-card"><div class="pvp-score-name" id="tetrisPvpOppName">상대</div><div class="pvp-score-value" id="tetrisPvpOppScore">0</div><div style="font-size:10px;color:var(--text-sub);">점수 · <span id="tetrisPvpOppLines">0</span>줄</div></div>
+        </div>
+        <div id="tetrisPvpGameOver" class="hidden" style="font-size:17px;font-weight:bold;padding:9px;margin-bottom:8px;border-radius:8px;background:rgba(248,113,113,.18);color:#f87171;">게임 종료</div>
+        <canvas id="tetrisPvpCanvas" width="${TETRIS_COLS*TETRIS_BLOCK}" height="${TETRIS_ROWS*TETRIS_BLOCK}" style="background:var(--input-bg);border:1px solid var(--border-color);border-radius:8px;touch-action:none;"></canvas>
+        <div style="display:flex;justify-content:center;gap:8px;margin-top:10px;flex-wrap:wrap;">
+          <button onclick="tetrisPvpAction('left')" style="font-size:20px;padding:12px 18px;">◀</button><button onclick="tetrisPvpAction('rotate')" style="font-size:20px;padding:12px 18px;">🔄</button><button onclick="tetrisPvpAction('right')" style="font-size:20px;padding:12px 18px;">▶</button>
+        </div>
+        <div style="display:flex;justify-content:center;gap:8px;margin-top:8px;flex-wrap:wrap;"><button onclick="tetrisPvpAction('down')">⬇ 소프트드롭</button><button onclick="tetrisPvpAction('hard')">⤓ 하드드롭</button></div>
+        <button onclick="startTetrisPvp()" id="tetrisPvpStartBtn" style="width:100%;margin-top:10px;">시작하기</button>
+        <div id="customPvpResult"></div>
+      </div>`;
+    }
+    const other=players.find(u=>u!==currentUser)||'상대';
+    const status=document.getElementById('tetrisPvpStatus');
+    const oppName=document.getElementById('tetrisPvpOppName');
+    const oppScore=document.getElementById('tetrisPvpOppScore');
+    const oppLines=document.getElementById('tetrisPvpOppLines');
+    if(oppName)oppName.textContent=other;
+    if(oppScore)oppScore.textContent=scores[other]||0;
+    if(oppLines)oppLines.textContent=lines[other]||0;
+    if(status)status.textContent=data.status==='finished'?(data.winner==='draw'?'무승부':(data.winner===currentUser?'승리!':'상대 승리!')):(data.alive?.[other]===false?'상대 게임 오버 — 결과 계산 중':`${other}와 실시간 대결 중`);
+  }
+
+  /* ---------- 핑퐁 PvP ---------- */
+  const PW=320,PH=420,PADW=70,PADH=10,BALL=6;
+  function drawPvpPong(data){
+    const c=document.getElementById('pongPvpCanvas');if(!c)return;
+    const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);
+    ctx.fillStyle='#334155';ctx.fillRect(0,PH/2-1,PW,2);
+    const players=data.players||[];const my=players[0]===currentUser?0:1;
+    const paddles=data.paddles||{};const ball=data.ball||{x:.5,y:.5};
+    ctx.fillStyle='#60a5fa';ctx.fillRect((paddles[players[0]]||.5)*PW-PADW/2,15-PADH/2,PADW,PADH);
+    ctx.fillStyle='#facc15';ctx.fillRect((paddles[players[1]]||.5)*PW-PADW/2,PH-15-PADH/2,PADW,PADH);
+    ctx.beginPath();ctx.arc(ball.x*PW,ball.y*PH,BALL,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
+    ctx.font='bold 18px sans-serif';ctx.fillStyle='rgba(255,255,255,.7)';ctx.fillText(String((data.scores||{})[players[0]]||0),12,55);ctx.fillText(String((data.scores||{})[players[1]]||0),12,PH-55);
+  }
+  async function sendPongPaddle(){
+    const st=window.__customPongPvp;if(!st||!pvpState?.matchId)return;
+    try{await updateDoc(doc(db,'gamePvpMatches',pvpState.matchId),{[`paddles.${currentUser}`]:st.paddle});}catch(e){}
+  }
+  function pongPvpFrame(){
+    const st=window.__customPongPvp;if(!st||!st.running)return;
+    if(st.keys.left)st.paddle=Math.max(.12,st.paddle-.018);
+    if(st.keys.right)st.paddle=Math.min(.88,st.paddle+.018);
+    drawPvpPong(pvpState.lastData||{players:[currentUser,'상대'],paddles:{[currentUser]:st.paddle},ball:{x:.5,y:.5},scores:{}});
+    st.raf=requestAnimationFrame(pongPvpFrame);
+  }
+  function startPongPvp(){
+    stopCustomPvpGameLoop();
+    const data=pvpState?.lastData;if(!data||data.status==='finished')return;
+    const players=data.players||[];const st={running:true,paddle:(data.paddles||{})[currentUser]||.5,keys:{left:false,right:false},raf:null,sendTimer:null,keyDown:null,keyUp:null};
+    window.__customPongPvp=st;
+    st.keyDown=e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();st.keys[e.key==='ArrowLeft'?'left':'right']=true;}};
+    st.keyUp=e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight')st.keys[e.key==='ArrowLeft'?'left':'right']=false;};
+    document.addEventListener('keydown',st.keyDown);document.addEventListener('keyup',st.keyUp);
+    const left=document.getElementById('pongPvpLeftBtn'),right=document.getElementById('pongPvpRightBtn');
+    if(left){left.onpointerdown=()=>st.keys.left=true;left.onpointerup=left.onpointercancel=()=>st.keys.left=false;}
+    if(right){right.onpointerdown=()=>st.keys.right=true;right.onpointerup=right.onpointercancel=()=>st.keys.right=false;}
+    st.sendTimer=setInterval(sendPongPaddle,100);
+    sendPongPaddle();pongPvpFrame();
+  }
+  function renderPongPvpMatch(data){
+    const area=document.getElementById('gamePlayArea');if(!area)return;
+    const players=data.players||[];const scores=data.scores||{};const other=players.find(u=>u!==currentUser)||'상대';
+    if(!document.getElementById('pongPvpCanvas')){
+      area.innerHTML=`<div class="box" style="margin:0;text-align:center;">
+        <div class="pvp-status" id="pongPvpStatus">상대와 연결 중...</div>
+        <div class="pvp-scoreboard">
+          <div class="pvp-score-card me"><div class="pvp-score-name">${escapeHtml(currentUser)} (나)</div><div class="pvp-score-value" id="pongPvpMyScore">0</div></div>
+          <div class="pvp-score-card"><div class="pvp-score-name" id="pongPvpOppName">${escapeHtml(other)}</div><div class="pvp-score-value" id="pongPvpOppScore">0</div></div>
+        </div>
+        <canvas id="pongPvpCanvas" width="${PW}" height="${PH}" style="max-width:100%;background:var(--input-bg);border:1px solid var(--border-color);border-radius:8px;touch-action:none;"></canvas>
+        <div style="display:flex;justify-content:center;gap:24px;margin-top:10px;"><button id="pongPvpLeftBtn" style="font-size:18px;padding:12px 22px;">◀</button><button id="pongPvpRightBtn" style="font-size:18px;padding:12px 22px;">▶</button></div>
+        <div style="font-size:11px;color:var(--text-sub);margin-top:8px;">PC에서는 방향키(◀▶)로 이동합니다. 먼저 상대에게 도전장을 보내세요.</div>
+        <div id="pongPvpGameOver" class="hidden" style="font-size:17px;font-weight:bold;padding:9px;margin-top:8px;border-radius:8px;background:rgba(248,113,113,.18);color:#f87171;">게임 종료</div>
+        <button onclick="startPongPvp()" id="pongPvpStartBtn" style="width:100%;margin-top:10px;">준비하기</button>
+        <div id="customPvpResult"></div>
+      </div>`;
+    }
+    const meScore=document.getElementById('pongPvpMyScore'),opScore=document.getElementById('pongPvpOppScore');
+    if(meScore)meScore.textContent=scores[currentUser]||0;if(opScore)opScore.textContent=scores[other]||0;
+    const status=document.getElementById('pongPvpStatus');
+    if(status)status.textContent=data.status==='finished'?(data.winner==='draw'?'무승부':(data.winner===currentUser?'승리!':'상대 승리!')):`${other}와 실시간 핑퐁 대결`;
+    drawPvpPong(data);
+  }
+
+  /* 핑퐁은 첫 번째 플레이어를 서버 상태 계산 담당자로 사용 */
+  async function pongHostTick(){
+    if(!pvpState||pvpState.gameType!=='pong'||!window.__customPongPvp||!window.__customPongPvp.running)return;
+    const data=pvpState.lastData;if(!data||data.host!==currentUser||data.status==='finished')return;
+    const players=data.players||[];if(players.length<2)return;
+    const st=window.__customPongPvp;
+    const ball={...(data.ball||{x:.5,y:.5,vx:.005,vy:.004})};
+    const paddles={...(data.paddles||{})};
+    paddles[currentUser]=st.paddle;
+    ball.x+=ball.vx*2.2;ball.y+=ball.vy*2.2;
+    if(ball.x<.02||ball.x>.98){ball.x=Math.max(.02,Math.min(.98,ball.x));ball.vx*=-1;}
+    const top=players[0],bottom=players[1];
+    if(ball.vy<0&&ball.y<.08&&Math.abs(ball.x-(paddles[top]||.5))<.14){ball.y=.08;ball.vy=Math.abs(ball.vy)*1.03;}
+    if(ball.vy>0&&ball.y>.92&&Math.abs(ball.x-(paddles[bottom]||.5))<.14){ball.y=.92;ball.vy=-Math.abs(ball.vy)*1.03;}
+    let scores={...(data.scores||{})};
+    let winner=null;
+    if(ball.y<-.03){scores[bottom]=(scores[bottom]||0)+1;ball.x=.5;ball.y=.5;ball.vy=Math.abs(.004+Math.random()*.002);}
+    if(ball.y>1.03){scores[top]=(scores[top]||0)+1;ball.x=.5;ball.y=.5;ball.vy=-Math.abs(.004+Math.random()*.002);}
+    if((scores[top]||0)>=5)winner=top;if((scores[bottom]||0)>=5)winner=bottom;
+    try{await updateDoc(doc(db,'gamePvpMatches',pvpState.matchId),{ball,paddles,scores,status:winner?'finished':'active',winner});}catch(e){}
+  }
+  function startPongHostLoop(){
+    if(pongHostLoop)clearInterval(pongHostLoop);
+    pongHostLoop=setInterval(pongHostTick,80);
+  }
+
+  /* 기존 도전/수락 시스템을 새 게임에도 연결 */
+  const originalSendChallenge=window.pvpSendChallenge;
+  window.pvpSendChallenge=async function(gameType){
+    if(isCustomPvpType(gameType)){
+      return originalSendChallenge(gameType);
+    }
+    return originalSendChallenge(gameType);
+  };
+
+  const originalAcceptChallenge=window.pvpAcceptChallenge;
+  window.pvpAcceptChallenge=async function(challengeId,gameType,fromUser){
+    if(!isCustomPvpType(gameType)) return originalAcceptChallenge(challengeId,gameType,fromUser);
+    try{
+      const matchRef=await createCustomMatch(gameType,fromUser,currentUser);
+      await updateDoc(doc(db,'gamePvpChallenges',challengeId),{status:'accepted',matchId:matchRef.id});
+      pvpPendingEntry={gameType,matchId:matchRef.id};
+      window.openGameDetail(gameType+'Pvp',PVP_GAME_CONFIG[gameType].label+' - 실시간 대결');
+    }catch(e){console.error(e);alert('도전 수락에 실패했습니다.');}
+  };
+
+  const originalEnterAccepted=window.pvpEnterAcceptedChallenge;
+  window.pvpEnterAcceptedChallenge=async function(challengeId,matchId,gameType){
+    if(!isCustomPvpType(gameType)) return originalEnterAccepted(challengeId,matchId,gameType);
+    try{await updateDoc(doc(db,'gamePvpChallenges',challengeId),{status:'consumed'});}catch(e){}
+    pvpPendingEntry={gameType,matchId};
+    window.openGameDetail(gameType+'Pvp',PVP_GAME_CONFIG[gameType].label+' - 실시간 대결');
+  };
+
+  /* 게임 목록의 테트리스/핑퐁 카드에 대결 버튼만 추가 */
+  const originalRenderGameHub=renderGameHub;
+  renderGameHub=function(){
+    originalRenderGameHub();
+    const cards=[...document.querySelectorAll('#gameHubTab .game-card')];
+    cards.forEach(card=>{
+      const title=card.querySelector('div[style*="font-size:14px"]');
+      if(!title)return;
+      const t=title.textContent||'';
+      if((t.includes('테트리스')||t.includes('핑퐁'))&&!card.querySelector('.added-pvp-button')){
+        const key=t.includes('테트리스')?'tetris':'pong';
+        const label=key==='tetris'?'🧱 테트리스':'🏓 핑퐁';
+        const b=document.createElement('button');
+        b.className='added-pvp-button';
+        b.textContent='⚡ 실시간 대결';
+        b.style.cssText='width:100%;margin-top:6px;background:var(--input-bg);color:var(--cafe-green);border:1px solid var(--cafe-green);';
+        b.onclick=()=>openGameDetail(key+'Pvp',label+' - 실시간 대결');
+        card.appendChild(b);
+      }
+    });
+  };
+
+  /* 수락 후 openGameDetail -> custom lobby 진입 */
+  const originalLoadGamePlayDetail=loadGamePlayDetail;
+  loadGamePlayDetail=function(){
+    if(currentGamePlayKey==='tetrisPvp'){
+      document.getElementById('gamePlayDetailTitle').textContent=currentGamePlayLabel||'테트리스 - 실시간 대결';
+      return window.openTetrisPvpLobby();
+    }
+    if(currentGamePlayKey==='pongPvp'){
+      document.getElementById('gamePlayDetailTitle').textContent=currentGamePlayLabel||'핑퐁 - 실시간 대결';
+      return window.openPongPvpLobby();
+    }
+    return originalLoadGamePlayDetail();
+  };
+
+  /* 수락한 플레이어가 매치에 들어오면 pending entry가 사라지기 전에 직접 match로 연결 */
+  const originalOpenTetrisPvpLobby=window.openTetrisPvpLobby;
+  const originalOpenPongPvpLobby=window.openPongPvpLobby;
+  window.openTetrisPvpLobby=function(){
+    if(pvpPendingEntry&&pvpPendingEntry.gameType==='tetris'){const e=pvpPendingEntry;pvpPendingEntry=null;return customEnterMatch(e.matchId,'tetris');}
+    return customLobby('tetris');
+  };
+  window.openPongPvpLobby=function(){
+    if(pvpPendingEntry&&pvpPendingEntry.gameType==='pong'){const e=pvpPendingEntry;pvpPendingEntry=null;return customEnterMatch(e.matchId,'pong');}
+    return customLobby('pong');
+  };
+
+  /* 핑퐁 루프는 match에 입장해 양쪽 모두 준비 버튼을 누르면 시작.
+     호스트만 공을 계산하고 Firestore에 동기화합니다. */
+  const oldStartPongPvp=startPongPvp;
+  startPongPvp=function(){
+    oldStartPongPvp();
+    if(window.__customPongPvp){window.__customPongPvp.running=true;startPongHostLoop();}
+  };
+
+  /* renderPongPvpMatch가 DOM을 만든 직후 host loop를 유지 */
+  const oldRenderPongPvpMatch=renderPongPvpMatch;
+  renderPongPvpMatch=function(data){
+    oldRenderPongPvpMatch(data);
+    if(data.status==='finished'){
+      if(pongHostLoop)clearInterval(pongHostLoop);
+      pongHostLoop=null;
+    }
+  };
+
+  /* 초기 허브 렌더 이후에도 대결 버튼이 보이도록 한 번 갱신 */
+  setTimeout(()=>{try{renderGameHub();}catch(e){}},0);
+})();
+
 </script>
 </body>
 </html>
