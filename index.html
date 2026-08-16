@@ -121,7 +121,7 @@ body {
   background: var(--cafe-green);
 }
 .sidebar-item-icon { display: inline-block; margin-right: 6px; }
-.sidebar-item-label { display: inline-block; white-space: nowrap; }
+.sidebar-item-label { display: inline-block; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
 .sidebar-bottom { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-color); }
 .app-content { flex: 1; min-width: 0; width: min(600px, calc(100vw - 280px)); margin: 40px auto; box-sizing: border-box; }
 .chat-view { height: min(720px, calc(100vh - 80px)); min-height: 500px; overflow: hidden; border: 1px solid var(--border-color); border-radius: 14px; background: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; }
@@ -1331,7 +1331,7 @@ const SIDEBAR_ITEMS = [
   { key: 'ranking', icon: '🏆', label: '랭킹' },
   { key: 'game', icon: '🎮', label: '미니게임' },
   { key: 'aiChat', icon: '✨', label: 'AI 채팅' },
-  { key: 'curious', icon: '🎲', label: "I'm Feeling Curious" },
+  { key: 'curious', icon: '🎲', label: "I'm Feeling Curious", shortLabel: 'IFC' },
   { key: 'browse', icon: '🌐', label: '웹 브라우징' },
   { key: 'teamddd', icon: '🛡️', label: 'TeamDDD' },
   { key: 'bookmarks', icon: '⭐', label: '북마크' },
@@ -1383,14 +1383,57 @@ function renderSidebarNav() {
     let badge = '';
     if (key === 'chat') badge = '<span id="unreadBadge" class="unread-badge hidden"></span>';
     if (key === 'notifications') badge = '<span id="notificationBadge" class="unread-badge hidden"></span>';
-    return `<button id="${id}" class="sidebar-item" onclick="${onclick}"><span class="sidebar-item-icon">${item.icon}</span><span class="sidebar-item-label">${item.label}</span>${badge}</button>`;
+    const labelAttrs = item.shortLabel ? ` data-full="${item.label}" data-short="${item.shortLabel}"` : '';
+    return `<button id="${id}" class="sidebar-item" onclick="${onclick}"><span class="sidebar-item-icon">${item.icon}</span><span class="sidebar-item-label"${labelAttrs}>${item.label}</span>${badge}</button>`;
   }).join('');
   // 재렌더링 후에도 현재 보고 있는 화면의 활성 표시를 유지
   const activeSection = ['cafe', 'ranking', 'game', 'aiChat', 'bookmarks', 'chat', 'notifications', 'settings', 'admin'].find(sec => !document.getElementById(`${sec}View`)?.classList.contains('hidden'));
   if (activeSection && SIDEBAR_ITEM_IDS[activeSection]) {
     document.getElementById(SIDEBAR_ITEM_IDS[activeSection])?.classList.add('active');
   }
+  adjustSidebarLabelOverflow();
 }
+
+// ===== 사이드바 라벨 자동 축약 (넘치면 shortLabel로 교체, 예: "I'm Feeling Curious" -> "IFC") =====
+function sidebarLabelTextWidth(text, referenceEl) {
+  const test = document.createElement('span');
+  test.style.position = 'absolute';
+  test.style.left = '-9999px';
+  test.style.top = '0';
+  test.style.visibility = 'hidden';
+  test.style.whiteSpace = 'nowrap';
+  test.style.font = getComputedStyle(referenceEl).font;
+  test.textContent = text;
+  document.body.appendChild(test);
+  const width = test.offsetWidth;
+  document.body.removeChild(test);
+  return width;
+}
+
+function adjustSidebarLabelOverflow() {
+  const isMobileLayout = window.matchMedia('(max-width: 700px)').matches;
+  document.querySelectorAll('.sidebar-item-label[data-short]').forEach(labelEl => {
+    const btn = labelEl.closest('.sidebar-item');
+    if (!btn) return;
+    const fullText = labelEl.getAttribute('data-full');
+    const shortText = labelEl.getAttribute('data-short');
+    const btnStyle = getComputedStyle(btn);
+    const paddingLeft = parseFloat(btnStyle.paddingLeft) || 0;
+    const paddingRight = parseFloat(btnStyle.paddingRight) || 0;
+    const iconEl = btn.querySelector('.sidebar-item-icon');
+    // 모바일(세로 스택 레이아웃)에서는 아이콘이 라벨 위에 있어 가로 폭을 나눠 쓰지 않음
+    const iconWidth = (!isMobileLayout && iconEl) ? iconEl.offsetWidth + 6 : 0;
+    const availableWidth = btn.clientWidth - paddingLeft - paddingRight - iconWidth;
+    const fullTextWidth = sidebarLabelTextWidth(fullText, labelEl);
+    labelEl.textContent = fullTextWidth <= availableWidth ? fullText : shortText;
+  });
+}
+
+let sidebarLabelResizeTimer = null;
+window.addEventListener('resize', function () {
+  clearTimeout(sidebarLabelResizeTimer);
+  sidebarLabelResizeTimer = setTimeout(adjustSidebarLabelOverflow, 120);
+});
 
 function renderSidebarOrderEditor() {
   const container = document.getElementById('sidebarOrderList');
