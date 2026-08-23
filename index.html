@@ -837,9 +837,13 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="gameShopPanel" class="hidden" style="border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:14px;"></div>
 <div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;">
 <button id="gameTabHubBtn" class="page-btn active" onclick="setGameTab('hub')" style="padding:6px 12px; font-size:12px;">게임 목록</button>
+<button id="gameTabPvpRecordBtn" class="page-btn" onclick="setGameTab('pvpRecord')" style="padding:6px 12px; font-size:12px;">🏆 내 대결 전적</button>
+<button id="gameTabPvpSpectateBtn" class="page-btn" onclick="setGameTab('pvpSpectate')" style="padding:6px 12px; font-size:12px;">👀 대결 구경하기</button>
 <button id="gameTabLeaderboardBtn" class="page-btn" onclick="setGameTab('leaderboard')" style="padding:6px 12px; font-size:12px;">🏆 리더보드</button>
 </div>
 <div id="gameHubTab"></div>
+<div id="gamePvpRecordTab" class="hidden"></div>
+<div id="gamePvpSpectateTab" class="hidden"></div>
 <div id="gameLeaderboardTab" class="hidden">
 <div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;">
 <button id="lbSubTotalBtn" class="page-btn active" onclick="setLeaderboardSubTab('total')" style="padding:5px 10px; font-size:11px;">💰 총 포인트</button>
@@ -938,6 +942,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <span style="cursor:pointer;" onclick="openFollowListModal('followers')">팔로워 <b id="profileFollowerCount" style="color:var(--text-main);">0</b></span>
 <span style="cursor:pointer;" onclick="openFollowListModal('following')">팔로잉 <b id="profileFollowingCount" style="color:var(--text-main);">0</b></span>
 </div>
+<div id="profilePvpRatingRow" class="hidden" style="display:flex; gap:14px; margin-bottom:16px; font-size:12px; color:var(--text-sub); flex-wrap:wrap;"></div>
 <h3 style="margin-top:0;">작성한 게시글</h3>
 <div id="profilePostsContainer">불러오는 중...</div>
 </div>
@@ -950,6 +955,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button class="admin-sidebar-item" data-admin-tab="reports" onclick="setAdminTab('reports')">🚨 신고 목록</button>
 <button class="admin-sidebar-item" data-admin-tab="users" onclick="setAdminTab('users')">👥 회원 관리</button>
 <button class="admin-sidebar-item" data-admin-tab="rooms" onclick="setAdminTab('rooms')">💬 채팅방 관리</button>
+<button class="admin-sidebar-item" data-admin-tab="pvpMatches" onclick="setAdminTab('pvpMatches')">🎮 진행 중인 대결</button>
 </nav>
 <div class="admin-content">
 <div id="adminTab_stats" class="admin-tab-panel box">
@@ -979,6 +985,13 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="adminTab_rooms" class="admin-tab-panel box hidden">
 <h2 style="margin-top: 0;">채팅방 관리 (전체)</h2>
 <div id="adminChatRoomsContainer">불러오는 중...</div>
+</div>
+<div id="adminTab_pvpMatches" class="admin-tab-panel box hidden">
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<h2 style="margin-top: 0;">진행 중인 실시간 대결</h2>
+<button onclick="loadAdminPvpMatches()" style="padding: 6px 10px; font-size: 12px;">새로고침</button>
+</div>
+<div id="adminPvpMatchesContainer">불러오는 중...</div>
 </div>
 </div>
 </div>
@@ -3875,6 +3888,19 @@ async function loadProfileView(username) {
     const followingList = userData.following || [];
     document.getElementById('profileFollowingCount').textContent = followingList.length;
 
+    const ratingRow = document.getElementById('profilePvpRatingRow');
+    if (ratingRow) {
+      const ratings = userData.pvpRating || {};
+      const entries = Object.keys(PVP_GAME_CONFIG).filter(gt => ratings[gt] != null);
+      if (entries.length) {
+        ratingRow.classList.remove('hidden');
+        ratingRow.innerHTML = entries.map(gt => `<span>${escapeHtml(PVP_GAME_CONFIG[gt].label)} 레이팅 <b style="color:var(--text-main);">${ratings[gt]}</b></span>`).join('');
+      } else {
+        ratingRow.classList.add('hidden');
+        ratingRow.innerHTML = '';
+      }
+    }
+
     const followersSnap = await getDocs(query(collection(db, 'users'), where('following', 'array-contains', username)));
     document.getElementById('profileFollowerCount').textContent = followersSnap.size;
 
@@ -4027,7 +4053,7 @@ window.followListToggleFollow = async function(targetUser, type) {
 };
 
 // ===== 관리자 통계 대시보드 =====
-const ADMIN_TABS = ['stats', 'online', 'reports', 'users', 'rooms'];
+const ADMIN_TABS = ['stats', 'online', 'reports', 'users', 'rooms', 'pvpMatches'];
 
 window.setAdminTab = function(tab) {
   if (!ADMIN_TABS.includes(tab)) return;
@@ -4044,6 +4070,7 @@ window.setAdminTab = function(tab) {
   if (tab === 'reports') loadAdminPanel();
   if (tab === 'users') loadAdminUsers();
   if (tab === 'rooms') loadAdminChatRooms();
+  if (tab === 'pvpMatches') loadAdminPvpMatches();
 };
 
 window.loadAdminStats = async function() {
@@ -4276,6 +4303,45 @@ window.adminDeleteChatRoomById = async function(roomId) {
   } catch (error) {
     console.error(error);
     alert('채팅방 삭제에 실패했습니다.');
+  }
+};
+
+async function loadAdminPvpMatches() {
+  const container = document.getElementById('adminPvpMatchesContainer');
+  if (!container) return;
+  if (currentUserRole !== 'admin') { container.innerHTML = '<div style="padding:14px; color:var(--text-sub);">관리자만 접근할 수 있습니다.</div>'; return; }
+  container.innerHTML = '불러오는 중...';
+  try {
+    const snapshot = await getDocs(collection(db, 'gamePvpMatches'));
+    const matches = snapshot.docs
+      .map(item => ({ id: item.id, ...item.data() }))
+      .filter(m => m.status !== 'finished')
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    if (!matches.length) { container.innerHTML = '<div style="padding:14px; color:var(--text-sub);">진행 중인 대결이 없습니다.</div>'; return; }
+    container.innerHTML = matches.map(m => {
+      const cfg = PVP_GAME_CONFIG[m.gameType];
+      const statusLabel = m.status === 'waiting_ready' ? '대기 중' : '진행 중';
+      const players = Array.isArray(m.players) ? m.players.join(' VS ') : '';
+      return `<div class="comment-item admin-row">
+        <div class="comment-body">${escapeHtml(cfg ? cfg.label : (m.gameType || ''))} · <b>${escapeHtml(players)}</b> <span style="color:var(--text-sub); font-size:11px;">(${statusLabel})</span></div>
+        <div class="admin-row-actions"><button class="danger-btn" onclick="adminForceEndMatch('${m.id}')" style="padding:4px 8px; font-size:11px;">강제 종료</button></div>
+      </div>`;
+    }).join('');
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = '<div class="error-box">대결 목록을 불러오지 못했습니다.</div>';
+  }
+}
+
+window.adminForceEndMatch = async function(matchId) {
+  if (currentUserRole !== 'admin') return;
+  if (!confirm('이 대결을 강제로 종료하시겠습니까? 양쪽 모두 무승부로 처리됩니다.')) return;
+  try {
+    await updateDoc(doc(db, 'gamePvpMatches', matchId), { status: 'finished', winner: 'draw', forcedEndByAdmin: true, updatedAt: Date.now() });
+    loadAdminPvpMatches();
+  } catch (error) {
+    console.error(error);
+    alert('강제 종료에 실패했습니다.');
   }
 };
 
@@ -5803,11 +5869,18 @@ window.setGameTab = function(tab) {
   stopPong();
   stopReaction();
   stopMemory();
+  if (typeof stopPvpSession === 'function') stopPvpSession();
   document.getElementById('gameTabHubBtn').classList.toggle('active', tab === 'hub');
+  document.getElementById('gameTabPvpRecordBtn').classList.toggle('active', tab === 'pvpRecord');
+  document.getElementById('gameTabPvpSpectateBtn').classList.toggle('active', tab === 'pvpSpectate');
   document.getElementById('gameTabLeaderboardBtn').classList.toggle('active', tab === 'leaderboard');
   document.getElementById('gameHubTab').classList.toggle('hidden', tab !== 'hub');
+  document.getElementById('gamePvpRecordTab').classList.toggle('hidden', tab !== 'pvpRecord');
+  document.getElementById('gamePvpSpectateTab').classList.toggle('hidden', tab !== 'pvpSpectate');
   document.getElementById('gameLeaderboardTab').classList.toggle('hidden', tab !== 'leaderboard');
   if (tab === 'hub') renderGameHub();
+  else if (tab === 'pvpRecord') renderPvpRecordTab();
+  else if (tab === 'pvpSpectate') renderPvpSpectateTab();
   else setLeaderboardSubTab(leaderboardActiveSubTab);
 };
 
@@ -5902,9 +5975,7 @@ function renderGameHub() {
     { key: 'snake', title: '🐍 스네이크', desc: '방향키로 먹이를 먹고 몸을 키우세요! 길수록 포인트 UP', action: "openGameDetail('snake', '🐍 스네이크')", btnText: '플레이하기' },
     { key: 'pong', title: '🏓 핑퐁', desc: '컴퓨터를 상대로 공을 튕겨내며 랠리를 이어가 보세요', action: "openGameDetail('pong', '🏓 핑퐁')", btnText: '플레이하기', pvpAction: "openGameDetail('pongPvp', '🏓 핑퐁 - 실시간 대결')" },
     { key: 'reaction', title: '⚡ 반응속도 테스트', desc: '화면이 초록색으로 바뀌는 순간 탭! 빠를수록 포인트 UP', action: "openGameDetail('reaction', '⚡ 반응속도 테스트')", btnText: '도전하기' },
-    { key: 'memory', title: '🧠 메모리 게임', desc: '카드를 뒤집어 짝을 맞춰보세요! 초급·중급·고급 난이도 지원', action: "openGameDetail('memory', '🧠 메모리 게임')", btnText: '플레이하기' },
-    { key: 'pvpRecord', title: '🏆 내 대결 전적', desc: '실시간 대결 승/패/무 기록과 레이팅, 상대별 전적을 확인해보세요', action: "openGameDetail('pvpRecord', '🏆 내 대결 전적')", btnText: '전적 보기' },
-    { key: 'pvpSpectate', title: '👀 대결 구경하기', desc: '지금 진행 중인 다른 회원들의 실시간 대결을 관전하고 채팅해보세요', action: "openGameDetail('pvpSpectate', '👀 대결 구경하기')", btnText: '구경하기' }
+    { key: 'memory', title: '🧠 메모리 게임', desc: '카드를 뒤집어 짝을 맞춰보세요! 초급·중급·고급 난이도 지원', action: "openGameDetail('memory', '🧠 메모리 게임')", btnText: '플레이하기' }
   ];
   const pinnedKeys = getPinnedGames();
   const pinnedGames = pinnedKeys.map(key => games.find(g => g.key === key)).filter(Boolean);
@@ -5940,9 +6011,7 @@ const GAME_OPEN_FUNC_NAMES = {
   tttPvp: 'openTttPvpLobby',
   omokPvp: 'openOmokPvpLobby',
   tetrisPvp: 'openTetrisPvpLobby',
-  pongPvp: 'openPongPvpLobby',
-  pvpRecord: 'openPvpRecordPage',
-  pvpSpectate: 'openPvpSpectateLobby'
+  pongPvp: 'openPongPvpLobby'
 };
 
 function stopAllGames() {
@@ -8684,10 +8753,8 @@ function pvpRenderRaceResult(matchId, data, opponent) {
 }
 
 // ===== 🏆 대결 전적 페이지 =====
-window.openPvpRecordPage = async function() {
-  pvpResetLocalGameStates();
-  stopPvpSession();
-  const area = document.getElementById('gamePlayArea');
+async function renderPvpRecordTab() {
+  const area = document.getElementById('gamePvpRecordTab');
   if (!area) return;
   if (!currentUser) { area.innerHTML = '<div class="box" style="margin:0; text-align:center;">로그인 후 이용할 수 있습니다.</div>'; return; }
   area.innerHTML = '<div class="box" style="margin:0; text-align:center; padding:20px 0; color:var(--text-sub);">불러오는 중...</div>';
@@ -8731,13 +8798,11 @@ window.openPvpRecordPage = async function() {
     console.error(error);
     area.innerHTML = '<div class="box" style="margin:0; text-align:center;">전적을 불러오지 못했습니다.</div>';
   }
-};
+}
 
 // ===== 👀 실시간 대결 관전 =====
-window.openPvpSpectateLobby = function() {
-  pvpResetLocalGameStates();
-  stopPvpSession();
-  const area = document.getElementById('gamePlayArea');
+function renderPvpSpectateTab() {
+  const area = document.getElementById('gamePvpSpectateTab');
   if (!area) return;
   area.innerHTML = `<div class="box" style="margin:0;">
     <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px; text-align:center;">지금 진행 중인 실시간 대결을 골라 관전해보세요.</div>
@@ -8759,7 +8824,7 @@ window.openPvpSpectateLobby = function() {
       `).join('')
       : `<div style="padding:16px 0;">현재 진행 중인 대결이 없어요.</div>`;
   }, error => console.error(error));
-};
+}
 
 window.pvpSpectateMatch = async function(matchId, gameType) {
   if (pvpState && pvpState.unsubMatch) pvpState.unsubMatch();
@@ -8767,6 +8832,7 @@ window.pvpSpectateMatch = async function(matchId, gameType) {
   if (pvpState && pvpState.unsubList) pvpState.unsubList();
   currentGamePlayKey = 'pvpSpectate';
   currentGamePlayLabel = (PVP_GAME_CONFIG[gameType]?.label || '게임') + ' - 관전';
+  showAppSection('gamePlay');
   const titleEl = document.getElementById('gamePlayDetailTitle');
   if (titleEl) titleEl.textContent = currentGamePlayLabel;
   const outerArea = document.getElementById('gamePlayArea');
