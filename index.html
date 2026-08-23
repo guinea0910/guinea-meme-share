@@ -1223,6 +1223,13 @@ const PVP_GAME_CONFIG = {
   tetris: { label: '테트리스', type: 'race', winPoints: 30, drawPoints: 12 },
   pong: { label: '핑퐁', type: 'race', winPoints: 25, drawPoints: 10 }
 };
+// 네 가지 대결 게임(틱택토·오목·테트리스·핑퐁) 레이팅의 평균을 하나의 "게임 레이팅"으로 계산합니다.
+// 아직 플레이하지 않은 게임은 기본 레이팅(1000)으로 계산에 포함됩니다.
+function getAverageGameRating(ratings) {
+  const keys = Object.keys(PVP_GAME_CONFIG);
+  const total = keys.reduce((sum, gt) => sum + (ratings && ratings[gt] != null ? ratings[gt] : 1000), 0);
+  return Math.round(total / keys.length);
+}
 let mentionNotifications = [];
 let chatInvites = [];
 let ownerTransferRequests = [];
@@ -3894,7 +3901,7 @@ async function loadProfileView(username) {
       const entries = Object.keys(PVP_GAME_CONFIG).filter(gt => ratings[gt] != null);
       if (entries.length) {
         ratingRow.classList.remove('hidden');
-        ratingRow.innerHTML = entries.map(gt => `<span>${escapeHtml(PVP_GAME_CONFIG[gt].label)} 레이팅 <b style="color:var(--text-main);">${ratings[gt]}</b></span>`).join('');
+        ratingRow.innerHTML = `<span>게임 레이팅 <b style="color:var(--text-main);">${getAverageGameRating(ratings)}</b></span>`;
       } else {
         ratingRow.classList.add('hidden');
         ratingRow.innerHTML = '';
@@ -6073,10 +6080,19 @@ async function awardGamePoints(gameKey, gameLabel, points, detailText) {
 function renderGameResultActions(resultText) {
   const safeText = resultText.replace(/'/g, "\\'");
   return `<div style="display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;">
+    <button onclick="restartCurrentGame()" style="padding:6px 10px; font-size:12px; background: var(--cafe-green); color:#fff;">🔁 다시 대결하기</button>
+    <button onclick="closeGameDetail()" style="padding:6px 10px; font-size:12px; background: var(--border-color); color: var(--text-main);">⏹ 게임 종료하기</button>
     <button onclick="shareGameResultToChat('${safeText}')" style="padding:6px 10px; font-size:12px; background: var(--border-color); color: var(--text-main);">💬 채팅에 공유</button>
     <button onclick="shareGameResultToBoard('${safeText}')" style="padding:6px 10px; font-size:12px; background: var(--border-color); color: var(--text-main);">📝 카페에 글로 공유</button>
   </div>`;
 }
+
+// 결과 화면에서 "다시 대결하기"를 누르면 진행 중이던 미니게임(솔로/PvP 로비 모두 포함)을 정리하고 같은 게임을 새로 시작합니다.
+window.restartCurrentGame = function() {
+  if (!currentGamePlayKey) { window.closeGameDetail(); return; }
+  stopAllGames();
+  loadGamePlayDetail();
+};
 
 window.shareGameResultToChat = async function(text) {
   if (!currentUser) return;
