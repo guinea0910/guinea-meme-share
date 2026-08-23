@@ -799,11 +799,17 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div class="box">
 <div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;">
 <button id="rankingTabMembersBtn" class="page-btn active" onclick="setRankingTab('members')" style="padding:6px 12px; font-size:12px;">회원 조회수 랭킹</button>
+<button id="rankingTabGameRatingBtn" class="page-btn" onclick="setRankingTab('gameRating')" style="padding:6px 12px; font-size:12px;">🎮 게임 레이팅</button>
 <button id="rankingTabPopularBtn" class="page-btn" onclick="setRankingTab('popular')" style="padding:6px 12px; font-size:12px;">🔥 인기 짤</button>
 </div>
 <div id="rankingMembersTab">
 <h2 style="margin-top: 0;">회원 조회수 랭킹</h2>
 <div id="rankingContainer">불러오는 중...</div>
+</div>
+<div id="rankingGameRatingTab" class="hidden">
+<h2 style="margin-top: 0;">🎮 게임 레이팅</h2>
+<div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">틱택토·오목·테트리스·핑퐁 레이팅의 평균이에요. 아직 게임을 한 번도 안 한 회원은 순위가 -로 표시돼요.</div>
+<div id="gameRatingRankingContainer">불러오는 중...</div>
 </div>
 <div id="rankingPopularTab" class="hidden">
 <h2 style="margin-top: 0;">인기 짤</h2>
@@ -3749,13 +3755,51 @@ window.openPopularPost = function(postId) {
 
 window.setRankingTab = function(tab) {
   const isMembers = tab === 'members';
+  const isGameRating = tab === 'gameRating';
+  const isPopular = tab === 'popular';
   document.getElementById('rankingTabMembersBtn').classList.toggle('active', isMembers);
-  document.getElementById('rankingTabPopularBtn').classList.toggle('active', !isMembers);
+  document.getElementById('rankingTabGameRatingBtn').classList.toggle('active', isGameRating);
+  document.getElementById('rankingTabPopularBtn').classList.toggle('active', isPopular);
   document.getElementById('rankingMembersTab').classList.toggle('hidden', !isMembers);
-  document.getElementById('rankingPopularTab').classList.toggle('hidden', isMembers);
-  document.getElementById('hotRoomsBox').classList.toggle('hidden', isMembers);
-  if (!isMembers) { loadPopularPosts(); loadHotRooms(); }
+  document.getElementById('rankingGameRatingTab').classList.toggle('hidden', !isGameRating);
+  document.getElementById('rankingPopularTab').classList.toggle('hidden', !isPopular);
+  document.getElementById('hotRoomsBox').classList.toggle('hidden', !isPopular);
+  if (isGameRating) { loadGameRatingRanking(); }
+  if (isPopular) { loadPopularPosts(); loadHotRooms(); }
 };
+
+// ===== 🎮 게임 레이팅 랭킹 (틱택토·오목·테트리스·핑퐁 평균) =====
+async function loadGameRatingRanking() {
+  const container = document.getElementById('gameRatingRankingContainer');
+  container.innerHTML = '불러오는 중...';
+  try {
+    if (!allUsers.length) { await fetchUsersAndRanking(); }
+    const rows = allUsers.map(user => {
+      const ratings = (userProfiles[user] && userProfiles[user].pvpRating) || {};
+      const hasPlayed = Object.keys(PVP_GAME_CONFIG).some(gt => ratings[gt] != null);
+      return { user, rating: getAverageGameRating(ratings), hasPlayed };
+    });
+    const played = rows.filter(r => r.hasPlayed).sort((a, b) => b.rating - a.rating);
+    const notPlayed = rows.filter(r => !r.hasPlayed).sort((a, b) => a.user.localeCompare(b.user));
+    const renderRow = (row, rank) => `
+      <div class="post-list-item" onclick="openProfile('${escapeHtml(row.user)}')">
+        <div style="color: var(--cafe-green); font-weight: bold; width: 20px;">${rank}</div>
+        ${getAvatarHtml(row.user, 36)}
+        <div class="list-info"><div class="list-title">${escapeHtml(row.user)}</div></div>
+        <div class="list-stats-badge">
+          <span>게임 레이팅 ${row.rating}</span>
+          ${currentUser && row.user !== currentUser ? `<button onclick="event.stopPropagation(); startDirectMessage('${escapeHtml(row.user)}')" style="padding:3px 8px; font-size:11px; margin-top:4px;">1:1 대화</button>` : ''}
+        </div>
+      </div>
+    `;
+    const html = played.map((row, index) => renderRow(row, index + 1)).join('')
+      + notPlayed.map(row => renderRow(row, '-')).join('');
+    container.innerHTML = html || '<div style="padding:14px; color:var(--text-sub); text-align:center;">회원이 없어요.</div>';
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = '<div class="error-box">게임 레이팅 랭킹을 불러오지 못했습니다.</div>';
+  }
+}
 
 async function loadRankingView() {
   const container = document.getElementById('rankingContainer');
