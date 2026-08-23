@@ -8128,6 +8128,40 @@ async function pvpGetRating(username, gameType) {
   } catch (error) { console.error(error); return 1000; }
 }
 
+// 새로고침/재접속 시 진행 중인 실시간 대결로 돌아가기 위한 로컬 저장
+function pvpSaveActiveMatchRef(matchId, gameType) {
+  try { localStorage.setItem('gms_active_pvp_match', JSON.stringify({ matchId, gameType, user: currentUser })); } catch (error) {}
+}
+function pvpClearActiveMatchRef() {
+  try { localStorage.removeItem('gms_active_pvp_match'); } catch (error) {}
+}
+function pvpLoadActiveMatchRef() {
+  try {
+    const raw = localStorage.getItem('gms_active_pvp_match');
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) { return null; }
+}
+
+async function pvpTryAutoRejoin() {
+  const ref = pvpLoadActiveMatchRef();
+  if (!ref || !ref.matchId || !ref.gameType || !currentUser || ref.user !== currentUser) return;
+  try {
+    const snap = await getDoc(doc(db, 'gamePvpMatches', ref.matchId));
+    if (!snap.exists()) { pvpClearActiveMatchRef(); return; }
+    const data = snap.data();
+    if (data.status === 'finished' || !Array.isArray(data.players) || !data.players.includes(currentUser)) {
+      pvpClearActiveMatchRef();
+      return;
+    }
+    currentGamePlayKey = ref.gameType + 'Pvp';
+    currentGamePlayLabel = (PVP_GAME_CONFIG[ref.gameType]?.label || '게임') + ' - 실시간 대결';
+    showAppSection('gamePlay');
+    await pvpEnterMatch(ref.matchId, ref.gameType);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 function stopPvpSession() {
   if (!pvpState) return;
   if (pvpState.unsubMatch) { pvpState.unsubMatch(); }
@@ -8359,6 +8393,7 @@ async function pvpEnterMatch(matchId, gameType) {
   const titleEl = document.getElementById('gamePlayDetailTitle');
   if (titleEl) titleEl.textContent = currentGamePlayLabel;
   pvpState = { mode: 'match', gameType, matchId, submitting: false, unsubMatch: null, unsubChat: null, lastData: null, gameLaunched: false, countdownTimer: null, chatMessages: [] };
+  pvpSaveActiveMatchRef(matchId, gameType);
   const outerArea = document.getElementById('gamePlayArea');
   if (outerArea) {
     outerArea.innerHTML = `<div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;">
@@ -8437,6 +8472,7 @@ function pvpRenderMatch(matchId, data) {
   const isMyTurn = data.status === 'active' && data.turn === currentUser;
   let statusLine;
   if (data.status === 'finished') {
+    pvpClearActiveMatchRef();
     if (data.winner === 'draw') statusLine = '🤝 무승부로 종료됐어요.';
     else if (data.winner === currentUser) statusLine = '🎉 승리했어요!';
     else statusLine = '💀 패배했어요.';
@@ -8546,6 +8582,7 @@ window.pvpLeaveMatch = async function() {
     console.error(error);
   }
   pvpRaceHook = null;
+  pvpClearActiveMatchRef();
   window.closeGameDetail();
 };
 
@@ -8582,6 +8619,7 @@ function pvpRenderRaceMatch(matchId, data) {
   if (data.status === 'finished') {
     if (pvpState.countdownTimer) { clearTimeout(pvpState.countdownTimer); pvpState.countdownTimer = null; }
     pvpRaceHook = null;
+    pvpClearActiveMatchRef();
     pvpRenderRaceResult(matchId, data, opponent);
     return;
   }
@@ -10127,6 +10165,7 @@ window.addEventListener('appinstalled', () => {
     pendingChatRoomId = savedRoomId;
   }
   showAppSection(savedSection);
+  pvpTryAutoRejoin();
 })();
 </script>
 </body>
