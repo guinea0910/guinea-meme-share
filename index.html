@@ -864,6 +864,8 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button id="lbSubPongBtn" class="page-btn" onclick="setLeaderboardSubTab('pong')" style="padding:5px 10px; font-size:11px;">🏓 핑퐁</button>
 <button id="lbSubReactionBtn" class="page-btn" onclick="setLeaderboardSubTab('reaction')" style="padding:5px 10px; font-size:11px;">⚡ 반응속도</button>
 <button id="lbSubMemoryBtn" class="page-btn" onclick="setLeaderboardSubTab('memory')" style="padding:5px 10px; font-size:11px;">🧠 메모리</button>
+<button id="lbSubChessBtn" class="page-btn" onclick="setLeaderboardSubTab('chess')" style="padding:5px 10px; font-size:11px;">♟️ 체스</button>
+<button id="lbSubWatermelonBtn" class="page-btn" onclick="setLeaderboardSubTab('watermelon')" style="padding:5px 10px; font-size:11px;">🍉 수박게임</button>
 </div>
 <div id="gameRankTab"></div>
 <div id="gameOmokRankTab" class="hidden"></div>
@@ -877,6 +879,8 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="gamePongRankTab" class="hidden"></div>
 <div id="gameReactionRankTab" class="hidden"></div>
 <div id="gameMemoryRankTab" class="hidden"></div>
+<div id="gameChessRankTab" class="hidden"></div>
+<div id="gameWatermelonRankTab" class="hidden"></div>
 </div>
 </div>
 </section>
@@ -1158,6 +1162,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, query, orderBy, where, increment } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { Chess } from "https://cdn.jsdelivr.net/npm/chess.js@1.4.0/+esm";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCfcOH-oargpwPPSxJwIycKnx7o9OGWxwo",
@@ -1227,7 +1232,8 @@ const PVP_GAME_CONFIG = {
   ttt: { size: 3, winLen: 3, label: '틱택토', type: 'board', winPoints: 20, drawPoints: 8 },
   omok: { size: 13, winLen: 5, label: '오목', type: 'board', winPoints: 40, drawPoints: 15 },
   tetris: { label: '테트리스', type: 'race', winPoints: 30, drawPoints: 12 },
-  pong: { label: '핑퐁', type: 'race', winPoints: 25, drawPoints: 10 }
+  pong: { label: '핑퐁', type: 'race', winPoints: 25, drawPoints: 10 },
+  chess: { label: '체스', type: 'chess', winPoints: 45, drawPoints: 18 }
 };
 // 네 가지 대결 게임(틱택토·오목·테트리스·핑퐁) 레이팅의 평균을 하나의 "게임 레이팅"으로 계산합니다.
 // 아직 플레이하지 않은 게임은 기본 레이팅(1000)으로 계산에 포함됩니다.
@@ -3577,6 +3583,8 @@ window.showAppSection = function(section) {
   if (section !== 'gamePlay' && typeof stopPong === 'function') stopPong();
   if (section !== 'gamePlay' && typeof stopReaction === 'function') stopReaction();
   if (section !== 'gamePlay' && typeof stopMemory === 'function') stopMemory();
+  if (section !== 'gamePlay' && typeof stopChess === 'function') stopChess();
+  if (section !== 'gamePlay' && typeof stopWatermelon === 'function') stopWatermelon();
   if (section !== 'gamePlay' && typeof stopPvpSession === 'function') stopPvpSession();
   const isCafe = section === 'cafe';
   const isChat = section === 'chat';
@@ -5920,6 +5928,8 @@ window.setGameTab = function(tab) {
   stopPong();
   stopReaction();
   stopMemory();
+  stopChess();
+  stopWatermelon();
   if (typeof stopPvpSession === 'function') stopPvpSession();
   document.getElementById('gameTabHubBtn').classList.toggle('active', tab === 'hub');
   document.getElementById('gameTabPvpRecordBtn').classList.toggle('active', tab === 'pvpRecord');
@@ -5949,6 +5959,8 @@ window.setLeaderboardSubTab = function(tab) {
   document.getElementById('lbSubPongBtn').classList.toggle('active', tab === 'pong');
   document.getElementById('lbSubReactionBtn').classList.toggle('active', tab === 'reaction');
   document.getElementById('lbSubMemoryBtn').classList.toggle('active', tab === 'memory');
+  document.getElementById('lbSubChessBtn').classList.toggle('active', tab === 'chess');
+  document.getElementById('lbSubWatermelonBtn').classList.toggle('active', tab === 'watermelon');
   document.getElementById('gameRankTab').classList.toggle('hidden', tab !== 'total');
   document.getElementById('gameOmokRankTab').classList.toggle('hidden', tab !== 'omok');
   document.getElementById('gameCpsRankTab').classList.toggle('hidden', tab !== 'cps');
@@ -5961,6 +5973,8 @@ window.setLeaderboardSubTab = function(tab) {
   document.getElementById('gamePongRankTab').classList.toggle('hidden', tab !== 'pong');
   document.getElementById('gameReactionRankTab').classList.toggle('hidden', tab !== 'reaction');
   document.getElementById('gameMemoryRankTab').classList.toggle('hidden', tab !== 'memory');
+  document.getElementById('gameChessRankTab').classList.toggle('hidden', tab !== 'chess');
+  document.getElementById('gameWatermelonRankTab').classList.toggle('hidden', tab !== 'watermelon');
   if (tab === 'total') renderGameRankTab();
   else if (tab === 'omok') renderOmokRankTab();
   else if (tab === 'cps') renderCpsRankTab();
@@ -5972,7 +5986,9 @@ window.setLeaderboardSubTab = function(tab) {
   else if (tab === 'snake') renderSnakeRankTab();
   else if (tab === 'pong') renderPongRankTab();
   else if (tab === 'reaction') renderReactionRankTab();
-  else renderMemoryRankTab();
+  else if (tab === 'memory') renderMemoryRankTab();
+  else if (tab === 'chess') renderChessRankTab();
+  else renderWatermelonRankTab();
 };
 
 function getPinnedGamesKey() {
@@ -6026,7 +6042,9 @@ function renderGameHub() {
     { key: 'snake', title: '🐍 스네이크', desc: '방향키로 먹이를 먹고 몸을 키우세요! 길수록 포인트 UP', action: "openGameDetail('snake', '🐍 스네이크')", btnText: '플레이하기' },
     { key: 'pong', title: '🏓 핑퐁', desc: '컴퓨터를 상대로 공을 튕겨내며 랠리를 이어가 보세요', action: "openGameDetail('pong', '🏓 핑퐁')", btnText: '플레이하기', pvpAction: "openGameDetail('pongPvp', '🏓 핑퐁 - 실시간 대결')" },
     { key: 'reaction', title: '⚡ 반응속도 테스트', desc: '화면이 초록색으로 바뀌는 순간 탭! 빠를수록 포인트 UP', action: "openGameDetail('reaction', '⚡ 반응속도 테스트')", btnText: '도전하기' },
-    { key: 'memory', title: '🧠 메모리 게임', desc: '카드를 뒤집어 짝을 맞춰보세요! 초급·중급·고급 난이도 지원', action: "openGameDetail('memory', '🧠 메모리 게임')", btnText: '플레이하기' }
+    { key: 'memory', title: '🧠 메모리 게임', desc: '카드를 뒤집어 짝을 맞춰보세요! 초급·중급·고급 난이도 지원', action: "openGameDetail('memory', '🧠 메모리 게임')", btnText: '플레이하기' },
+    { key: 'chess', title: '♟️ 체스', desc: '컴퓨터와 체스 한 판! 실시간 대결도 가능해요', action: "openGameDetail('chess', '♟️ 체스')", btnText: '한 판 하기', pvpAction: "openGameDetail('chessPvp', '♟️ 체스 - 실시간 대결')" },
+    { key: 'watermelon', title: '🍉 수박게임', desc: '같은 과일을 합쳐서 수박까지 만들어보세요!', action: "openGameDetail('watermelon', '🍉 수박게임')", btnText: '플레이하기' }
   ];
   const pinnedKeys = getPinnedGames();
   const pinnedGames = pinnedKeys.map(key => games.find(g => g.key === key)).filter(Boolean);
@@ -6059,10 +6077,13 @@ const GAME_OPEN_FUNC_NAMES = {
   pong: 'openPongGame',
   reaction: 'openReactionGame',
   memory: 'openMemoryGame',
+  chess: 'openChessGame',
+  watermelon: 'openWatermelonGame',
   tttPvp: 'openTttPvpLobby',
   omokPvp: 'openOmokPvpLobby',
   tetrisPvp: 'openTetrisPvpLobby',
-  pongPvp: 'openPongPvpLobby'
+  pongPvp: 'openPongPvpLobby',
+  chessPvp: 'openChessPvpLobby'
 };
 
 function stopAllGames() {
@@ -6078,6 +6099,8 @@ function stopAllGames() {
   stopPong();
   stopReaction();
   stopMemory();
+  stopChess();
+  stopWatermelon();
   if (typeof stopPvpSession === 'function') stopPvpSession();
 }
 
@@ -8234,11 +8257,13 @@ function stopPvpSession() {
   }
   pvpState = null;
   pvpRaceHook = null;
+  pvpChessSelected = null;
 }
 
 function pvpResetLocalGameStates() {
   stopTetris(); stop2048(); stopTtt(); stopMinesweeper(); stopCookieClicker(); stopRhythm();
   stopCardGacha(); stopOmok(); stopSnake(); stopPong(); stopReaction(); stopMemory();
+  stopChess(); stopWatermelon();
 }
 
 async function pvpCreateMatch(gameType, playerFirst, playerSecond) {
@@ -8255,6 +8280,21 @@ async function pvpCreateMatch(gameType, playerFirst, playerSecond) {
       boards: { [playerFirst]: [], [playerSecond]: [] },
       finishedBy: { [playerFirst]: false, [playerSecond]: false },
       finalScores: { [playerFirst]: null, [playerSecond]: null },
+      winner: null,
+      pointsAwarded: {},
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    });
+  }
+  if (cfg.type === 'chess') {
+    return await addDoc(collection(db, 'gamePvpMatches'), {
+      gameType,
+      matchType: 'chess',
+      players: [playerFirst, playerSecond],
+      colors: { [playerFirst]: 'w', [playerSecond]: 'b' },
+      fen: new Chess().fen(),
+      turn: playerFirst,
+      status: 'active',
       winner: null,
       pointsAwarded: {},
       createdAt: Date.now(),
@@ -8352,6 +8392,16 @@ window.openPongPvpLobby = function() {
   }
   pvpResetLocalGameStates();
   pvpOpenLobby('pong');
+};
+
+window.openChessPvpLobby = function() {
+  if (pvpPendingEntry && pvpPendingEntry.gameType === 'chess') {
+    const entry = pvpPendingEntry; pvpPendingEntry = null;
+    pvpEnterMatch(entry.matchId, 'chess');
+    return;
+  }
+  pvpResetLocalGameStates();
+  pvpOpenLobby('chess');
 };
 
 window.pvpJoinQueue = async function(gameType) {
@@ -8453,6 +8503,7 @@ async function pvpEnterMatch(matchId, gameType) {
   const titleEl = document.getElementById('gamePlayDetailTitle');
   if (titleEl) titleEl.textContent = currentGamePlayLabel;
   pvpState = { mode: 'match', gameType, matchId, submitting: false, unsubMatch: null, unsubChat: null, lastData: null, gameLaunched: false, countdownTimer: null, chatMessages: [] };
+  pvpChessSelected = null;
   pvpSaveActiveMatchRef(matchId, gameType);
   const outerArea = document.getElementById('gamePlayArea');
   if (outerArea) {
@@ -8466,6 +8517,7 @@ async function pvpEnterMatch(matchId, gameType) {
     if (!snap.exists()) return;
     const data = { id: snap.id, ...snap.data() };
     if (data.matchType === 'race') pvpRenderRaceMatch(matchId, data);
+    else if (data.matchType === 'chess') pvpRenderChessMatch(matchId, data);
     else pvpRenderMatch(matchId, data);
   }, error => console.error(error));
 }
@@ -8603,6 +8655,9 @@ async function pvpMaybeAwardPoints(data, matchId) {
   if (data.gameType === 'omok' && data.winner === currentUser) {
     try { await updateDoc(doc(db, 'users', currentUser), { omokWins: increment(1) }); } catch (error) { console.error(error); }
   }
+  if (data.gameType === 'chess' && data.winner === currentUser) {
+    try { await updateDoc(doc(db, 'users', currentUser), { chessWins: increment(1) }); } catch (error) { console.error(error); }
+  }
   const opponent = data.players.find(user => user !== currentUser) || '상대';
   let ratingDelta = 0;
   try {
@@ -8667,6 +8722,83 @@ async function pvpMaybeResolveRaceMatch(matchId) {
     await updateDoc(doc(db, 'gamePvpMatches', matchId), { status: 'finished', winner, updatedAt: Date.now() });
   } catch (error) { console.error(error); }
 }
+
+// --- ♟️ 체스 실시간 대결 ---
+let pvpChessSelected = null;
+
+function pvpRenderChessMatch(matchId, data) {
+  if (!pvpState || pvpState.mode !== 'match' || pvpState.matchId !== matchId) return;
+  pvpState.lastData = data;
+  const area = document.getElementById('pvpGameArea');
+  if (!area) return;
+  const opponent = data.players.find(user => user !== currentUser) || '상대';
+  const myColor = data.colors ? data.colors[currentUser] : 'w';
+  const chess = new Chess(data.fen);
+  const isMyTurn = data.status === 'active' && data.turn === currentUser;
+  let statusLine;
+  if (data.status === 'finished') {
+    pvpClearActiveMatchRef();
+    if (data.winner === 'draw') statusLine = '🤝 무승부로 종료됐어요.';
+    else if (data.winner === currentUser) statusLine = '🎉 승리했어요!';
+    else statusLine = '💀 패배했어요.';
+  } else {
+    statusLine = isMyTurn ? (chess.inCheck() ? '✅ 내 차례예요! (체크!)' : '✅ 내 차례예요!') : `⏳ ${escapeHtml(opponent)}님의 차례를 기다리는 중...`;
+  }
+  const canClick = data.status === 'active' && isMyTurn;
+  if (!canClick) pvpChessSelected = null;
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px; font-size:13px; color:var(--text-sub);">
+      <span>${escapeHtml(currentUser)} (${myColor === 'w' ? '⚪ 백' : '⚫ 흑'})</span><span>VS</span><span>${escapeHtml(opponent)}</span>
+    </div>
+    <div style="font-size:14px; font-weight:bold; margin-bottom:10px;">${statusLine}</div>
+    <div id="pvpChessBoard"></div>
+    <div id="pvpResult" style="margin-top:10px;"></div>
+    <button class="danger-btn" onclick="pvpLeaveMatch()" style="width:100%; margin-top:12px;">${data.status === 'finished' ? '나가기' : '기권하고 나가기'}</button>
+  </div>`;
+  drawChessBoard('pvpChessBoard', chess, myColor, canClick, pvpChessSelected, 'pvpChessSquareClick');
+  if (data.status === 'finished') pvpMaybeAwardPoints(data, matchId);
+}
+
+window.pvpChessSquareClick = async function(square) {
+  if (!pvpState || pvpState.mode !== 'match' || pvpState.submitting) return;
+  const data = pvpState.lastData;
+  if (!data || data.status !== 'active' || data.turn !== currentUser) return;
+  const myColor = data.colors ? data.colors[currentUser] : 'w';
+  const chess = new Chess(data.fen);
+  if (chess.turn() !== myColor) return;
+  const piece = chess.get(square);
+  if (pvpChessSelected) {
+    const moves = chess.moves({ square: pvpChessSelected, verbose: true });
+    const target = moves.find(m => m.to === square);
+    if (target) {
+      let promotion;
+      if (target.promotion) {
+        promotion = (prompt('프로모션할 기물을 선택하세요 (q=퀸, r=룩, b=비숍, n=나이트)', 'q') || 'q').toLowerCase();
+        if (!['q', 'r', 'b', 'n'].includes(promotion)) promotion = 'q';
+      }
+      pvpState.submitting = true;
+      try {
+        chess.move({ from: pvpChessSelected, to: square, promotion });
+        pvpChessSelected = null;
+        const opponent = data.players.find(user => user !== currentUser);
+        const updates = { fen: chess.fen(), updatedAt: Date.now() };
+        if (chess.isCheckmate()) { updates.status = 'finished'; updates.winner = currentUser; }
+        else if (chess.isDraw() || chess.isStalemate()) { updates.status = 'finished'; updates.winner = 'draw'; }
+        else { updates.turn = opponent; }
+        await updateDoc(doc(db, 'gamePvpMatches', pvpState.matchId), updates);
+      } catch (error) { console.error(error); }
+      finally { if (pvpState) pvpState.submitting = false; }
+      return;
+    }
+    pvpChessSelected = (piece && piece.color === myColor) ? square : null;
+    pvpRenderChessMatch(pvpState.matchId, data);
+    return;
+  }
+  if (piece && piece.color === myColor) {
+    pvpChessSelected = square;
+    pvpRenderChessMatch(pvpState.matchId, data);
+  }
+};
 
 function pvpRenderRaceMatch(matchId, data) {
   if (!pvpState || pvpState.mode !== 'match' || pvpState.matchId !== matchId) return;
@@ -9031,6 +9163,466 @@ async function renderOmokRankTab() {
         ${getAvatarHtml(entry.user, 26)}
         <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
         <span style="font-weight:bold; color:var(--cafe-green);">${entry.wins}승</span>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = `<div class="error-box">리더보드를 불러오지 못했습니다.</div>`;
+  }
+}
+
+// --- ♟️ 체스 (컴퓨터 대결) ---
+const CHESS_PIECE_UNICODE = {
+  w: { p: '♙', n: '♘', b: '♗', r: '♖', q: '♕', k: '♔' },
+  b: { p: '♟', n: '♞', b: '♝', r: '♜', q: '♛', k: '♚' }
+};
+let chessState = null;
+
+function stopChess() {
+  chessState = null;
+}
+
+function chessSquareAt(row, col) {
+  const file = String.fromCharCode(97 + col);
+  const rank = 8 - row;
+  return `${file}${rank}`;
+}
+
+// 체스판을 그리는 공용 함수 (솔로 플레이/실시간 대결 모두 사용)
+function drawChessBoard(containerId, chess, viewColor, interactive, selectedSquare, clickHandlerName) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const boardArr = chess.board();
+  const legalTargets = selectedSquare ? chess.moves({ square: selectedSquare, verbose: true }).map(m => m.to) : [];
+  const indices = [0, 1, 2, 3, 4, 5, 6, 7];
+  const rowsOrder = viewColor === 'b' ? [...indices].reverse() : indices;
+  const colsOrder = viewColor === 'b' ? [...indices].reverse() : indices;
+  let html = '<div style="width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;"><div style="display:grid; grid-template-columns:repeat(8, 34px); grid-auto-rows:34px; width:max-content; margin:0 auto; border:2px solid var(--border-color); border-radius:4px; overflow:hidden;">';
+  rowsOrder.forEach(row => {
+    colsOrder.forEach(col => {
+      const sq = boardArr[row][col];
+      const square = chessSquareAt(row, col);
+      const isLight = (row + col) % 2 === 0;
+      const isSelected = selectedSquare === square;
+      const isTarget = legalTargets.includes(square);
+      const piece = sq ? CHESS_PIECE_UNICODE[sq.color][sq.type] : '';
+      const bg = isSelected ? 'rgba(3,199,90,0.55)' : (isTarget ? 'rgba(3,199,90,0.3)' : (isLight ? '#f0d9b5' : '#b58863'));
+      html += `<div ${interactive ? `onclick="${clickHandlerName}('${square}')"` : ''} style="width:34px; height:34px; background:${bg}; display:flex; align-items:center; justify-content:center; font-size:24px; cursor:${interactive ? 'pointer' : 'default'};">${piece}</div>`;
+    });
+  });
+  html += '</div></div>';
+  el.innerHTML = html;
+}
+
+window.openChessGame = function() {
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div id="chessGameOverBanner" class="hidden" style="font-size:18px; font-weight:bold; padding:10px; border-radius:8px; margin-bottom:10px;"></div>
+    <div style="font-size:12px; color:var(--text-sub); margin-bottom:8px;">당신은 백(⚪)입니다. 기물을 눌러 이동할 칸을 확인해 보세요.</div>
+    <div id="chessBoard"></div>
+    <button onclick="startChess()" id="chessStartBtn" style="width:100%; margin-top:12px;">새 게임 시작</button>
+    <div id="chessResult" style="margin-top:10px;"></div>
+  </div>`;
+  startChess();
+};
+
+window.startChess = function() {
+  chessState = { chess: new Chess(), running: true, selected: null };
+  document.getElementById('chessGameOverBanner').classList.add('hidden');
+  document.getElementById('chessResult').innerHTML = '';
+  document.getElementById('chessStartBtn').textContent = '새 게임 시작';
+  drawChessBoard('chessBoard', chessState.chess, 'w', true, null, 'chessSquareClick');
+};
+
+window.chessSquareClick = function(square) {
+  if (!chessState || !chessState.running) return;
+  const chess = chessState.chess;
+  if (chess.turn() !== 'w') return;
+  const piece = chess.get(square);
+  if (chessState.selected) {
+    const moves = chess.moves({ square: chessState.selected, verbose: true });
+    const target = moves.find(m => m.to === square);
+    if (target) {
+      let promotion;
+      if (target.promotion) {
+        promotion = (prompt('프로모션할 기물을 선택하세요 (q=퀸, r=룩, b=비숍, n=나이트)', 'q') || 'q').toLowerCase();
+        if (!['q', 'r', 'b', 'n'].includes(promotion)) promotion = 'q';
+      }
+      chess.move({ from: chessState.selected, to: square, promotion });
+      chessState.selected = null;
+      drawChessBoard('chessBoard', chess, 'w', true, null, 'chessSquareClick');
+      if (chess.isGameOver()) { finishChess(chess.isCheckmate() ? 'X' : 'draw'); return; }
+      setTimeout(chessComputerMove, 400);
+      return;
+    }
+    chessState.selected = (piece && piece.color === 'w') ? square : null;
+    drawChessBoard('chessBoard', chess, 'w', true, chessState.selected, 'chessSquareClick');
+    return;
+  }
+  if (piece && piece.color === 'w') {
+    chessState.selected = square;
+    drawChessBoard('chessBoard', chess, 'w', true, chessState.selected, 'chessSquareClick');
+  }
+};
+
+function chessComputerMove() {
+  if (!chessState || !chessState.running) return;
+  const chess = chessState.chess;
+  if (chess.turn() !== 'b') return;
+  const move = pickChessComputerMove(chess);
+  if (move) chess.move(move);
+  drawChessBoard('chessBoard', chess, 'w', true, null, 'chessSquareClick');
+  if (chess.isGameOver()) finishChess(chess.isCheckmate() ? 'O' : 'draw');
+}
+
+const CHESS_PIECE_VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+function evaluateChessBoard(chess) {
+  let score = 0;
+  chess.board().forEach(row => row.forEach(sq => {
+    if (!sq) return;
+    const v = CHESS_PIECE_VALUE[sq.type] || 0;
+    score += sq.color === 'b' ? v : -v;
+  }));
+  return score;
+}
+
+// 컴퓨터(흑)를 위한 간단한 1~2수 앞 예측 (너무 강하지 않도록 상대 응수는 일부만 샘플링)
+function pickChessComputerMove(chess) {
+  const moves = chess.moves({ verbose: true });
+  if (!moves.length) return null;
+  let bestMoves = [], bestScore = -Infinity;
+  for (const m of moves) {
+    chess.move(m);
+    let score;
+    if (chess.isCheckmate()) {
+      score = 1000;
+    } else {
+      const oppMoves = chess.moves({ verbose: true }).slice(0, 8);
+      if (!oppMoves.length) {
+        score = evaluateChessBoard(chess);
+      } else {
+        let worstReply = Infinity;
+        for (const om of oppMoves) {
+          chess.move(om);
+          const s = chess.isCheckmate() ? -1000 : evaluateChessBoard(chess);
+          worstReply = Math.min(worstReply, s);
+          chess.undo();
+        }
+        score = worstReply;
+      }
+    }
+    chess.undo();
+    if (score > bestScore) { bestScore = score; bestMoves = [m]; }
+    else if (score === bestScore) bestMoves.push(m);
+  }
+  return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+}
+
+async function finishChess(winner) {
+  chessState.running = false;
+  const banner = document.getElementById('chessGameOverBanner');
+  let outcome, points, bannerText, bannerStyle;
+  if (winner === 'X') {
+    outcome = '승리'; points = 45;
+    bannerText = '🎉 체크메이트! 승리'; bannerStyle = 'background:rgba(3,199,90,0.18); color:var(--cafe-green);';
+  } else if (winner === 'draw') {
+    outcome = '무승부'; points = 18;
+    bannerText = '🤝 무승부! 게임 종료'; bannerStyle = 'background:var(--input-bg); color:var(--text-sub);';
+  } else {
+    outcome = '패배'; points = 0;
+    bannerText = '💀 체크메이트... 패배'; bannerStyle = 'background:rgba(248,113,113,0.18); color:#f87171;';
+  }
+  banner.textContent = bannerText;
+  banner.style.cssText += bannerStyle;
+  banner.classList.remove('hidden');
+  await awardGamePoints('chess', '체스', points, `체스 ${outcome}! (${points}P)`);
+  if (winner === 'X') {
+    try { await updateDoc(doc(db, 'users', currentUser), { chessWins: increment(1) }); } catch (error) { console.error(error); }
+  }
+  const resultText = `체스에서 ${outcome}했어요! (${points}P 획득)`;
+  document.getElementById('chessResult').innerHTML = `<div style="font-size:13px; margin-bottom:6px;">+${points}P 획득</div>${renderGameResultActions(resultText)}`;
+}
+
+// --- ♟️ 체스 리더보드 (이긴 횟수 기준) ---
+async function renderChessRankTab() {
+  const container = document.getElementById('gameChessRankTab');
+  container.innerHTML = '불러오는 중...';
+  try {
+    const querySnapshot = await getDocs(collection(db, 'users'));
+    const ranked = querySnapshot.docs
+      .map(docSnap => ({ user: docSnap.id, wins: docSnap.data().chessWins || 0 }))
+      .filter(entry => entry.wins > 0)
+      .sort((a, b) => b.wins - a.wins)
+      .slice(0, 30);
+    if (!ranked.length) {
+      container.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">아직 체스에서 승리한 회원이 없어요. 첫 승리의 주인공이 되어보세요!</div>`;
+      return;
+    }
+    container.innerHTML = ranked.map((entry, idx) => `
+      <div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-color);">
+        <span style="width:24px; font-weight:bold; color:${idx < 3 ? 'var(--cafe-green)' : 'var(--text-sub)'};">${idx + 1}</span>
+        ${getAvatarHtml(entry.user, 26)}
+        <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
+        <span style="font-weight:bold; color:var(--cafe-green);">${entry.wins}승</span>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = `<div class="error-box">리더보드를 불러오지 못했습니다.</div>`;
+  }
+}
+
+// --- 🍉 수박게임 ---
+const WATERMELON_TIERS = [
+  { r: 14, color: '#ff6b81', emoji: '🍒' },
+  { r: 19, color: '#ff9ff3', emoji: '🍓' },
+  { r: 25, color: '#7bed9f', emoji: '🍇' },
+  { r: 32, color: '#ffa502', emoji: '🍊' },
+  { r: 40, color: '#ff6348', emoji: '🍎' },
+  { r: 48, color: '#eccc68', emoji: '🍐' },
+  { r: 58, color: '#ff7f50', emoji: '🍑' },
+  { r: 70, color: '#f9ca24', emoji: '🍍' },
+  { r: 85, color: '#c4e538', emoji: '🍈' },
+  { r: 100, color: '#2ecc71', emoji: '🍉' }
+];
+let watermelonState = null;
+
+function stopWatermelon() {
+  if (watermelonState) {
+    if (watermelonState.rafId) cancelAnimationFrame(watermelonState.rafId);
+    const canvas = watermelonState.canvas;
+    if (canvas && watermelonState.pointerMoveHandler) {
+      canvas.removeEventListener('mousemove', watermelonState.pointerMoveHandler);
+      canvas.removeEventListener('touchmove', watermelonState.pointerMoveHandler);
+    }
+    if (canvas && watermelonState.dropHandler) {
+      canvas.removeEventListener('click', watermelonState.dropHandler);
+      canvas.removeEventListener('touchend', watermelonState.dropHandler);
+    }
+    watermelonState = null;
+  }
+}
+
+window.openWatermelonGame = function() {
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div id="watermelonGameOverBanner" class="hidden" style="font-size:18px; font-weight:bold; padding:10px; border-radius:8px; margin-bottom:10px;"></div>
+    <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-sub); margin-bottom:6px; padding:0 4px;">
+      <span>점수: <b id="watermelonScoreText" style="color:var(--cafe-green);">0</b></span>
+      <span>다음: <span id="watermelonNextEmoji" style="font-size:16px;"></span></span>
+    </div>
+    <canvas id="watermelonCanvas" width="300" height="420" style="background:#fff8ec; border-radius:10px; touch-action:none; max-width:100%;"></canvas>
+    <div style="font-size:11px; color:var(--text-sub); margin-top:6px;">화면을 움직여 위치를 잡고 탭(클릭)해서 과일을 떨어뜨리세요. 같은 과일끼리 합쳐서 수박을 만들어보세요!</div>
+    <button onclick="startWatermelon()" id="watermelonStartBtn" style="width:100%; margin-top:12px;">새 게임 시작</button>
+    <div id="watermelonResult" style="margin-top:10px;"></div>
+  </div>`;
+  startWatermelon();
+};
+
+function watermelonRandomTier() {
+  return Math.floor(Math.random() * 4);
+}
+
+window.startWatermelon = function() {
+  stopWatermelon();
+  const canvas = document.getElementById('watermelonCanvas');
+  const ctx = canvas.getContext('2d');
+  document.getElementById('watermelonGameOverBanner').classList.add('hidden');
+  document.getElementById('watermelonResult').innerHTML = '';
+  document.getElementById('watermelonStartBtn').textContent = '새 게임 시작';
+  watermelonState = {
+    canvas, ctx, running: true, fruits: [], score: 0,
+    dropX: canvas.width / 2, nextTier: watermelonRandomTier(),
+    lastDropAt: 0, dangerY: 46, nextId: 1
+  };
+  updateWatermelonHud();
+  const posFromEvent = (evt) => {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = evt.touches ? evt.touches[0].clientX : (evt.changedTouches ? evt.changedTouches[0].clientX : evt.clientX);
+    const r = WATERMELON_TIERS[watermelonState.nextTier].r;
+    return Math.max(r + 4, Math.min(canvas.width - r - 4, (clientX - rect.left) * (canvas.width / rect.width)));
+  };
+  watermelonState.pointerMoveHandler = (evt) => {
+    if (!watermelonState || !watermelonState.running) return;
+    watermelonState.dropX = posFromEvent(evt);
+  };
+  watermelonState.dropHandler = (evt) => {
+    if (!watermelonState || !watermelonState.running) return;
+    evt.preventDefault();
+    watermelonState.dropX = posFromEvent(evt);
+    watermelonDropFruit();
+  };
+  canvas.addEventListener('mousemove', watermelonState.pointerMoveHandler);
+  canvas.addEventListener('touchmove', watermelonState.pointerMoveHandler, { passive: true });
+  canvas.addEventListener('click', watermelonState.dropHandler);
+  canvas.addEventListener('touchend', watermelonState.dropHandler);
+  watermelonLoop();
+};
+
+function watermelonDropFruit() {
+  const st = watermelonState;
+  if (!st || !st.running) return;
+  const now = Date.now();
+  if (now - st.lastDropAt < 550) return;
+  st.lastDropAt = now;
+  st.fruits.push({ id: st.nextId++, x: st.dropX, y: 30, vx: 0, vy: 0, tier: st.nextTier, settledSince: null });
+  st.nextTier = watermelonRandomTier();
+  updateWatermelonHud();
+}
+
+function updateWatermelonHud() {
+  const st = watermelonState;
+  if (!st) return;
+  const scoreEl = document.getElementById('watermelonScoreText');
+  if (scoreEl) scoreEl.textContent = st.score;
+  const nextEl = document.getElementById('watermelonNextEmoji');
+  if (nextEl) nextEl.textContent = WATERMELON_TIERS[st.nextTier].emoji;
+}
+
+function watermelonLoop() {
+  const st = watermelonState;
+  if (!st || !st.running) return;
+  if (!document.getElementById('watermelonCanvas')) { stopWatermelon(); return; }
+  watermelonStep();
+  watermelonDraw();
+  st.rafId = requestAnimationFrame(watermelonLoop);
+}
+
+function watermelonStep() {
+  const st = watermelonState;
+  const gravity = 0.45;
+  const width = st.canvas.width, height = st.canvas.height;
+  st.fruits.forEach(f => {
+    f.vy += gravity;
+    f.x += f.vx;
+    f.y += f.vy;
+    f.vx *= 0.98;
+    const r = WATERMELON_TIERS[f.tier].r;
+    if (f.x - r < 0) { f.x = r; f.vx *= -0.4; }
+    if (f.x + r > width) { f.x = width - r; f.vx *= -0.4; }
+    if (f.y + r > height) { f.y = height - r; f.vy *= -0.35; }
+  });
+  for (let i = 0; i < st.fruits.length; i++) {
+    for (let j = i + 1; j < st.fruits.length; j++) {
+      const a = st.fruits[i], b = st.fruits[j];
+      const ra = WATERMELON_TIERS[a.tier].r, rb = WATERMELON_TIERS[b.tier].r;
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
+      const minDist = ra + rb;
+      if (dist >= minDist) continue;
+      if (a.tier === b.tier && a.tier < WATERMELON_TIERS.length - 1) {
+        const newTier = a.tier + 1;
+        const nx = (a.x + b.x) / 2, ny = (a.y + b.y) / 2;
+        st.fruits = st.fruits.filter(f => f !== a && f !== b);
+        st.fruits.push({ id: st.nextId++, x: nx, y: ny, vx: 0, vy: -2, tier: newTier, settledSince: null });
+        st.score += (newTier + 1) * 5;
+        updateWatermelonHud();
+        i = -1;
+        break;
+      } else {
+        const overlap = (minDist - dist) / 2;
+        const nx = dx / dist, ny = dy / dist;
+        a.x -= nx * overlap; a.y -= ny * overlap;
+        b.x += nx * overlap; b.y += ny * overlap;
+        a.vx -= nx * overlap * 0.5; b.vx += nx * overlap * 0.5;
+      }
+    }
+    if (i === -1) continue;
+  }
+  const now = Date.now();
+  let overLine = false;
+  st.fruits.forEach(f => {
+    const r = WATERMELON_TIERS[f.tier].r;
+    const settled = Math.abs(f.vy) < 0.6 && Math.abs(f.vx) < 0.6;
+    if (settled && f.y - r < st.dangerY) {
+      overLine = true;
+      if (!f.settledSince) f.settledSince = now;
+    } else {
+      f.settledSince = null;
+    }
+  });
+  const stuckTooLong = st.fruits.some(f => f.settledSince && now - f.settledSince > 1200);
+  if (overLine && stuckTooLong) finishWatermelon();
+}
+
+function watermelonDraw() {
+  const st = watermelonState;
+  const ctx = st.ctx, canvas = st.canvas;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = 'rgba(239,68,68,0.5)';
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(0, st.dangerY);
+  ctx.lineTo(canvas.width, st.dangerY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  if (st.running) {
+    const nextR = Math.min(WATERMELON_TIERS[st.nextTier].r, 14);
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.arc(st.dropX, 16, nextR, 0, Math.PI * 2);
+    ctx.fillStyle = WATERMELON_TIERS[st.nextTier].color;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  st.fruits.forEach(f => {
+    const tier = WATERMELON_TIERS[f.tier];
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, tier.r, 0, Math.PI * 2);
+    ctx.fillStyle = tier.color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.stroke();
+    ctx.font = `${Math.floor(tier.r * 1.1)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(tier.emoji, f.x, f.y + 1);
+  });
+}
+
+async function finishWatermelon() {
+  const st = watermelonState;
+  if (!st || !st.running) return;
+  st.running = false;
+  const banner = document.getElementById('watermelonGameOverBanner');
+  const points = Math.min(60, Math.round(st.score / 4));
+  if (banner) {
+    banner.textContent = `💥 게임 오버! 최종 점수 ${st.score}점`;
+    banner.style.cssText += 'background:rgba(248,113,113,0.18); color:#f87171;';
+    banner.classList.remove('hidden');
+  }
+  await awardGamePoints('watermelon', '수박게임', points, `수박게임 ${st.score}점! (${points}P)`);
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser));
+    const best = snap.exists() ? (snap.data().bestWatermelonScore || 0) : 0;
+    if (st.score > best) await updateDoc(doc(db, 'users', currentUser), { bestWatermelonScore: st.score });
+  } catch (error) { console.error(error); }
+  const resultText = `수박게임에서 ${st.score}점을 기록했어요! (${points}P 획득)`;
+  const resultEl = document.getElementById('watermelonResult');
+  if (resultEl) resultEl.innerHTML = `<div style="font-size:13px; margin-bottom:6px;">+${points}P 획득</div>${renderGameResultActions(resultText)}`;
+}
+
+// --- 🍉 수박게임 리더보드 ---
+async function renderWatermelonRankTab() {
+  const container = document.getElementById('gameWatermelonRankTab');
+  container.innerHTML = '불러오는 중...';
+  try {
+    const querySnapshot = await getDocs(collection(db, 'users'));
+    const ranked = querySnapshot.docs
+      .map(docSnap => ({ user: docSnap.id, score: docSnap.data().bestWatermelonScore || 0 }))
+      .filter(entry => entry.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 30);
+    if (!ranked.length) {
+      container.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">아직 수박게임에 도전한 회원이 없어요. 첫 기록을 남겨보세요!</div>`;
+      return;
+    }
+    container.innerHTML = ranked.map((entry, idx) => `
+      <div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-color);">
+        <span style="width:24px; font-weight:bold; color:${idx < 3 ? 'var(--cafe-green)' : 'var(--text-sub)'};">${idx + 1}</span>
+        ${getAvatarHtml(entry.user, 26)}
+        <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
+        <span style="font-weight:bold; color:var(--cafe-green);">${entry.score}점</span>
       </div>
     `).join('');
   } catch (error) {
