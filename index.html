@@ -9392,12 +9392,11 @@ function stopWatermelon() {
     if (watermelonState.rafId) cancelAnimationFrame(watermelonState.rafId);
     const canvas = watermelonState.canvas;
     if (canvas && watermelonState.pointerMoveHandler) {
-      canvas.removeEventListener('mousemove', watermelonState.pointerMoveHandler);
-      canvas.removeEventListener('touchmove', watermelonState.pointerMoveHandler);
+      canvas.removeEventListener('pointermove', watermelonState.pointerMoveHandler);
+      canvas.removeEventListener('pointerdown', watermelonState.pointerMoveHandler);
     }
     if (canvas && watermelonState.dropHandler) {
-      canvas.removeEventListener('click', watermelonState.dropHandler);
-      canvas.removeEventListener('touchend', watermelonState.dropHandler);
+      canvas.removeEventListener('pointerup', watermelonState.dropHandler);
     }
     watermelonState = null;
   }
@@ -9412,7 +9411,7 @@ window.openWatermelonGame = function() {
       <span>다음: <span id="watermelonNextEmoji" style="font-size:16px;"></span></span>
     </div>
     <canvas id="watermelonCanvas" width="300" height="420" style="background:#fff8ec; border-radius:10px; touch-action:none; max-width:100%;"></canvas>
-    <div style="font-size:11px; color:var(--text-sub); margin-top:6px;">화면을 움직여 위치를 잡고 탭(클릭)해서 과일을 떨어뜨리세요. 같은 과일끼리 합쳐서 수박을 만들어보세요!</div>
+    <div style="font-size:11px; color:var(--text-sub); margin-top:6px;">손가락(또는 마우스)으로 화면을 눌러 좌우로 움직인 뒤 떼면 과일이 떨어져요. 같은 과일끼리 합쳐서 수박을 만들어보세요!</div>
     <button onclick="startWatermelon()" id="watermelonStartBtn" style="width:100%; margin-top:12px;">새 게임 시작</button>
     <div id="watermelonResult" style="margin-top:10px;"></div>
   </div>`;
@@ -9438,12 +9437,12 @@ window.startWatermelon = function() {
   updateWatermelonHud();
   const posFromEvent = (evt) => {
     const rect = canvas.getBoundingClientRect();
-    const clientX = evt.touches ? evt.touches[0].clientX : (evt.changedTouches ? evt.changedTouches[0].clientX : evt.clientX);
     const r = WATERMELON_TIERS[watermelonState.nextTier].r;
-    return Math.max(r + 4, Math.min(canvas.width - r - 4, (clientX - rect.left) * (canvas.width / rect.width)));
+    return Math.max(r + 4, Math.min(canvas.width - r - 4, (evt.clientX - rect.left) * (canvas.width / rect.width)));
   };
   watermelonState.pointerMoveHandler = (evt) => {
     if (!watermelonState || !watermelonState.running) return;
+    evt.preventDefault();
     watermelonState.dropX = posFromEvent(evt);
   };
   watermelonState.dropHandler = (evt) => {
@@ -9452,10 +9451,9 @@ window.startWatermelon = function() {
     watermelonState.dropX = posFromEvent(evt);
     watermelonDropFruit();
   };
-  canvas.addEventListener('mousemove', watermelonState.pointerMoveHandler);
-  canvas.addEventListener('touchmove', watermelonState.pointerMoveHandler, { passive: true });
-  canvas.addEventListener('click', watermelonState.dropHandler);
-  canvas.addEventListener('touchend', watermelonState.dropHandler);
+  canvas.addEventListener('pointermove', watermelonState.pointerMoveHandler);
+  canvas.addEventListener('pointerdown', watermelonState.pointerMoveHandler);
+  canvas.addEventListener('pointerup', watermelonState.dropHandler);
   watermelonLoop();
 };
 
@@ -9497,11 +9495,13 @@ function watermelonStep() {
     f.x += f.vx;
     f.y += f.vy;
     f.vx *= 0.98;
+    if (Math.abs(f.vx) < 0.05) f.vx = 0;
     const r = WATERMELON_TIERS[f.tier].r;
-    if (f.x - r < 0) { f.x = r; f.vx *= -0.4; }
-    if (f.x + r > width) { f.x = width - r; f.vx *= -0.4; }
-    if (f.y + r > height) { f.y = height - r; f.vy *= -0.35; }
+    if (f.x - r < 0) { f.x = r; f.vx = Math.abs(f.vx) < 1 ? 0 : f.vx * -0.4; }
+    if (f.x + r > width) { f.x = width - r; f.vx = Math.abs(f.vx) < 1 ? 0 : f.vx * -0.4; }
+    if (f.y + r > height) { f.y = height - r; f.vy = Math.abs(f.vy) < 1 ? 0 : f.vy * -0.3; }
   });
+  const maxTier = WATERMELON_TIERS.length - 1;
   for (let i = 0; i < st.fruits.length; i++) {
     for (let j = i + 1; j < st.fruits.length; j++) {
       const a = st.fruits[i], b = st.fruits[j];
@@ -9510,21 +9510,24 @@ function watermelonStep() {
       const dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
       const minDist = ra + rb;
       if (dist >= minDist) continue;
-      if (a.tier === b.tier && a.tier < WATERMELON_TIERS.length - 1) {
-        const newTier = a.tier + 1;
+      if (a.tier === b.tier) {
+        // 같은 과일끼리 합체: 수박(마지막 단계) + 수박은 다시 체리로 되돌아감
         const nx = (a.x + b.x) / 2, ny = (a.y + b.y) / 2;
+        const newTier = a.tier < maxTier ? a.tier + 1 : 0;
         st.fruits = st.fruits.filter(f => f !== a && f !== b);
         st.fruits.push({ id: st.nextId++, x: nx, y: ny, vx: 0, vy: -2, tier: newTier, settledSince: null });
-        st.score += (newTier + 1) * 5;
+        st.score += a.tier < maxTier ? (newTier + 1) * 5 : 100;
         updateWatermelonHud();
         i = -1;
         break;
       } else {
+        // 위치만 밀어내고(포지션 보정) 속도는 튕기지 않고 감쇠만 시켜 겹침으로 인한 떨림/깜빡임을 방지
         const overlap = (minDist - dist) / 2;
         const nx = dx / dist, ny = dy / dist;
         a.x -= nx * overlap; a.y -= ny * overlap;
         b.x += nx * overlap; b.y += ny * overlap;
-        a.vx -= nx * overlap * 0.5; b.vx += nx * overlap * 0.5;
+        a.vx *= 0.8; a.vy *= 0.8;
+        b.vx *= 0.8; b.vy *= 0.8;
       }
     }
     if (i === -1) continue;
