@@ -1176,6 +1176,21 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// --- 🔑 기니 계정 (통합 로그인) ---
+// 기니 짤방 웹버전 / OMOK / TeamDDD 대시보드가 공통으로 사용하는 계정 전용 Firebase 프로젝트입니다.
+// 아이디/비밀번호는 여기 하나에만 저장하고, 각 앱의 나머지 데이터(게시판, 게임 기록 등)는 지금처럼 각자 프로젝트에 둡니다.
+const accountFirebaseConfig = {
+  apiKey: "AIzaSyAhPl45_VXxVvcTg69sLqPoX9AeKybGSZ4",
+  authDomain: "accounts-4032a.firebaseapp.com",
+  projectId: "accounts-4032a",
+  storageBucket: "accounts-4032a.firebasestorage.app",
+  messagingSenderId: "757237889148",
+  appId: "1:757237889148:web:68b9efd6fc3617e4b931f9",
+  measurementId: "G-KEV7KEZRVF"
+};
+const accountApp = initializeApp(accountFirebaseConfig, 'guineaAccount');
+const accountDb = getFirestore(accountApp);
+
 // ⚠️ Gemini API 키 (수학 게시판 AI 답변 기능용)
 // 이 코드는 클라이언트에서 직접 호출되므로 키가 브라우저 소스에 노출됩니다.
 // 발급: https://aistudio.google.com/apikey 에서 무료로 발급 가능
@@ -1746,13 +1761,17 @@ window.handleSignup = async function() {
   const pw = document.getElementById('signupPw').value.trim();
   if(!id || !pw) { alert('아이디와 비밀번호를 모두 입력해 주세요!'); return; }
   try {
-    const userRef = doc(db, "users", id);
-    const userSnap = await getDoc(userRef);
-    if(userSnap.exists()) { alert('이미 존재하는 아이디입니다!'); return; }
+    // 아이디 중복 확인은 세 앱이 공유하는 "기니 계정" 프로젝트 기준으로 검사합니다.
+    // (여기서 이미 쓰이고 있으면 OMOK이나 TeamDDD에서 이미 가입된 아이디라는 뜻)
+    const accountRef = doc(accountDb, "accounts", id);
+    const accountSnap = await getDoc(accountRef);
+    if(accountSnap.exists()) { alert('이미 존재하는 아이디입니다! (다른 기니 앱에서 가입된 아이디일 수 있어요)'); return; }
     const signupTimestamp = Date.now();
-    await setDoc(userRef, { password: pw, theme: 'dark', createdAt: signupTimestamp });
+    await setDoc(accountRef, { password: pw, createdAt: signupTimestamp });
+    const userRef = doc(db, "users", id);
+    await setDoc(userRef, { theme: 'dark', createdAt: signupTimestamp });
     syncToSheet('user', 'create', { id, theme: 'dark', createdAt: signupTimestamp });
-    alert('회원가입 완료! 로그인해 주세요.');
+    alert('회원가입 완료! 이 계정으로 OMOK, TeamDDD 대시보드에도 로그인할 수 있어요. 로그인해 주세요.');
     switchTab('login');
     document.getElementById('loginId').value = id;
   } catch (error) {
@@ -1766,9 +1785,29 @@ window.handleLogin = async function() {
   const pw = document.getElementById('loginPw').value.trim();
   if(!id || !pw) { alert('아이디와 비밀번호를 입력해 주세요!'); return; }
   try {
+    const accountRef = doc(accountDb, "accounts", id);
+    const accountSnap = await getDoc(accountRef);
     const userRef = doc(db, "users", id);
-    const userSnap = await getDoc(userRef);
-    if(!userSnap.exists() || userSnap.data().password !== pw) {
+    let userSnap = await getDoc(userRef);
+    if (accountSnap.exists()) {
+      // 공유 "기니 계정" 정보로 비밀번호 확인
+      if (accountSnap.data().password !== pw) {
+        alert('아이디 또는 비밀번호가 일치하지 않습니다.');
+        return;
+      }
+      if (!userSnap.exists()) {
+        // 다른 기니 앱(OMOK/TeamDDD)에서 만든 계정으로 이 앱에 처음 로그인하는 경우 → 로컬 프로필 자동 생성
+        await setDoc(userRef, { theme: 'dark', createdAt: Date.now() });
+        userSnap = await getDoc(userRef);
+      }
+    } else if (userSnap.exists() && userSnap.data().password) {
+      // 통합 계정 도입 이전에 이 앱에서만 가입했던 기존 계정 → 비밀번호 확인 후 공유 계정으로 1회 자동 이전
+      if (userSnap.data().password !== pw) {
+        alert('아이디 또는 비밀번호가 일치하지 않습니다.');
+        return;
+      }
+      await setDoc(accountRef, { password: pw, createdAt: userSnap.data().createdAt || Date.now() });
+    } else {
       alert('아이디 또는 비밀번호가 일치하지 않습니다.');
       return;
     }
@@ -1978,10 +2017,11 @@ window.handleSaveSettings = async function() {
   try {
     const userRef = doc(db, "users", currentUser);
     const updateData = { theme: newTheme };
-    if(newPw) {
-      updateData.password = newPw;
-    }
     await updateDoc(userRef, updateData);
+    if(newPw) {
+      // 비밀번호는 세 앱이 공유하는 "기니 계정" 프로젝트에 저장돼요.
+      await setDoc(doc(accountDb, "accounts", currentUser), { password: newPw }, { merge: true });
+    }
     alert('설정이 성공적으로 저장되었습니다!');
     toggleSettings();
   } catch (error) {
@@ -4440,8 +4480,11 @@ window.saveSettingsView = async function() {
   const newIconBg = document.getElementById('pwaIconBgColor').value;
   try {
     const updateData = { theme: newTheme, accentColor: newAccent, customBg: newCustomBg };
-    if (newPw) updateData.password = newPw;
     await updateDoc(doc(db, 'users', currentUser), updateData);
+    if (newPw) {
+      // 비밀번호는 세 앱이 공유하는 "기니 계정" 프로젝트에 저장돼요.
+      await setDoc(doc(accountDb, "accounts", currentUser), { password: newPw }, { merge: true });
+    }
     userProfiles[currentUser] = { ...(userProfiles[currentUser] || {}), ...updateData };
     applyCustomBg(newCustomBg);
     savePwaIconColors(newIconBg);
