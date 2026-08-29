@@ -1216,6 +1216,29 @@ const accountFirebaseConfig = {
 const accountApp = initializeApp(accountFirebaseConfig, 'guineaAccount');
 const accountDb = getFirestore(accountApp);
 
+// --- ⚫⚪ OMOK(독립 오목 웹사이트) 연동 ---
+// "내 대결 전적"에 표시되는 오목 레이팅을 OMOK 웹사이트의 실제 ROS(Relative Omok Score)와
+// 맞추기 위해, OMOK 전용 Firebase 프로젝트에 읽기 전용으로 연결합니다. (계정/게임 데이터는 그대로 각자 프로젝트 유지)
+const omokSiteFirebaseConfig = {
+  apiKey: "AIzaSyCtDUl6rTmuhYTo0Po4sf0x3dV6ELn3cNQ",
+  authDomain: "omok-9f8e5.firebaseapp.com",
+  projectId: "omok-9f8e5",
+  storageBucket: "omok-9f8e5.firebasestorage.app",
+  messagingSenderId: "590002360494",
+  appId: "1:590002360494:web:46fd8ea0ec14ec10d71d3f"
+};
+const omokSiteApp = initializeApp(omokSiteFirebaseConfig, 'omokSite');
+const omokSiteDb = getFirestore(omokSiteApp);
+
+// OMOK 웹사이트에 등록된 내 ROS를 가져옵니다. OMOK에 가입한 적이 없으면 기본값(1000, 신규 취급)을 반환합니다.
+async function getOmokRos(username) {
+  try {
+    const snap = await getDoc(doc(omokSiteDb, 'users', username));
+    if (snap.exists() && typeof snap.data().rating === 'number') return snap.data().rating;
+  } catch (error) { console.error('OMOK ROS 조회 실패:', error); }
+  return null; // OMOK 미가입 등 값을 알 수 없는 경우
+}
+
 // ⚠️ Gemini API 키 (수학 게시판 AI 답변 기능용)
 // 이 코드는 클라이언트에서 직접 호출되므로 키가 브라우저 소스에 노출됩니다.
 // 발급: https://aistudio.google.com/apikey 에서 무료로 발급 가능
@@ -9143,9 +9166,10 @@ async function renderPvpRecordTab() {
   if (!currentUser) { area.innerHTML = '<div class="box" style="margin:0; text-align:center;">로그인 후 이용할 수 있습니다.</div>'; return; }
   area.innerHTML = '<div class="box" style="margin:0; text-align:center; padding:20px 0; color:var(--text-sub);">불러오는 중...</div>';
   try {
-    const [userSnap, historySnap] = await Promise.all([
+    const [userSnap, historySnap, omokRos] = await Promise.all([
       getDoc(doc(db, 'users', currentUser)),
-      getDocs(query(collection(db, 'gamePvpHistory'), where('user', '==', currentUser)))
+      getDocs(query(collection(db, 'gamePvpHistory'), where('user', '==', currentUser))),
+      getOmokRos(currentUser)
     ]);
     const userData = userSnap.exists() ? userSnap.data() : {};
     const stats = userData.pvpStats || {};
@@ -9160,10 +9184,13 @@ async function renderPvpRecordTab() {
     });
     const gameRows = Object.keys(PVP_GAME_CONFIG).map(gt => {
       const s = stats[gt] || { wins: 0, losses: 0, draws: 0 };
-      const rating = ratings[gt] != null ? ratings[gt] : 1000;
+      // 오목은 이 앱 자체 레이팅 대신 OMOK 웹사이트의 실제 ROS를 그대로 보여줍니다.
+      const ratingLabel = gt === 'omok'
+        ? (omokRos != null ? `ROS <b>${omokRos}</b>` : `ROS <span style="color:var(--text-sub);">OMOK 미가입</span>`)
+        : `레이팅 <b>${ratings[gt] != null ? ratings[gt] : 1000}</b>`;
       return `<div style="display:flex; justify-content:space-between; align-items:center; padding:9px 10px; border-bottom:1px solid var(--border-color); font-size:13px;">
         <span>${escapeHtml(PVP_GAME_CONFIG[gt].label)}</span>
-        <span>${s.wins || 0}승 ${s.losses || 0}패 ${s.draws || 0}무 · 레이팅 <b>${rating}</b></span>
+        <span>${s.wins || 0}승 ${s.losses || 0}패 ${s.draws || 0}무 · ${ratingLabel}</span>
       </div>`;
     }).join('');
     const vsRows = Object.entries(vsMap)
