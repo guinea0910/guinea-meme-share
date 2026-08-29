@@ -3628,6 +3628,7 @@ window.showAppSection = function(section) {
   if (section !== 'gamePlay' && typeof stopMemory === 'function') stopMemory();
   if (section !== 'gamePlay' && typeof stopChess === 'function') stopChess();
   if (section !== 'gamePlay' && typeof stopWatermelon === 'function') stopWatermelon();
+  if (section !== 'gamePlay' && typeof stopBluemarble === 'function') stopBluemarble();
   if (section !== 'gamePlay' && typeof stopPvpSession === 'function') stopPvpSession();
   const isCafe = section === 'cafe';
   const isChat = section === 'chat';
@@ -5976,6 +5977,7 @@ window.setGameTab = function(tab) {
   stopMemory();
   stopChess();
   stopWatermelon();
+  if (typeof stopBluemarble === 'function') stopBluemarble();
   if (typeof stopPvpSession === 'function') stopPvpSession();
   document.getElementById('gameTabHubBtn').classList.toggle('active', tab === 'hub');
   document.getElementById('gameTabPvpRecordBtn').classList.toggle('active', tab === 'pvpRecord');
@@ -6090,7 +6092,8 @@ function renderGameHub() {
     { key: 'reaction', title: '⚡ 반응속도 테스트', desc: '화면이 초록색으로 바뀌는 순간 탭! 빠를수록 포인트 UP', action: "openGameDetail('reaction', '⚡ 반응속도 테스트')", btnText: '도전하기' },
     { key: 'memory', title: '🧠 메모리 게임', desc: '카드를 뒤집어 짝을 맞춰보세요! 초급·중급·고급 난이도 지원', action: "openGameDetail('memory', '🧠 메모리 게임')", btnText: '플레이하기' },
     { key: 'chess', title: '♟️ 체스', desc: '컴퓨터와 체스 한 판! 실시간 대결도 가능해요', action: "openGameDetail('chess', '♟️ 체스')", btnText: '한 판 하기', pvpAction: "openGameDetail('chessPvp', '♟️ 체스 - 실시간 대결')" },
-    { key: 'watermelon', title: '🍉 수박게임', desc: '같은 과일을 합쳐서 수박까지 만들어보세요!', action: "openGameDetail('watermelon', '🍉 수박게임')", btnText: '플레이하기' }
+    { key: 'watermelon', title: '🍉 수박게임', desc: '같은 과일을 합쳐서 수박까지 만들어보세요!', action: "openGameDetail('watermelon', '🍉 수박게임')", btnText: '플레이하기' },
+    { key: 'bluemarble', title: '🎲 부루마블', desc: '2~4명이 실시간으로 즐기는 부루마블! 방을 만들거나 코드로 입장해서 대결해보세요', action: "openGameDetail('bluemarble', '🎲 부루마블')", btnText: '플레이하기' }
   ];
   const pinnedKeys = getPinnedGames();
   const pinnedGames = pinnedKeys.map(key => games.find(g => g.key === key)).filter(Boolean);
@@ -6125,6 +6128,7 @@ const GAME_OPEN_FUNC_NAMES = {
   memory: 'openMemoryGame',
   chess: 'openChessGame',
   watermelon: 'openWatermelonGame',
+  bluemarble: 'openBluemarbleGame',
   tttPvp: 'openTttPvpLobby',
   omokPvp: 'openOmokPvpLobby',
   tetrisPvp: 'openTetrisPvpLobby',
@@ -6147,6 +6151,7 @@ function stopAllGames() {
   stopMemory();
   stopChess();
   stopWatermelon();
+  if (typeof stopBluemarble === 'function') stopBluemarble();
   if (typeof stopPvpSession === 'function') stopPvpSession();
 }
 
@@ -9679,6 +9684,30 @@ async function renderWatermelonRankTab() {
     container.innerHTML = `<div class="error-box">리더보드를 불러오지 못했습니다.</div>`;
   }
 }
+
+// --- 🎲 부루마블 ---
+const BLUEMARBLE_URL = 'https://guinea0910.github.io/bluemarble';
+let bluemarbleState = null;
+
+function stopBluemarble() {
+  if (bluemarbleState) {
+    const frame = bluemarbleState.frame;
+    if (frame) frame.src = 'about:blank';
+    bluemarbleState = null;
+  }
+}
+
+window.openBluemarbleGame = function() {
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; padding:0; overflow:hidden;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px; border-bottom:1px solid var(--border-color); flex-wrap:wrap;">
+      <div style="font-size:12px; color:var(--text-sub);">2~4명이 실시간으로 즐기는 부루마블! 방을 만들거나 참가 코드를 입력해서 함께 플레이하세요.</div>
+      <a href="${BLUEMARBLE_URL}" target="_blank" rel="noopener" style="font-size:11px; white-space:nowrap; color:var(--cafe-green); text-decoration:underline;">새 창에서 열기 ↗</a>
+    </div>
+    <iframe id="bluemarbleFrame" src="${BLUEMARBLE_URL}" style="width:100%; height:min(80vh, 800px); border:0; display:block; background:#0b1f3a;" allow="clipboard-write" title="부루마블"></iframe>
+  </div>`;
+  bluemarbleState = { frame: document.getElementById('bluemarbleFrame') };
+};
 
 // --- 🐍 스네이크 ---
 const SNAKE_COLS = 16;
