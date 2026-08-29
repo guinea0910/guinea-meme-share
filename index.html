@@ -927,6 +927,28 @@ button:hover { background-color: var(--cafe-green-hover); }
 </div>
 </div>
 </section>
+<section id="etcView" class="hidden">
+<div class="box">
+<h2 style="margin-top: 0;">⋯ 기타</h2>
+<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px;">
+<div class="box game-card" style="margin:0; padding:12px;">
+<div style="font-size:14px; font-weight:bold; margin-bottom:6px;">✨ AI 채팅</div>
+<div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">AI와 자유롭게 대화해보세요</div>
+<button onclick="showAppSection('aiChat')" style="width:100%;">열기</button>
+</div>
+<div class="box game-card" style="margin:0; padding:12px;">
+<div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🎲 I'm Feeling Curious</div>
+<div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">AI가 알려주는 신기한 상식 한 조각</div>
+<button onclick="openCuriousFact()" style="width:100%;">열기</button>
+</div>
+<div class="box game-card" style="margin:0; padding:12px;">
+<div style="font-size:14px; font-weight:bold; margin-bottom:6px;">🌐 웹 브라우징</div>
+<div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">주소나 검색어를 입력해 웹을 둘러보세요</div>
+<button onclick="openWebBrowse()" style="width:100%;">열기</button>
+</div>
+</div>
+</div>
+</section>
 <section id="profileView" class="hidden">
 <div class="box">
 <div class="profile-top-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
@@ -1394,9 +1416,7 @@ const SIDEBAR_ITEMS = [
   { key: 'cafe', icon: '☕', label: '카페' },
   { key: 'ranking', icon: '🏆', label: '랭킹' },
   { key: 'game', icon: '🎮', label: '미니게임' },
-  { key: 'aiChat', icon: '✨', label: 'AI 채팅' },
-  { key: 'curious', icon: '🎲', label: "I'm Feeling Curious", shortLabel: 'IFC' },
-  { key: 'browse', icon: '🌐', label: '웹 브라우징' },
+  { key: 'etc', icon: '⋯', label: '기타' },
   { key: 'teamddd', icon: '🛡️', label: 'TeamDDD' },
   { key: 'bookmarks', icon: '⭐', label: '북마크' },
   { key: 'profile', icon: '👤', label: '프로필' },
@@ -1404,10 +1424,26 @@ const SIDEBAR_ITEMS = [
   { key: 'notifications', icon: '🔔', label: '알림' },
   { key: 'settings', icon: '⚙️', label: '설정' }
 ];
-const SIDEBAR_ITEM_IDS = { cafe: 'cafeNavBtn', ranking: 'rankingNavBtn', game: 'gameNavBtn', aiChat: 'aiChatNavBtn', curious: 'curiousNavBtn', browse: 'browseNavBtn', teamddd: 'teamdddNavBtn', bookmarks: 'bookmarksNavBtn', profile: 'profileNavBtn', chat: 'chatNavBtn', notifications: 'notificationsNavBtn', settings: 'settingsNavBtn' };
+// 예전 사이드바 항목(AI 채팅/I'm Feeling Curious/웹 브라우징)은 '기타' 탭 하나로 통합됨. 저장된 순서/숨김 값 마이그레이션용으로만 사용.
+const LEGACY_SIDEBAR_KEYS_MERGED_INTO_ETC = ['aiChat', 'curious', 'browse'];
+const SIDEBAR_ITEM_IDS = { cafe: 'cafeNavBtn', ranking: 'rankingNavBtn', game: 'gameNavBtn', etc: 'etcNavBtn', teamddd: 'teamdddNavBtn', bookmarks: 'bookmarksNavBtn', profile: 'profileNavBtn', chat: 'chatNavBtn', notifications: 'notificationsNavBtn', settings: 'settingsNavBtn' };
 
 function getSidebarOrderKey() {
   return `cafe_sidebar_order_${currentUser || 'guest'}`;
+}
+
+// 예전 키(aiChat/curious/browse)가 순서 배열에 남아 있으면 첫 등장 위치를 'etc'로 바꾸고 나머지는 제거합니다.
+function migrateLegacySidebarKeys(list) {
+  const result = [];
+  let etcInserted = false;
+  list.forEach(key => {
+    if (LEGACY_SIDEBAR_KEYS_MERGED_INTO_ETC.includes(key)) {
+      if (!etcInserted && !result.includes('etc')) { result.push('etc'); etcInserted = true; }
+      return;
+    }
+    if (!result.includes(key)) result.push(key);
+  });
+  return result;
 }
 
 function getSidebarOrder() {
@@ -1415,7 +1451,8 @@ function getSidebarOrder() {
   try {
     const saved = JSON.parse(localStorage.getItem(getSidebarOrderKey()) || 'null');
     if (Array.isArray(saved)) {
-      const filtered = saved.filter(key => validKeys.includes(key));
+      const migrated = migrateLegacySidebarKeys(saved);
+      const filtered = migrated.filter(key => validKeys.includes(key));
       const missing = validKeys.filter(key => !filtered.includes(key));
       return [...filtered, ...missing];
     }
@@ -1426,6 +1463,44 @@ function getSidebarOrder() {
 function saveSidebarOrder(order) {
   localStorage.setItem(getSidebarOrderKey(), JSON.stringify(order));
 }
+
+// ===== 사이드바 항목 숨기기(삭제) =====
+function getSidebarHiddenKey() {
+  return `cafe_sidebar_hidden_${currentUser || 'guest'}`;
+}
+
+function getHiddenSidebarItems() {
+  const validKeys = SIDEBAR_ITEMS.map(item => item.key);
+  try {
+    const saved = JSON.parse(localStorage.getItem(getSidebarHiddenKey()) || 'null');
+    if (Array.isArray(saved)) {
+      const migrated = migrateLegacySidebarKeys(saved);
+      // '설정'은 항상 남겨둬서 되돌릴 방법이 사라지지 않게 함
+      return migrated.filter(key => validKeys.includes(key) && key !== 'settings');
+    }
+  } catch (error) { console.error(error); }
+  return [];
+}
+
+function saveHiddenSidebarItems(hidden) {
+  localStorage.setItem(getSidebarHiddenKey(), JSON.stringify(hidden));
+}
+
+window.hideSidebarItem = function(key) {
+  if (key === 'settings') return;
+  const hidden = getHiddenSidebarItems();
+  if (!hidden.includes(key)) hidden.push(key);
+  saveHiddenSidebarItems(hidden);
+  renderSidebarNav();
+  renderSidebarOrderEditor();
+};
+
+window.restoreSidebarItem = function(key) {
+  const hidden = getHiddenSidebarItems().filter(k => k !== key);
+  saveHiddenSidebarItems(hidden);
+  renderSidebarNav();
+  renderSidebarOrderEditor();
+};
 
 function hasTeamDDDAccess() {
   return !!currentUser && (TEAMDDD_OWNERS.includes(currentUser) || teamdddAllowedMembers.includes(currentUser));
@@ -1438,12 +1513,13 @@ function renderSidebarNav() {
   const container = document.getElementById('sidebarNavItems');
   if (!container) return;
   const order = getSidebarOrder();
-  container.innerHTML = order.map(key => {
+  const hidden = getHiddenSidebarItems();
+  container.innerHTML = order.filter(key => !hidden.includes(key)).map(key => {
     const item = SIDEBAR_ITEMS.find(sidebarItem => sidebarItem.key === key);
     if (!item) return '';
     if (key === 'teamddd' && !hasTeamDDDAccess()) return '';
     const id = SIDEBAR_ITEM_IDS[key];
-    const onclick = key === 'profile' ? 'openMyProfile()' : (key === 'settings' ? 'openSettingsFromSidebar()' : (key === 'curious' ? 'openCuriousFact()' : (key === 'browse' ? 'openWebBrowse()' : (key === 'teamddd' ? 'openTeamDDDViewer()' : `showAppSection('${key}')`))));
+    const onclick = key === 'profile' ? 'openMyProfile()' : (key === 'settings' ? 'openSettingsFromSidebar()' : (key === 'teamddd' ? 'openTeamDDDViewer()' : `showAppSection('${key}')`));
     let badge = '';
     if (key === 'chat') badge = '<span id="unreadBadge" class="unread-badge hidden"></span>';
     if (key === 'notifications') badge = '<span id="notificationBadge" class="unread-badge hidden"></span>';
@@ -1451,9 +1527,10 @@ function renderSidebarNav() {
     return `<button id="${id}" class="sidebar-item" onclick="${onclick}"><span class="sidebar-item-icon">${item.icon}</span><span class="sidebar-item-label"${labelAttrs}>${item.label}</span>${badge}</button>`;
   }).join('');
   // 재렌더링 후에도 현재 보고 있는 화면의 활성 표시를 유지
-  const activeSection = ['cafe', 'ranking', 'game', 'aiChat', 'bookmarks', 'chat', 'notifications', 'settings', 'admin'].find(sec => !document.getElementById(`${sec}View`)?.classList.contains('hidden'));
-  if (activeSection && SIDEBAR_ITEM_IDS[activeSection]) {
-    document.getElementById(SIDEBAR_ITEM_IDS[activeSection])?.classList.add('active');
+  const activeSection = ['cafe', 'ranking', 'game', 'aiChat', 'etc', 'bookmarks', 'chat', 'notifications', 'settings', 'admin'].find(sec => !document.getElementById(`${sec}View`)?.classList.contains('hidden'));
+  if (activeSection) {
+    const navKey = activeSection === 'aiChat' ? 'etc' : activeSection;
+    if (SIDEBAR_ITEM_IDS[navKey]) document.getElementById(SIDEBAR_ITEM_IDS[navKey])?.classList.add('active');
   }
   adjustSidebarLabelOverflow();
 }
@@ -1503,24 +1580,48 @@ function renderSidebarOrderEditor() {
   const container = document.getElementById('sidebarOrderList');
   if (!container) return;
   const order = getSidebarOrder();
-  container.innerHTML = order.map((key, index) => {
+  const hidden = getHiddenSidebarItems();
+  const visibleOrder = order.filter(key => !hidden.includes(key));
+  const visibleHtml = visibleOrder.map((key, index) => {
     const item = SIDEBAR_ITEMS.find(sidebarItem => sidebarItem.key === key);
     if (!item) return '';
     const isFirst = index === 0;
-    const isLast = index === order.length - 1;
-    return `<div class="sidebar-order-item" data-key="${key}" style="display:flex; align-items:center; gap:10px; padding:10px; box-sizing:border-box; background:var(--card-bg); ${index !== order.length - 1 ? 'border-bottom:1px solid var(--border-color);' : ''}">
+    const isLast = index === visibleOrder.length - 1;
+    const canDelete = key !== 'settings';
+    return `<div class="sidebar-order-item" data-key="${key}" style="display:flex; align-items:center; gap:6px; padding:10px; box-sizing:border-box; background:var(--card-bg); border-bottom:1px solid var(--border-color);">
       <span style="font-size:13px; flex:1;">${item.icon} ${item.label}</span>
       <button onclick="moveSidebarItem('${key}', -1)" ${isFirst ? 'disabled' : ''} style="padding:5px 9px; font-size:13px; line-height:1; ${isFirst ? 'opacity:0.35; cursor:not-allowed;' : ''}" aria-label="위로 이동">▲</button>
       <button onclick="moveSidebarItem('${key}', 1)" ${isLast ? 'disabled' : ''} style="padding:5px 9px; font-size:13px; line-height:1; ${isLast ? 'opacity:0.35; cursor:not-allowed;' : ''}" aria-label="아래로 이동">▼</button>
+      ${canDelete ? `<button onclick="hideSidebarItem('${key}')" style="padding:5px 9px; font-size:13px; line-height:1; color:#e5484d;" aria-label="삭제" title="사이드바에서 삭제">🗑</button>` : ''}
     </div>`;
   }).join('');
+  const hiddenHtml = hidden.length ? `<div style="padding:8px 10px; font-size:11px; color:var(--text-sub); background:var(--input-bg); border-bottom:1px solid var(--border-color);">삭제한 항목 (눌러서 되돌리기)</div>` + hidden.map(key => {
+    const item = SIDEBAR_ITEMS.find(sidebarItem => sidebarItem.key === key);
+    if (!item) return '';
+    return `<div style="display:flex; align-items:center; gap:8px; padding:10px; box-sizing:border-box; background:var(--card-bg); border-bottom:1px solid var(--border-color); opacity:0.6;">
+      <span style="font-size:13px; flex:1;">${item.icon} ${item.label}</span>
+      <button onclick="restoreSidebarItem('${key}')" style="padding:5px 10px; font-size:12px;">복원</button>
+    </div>`;
+  }).join('') : '';
+  container.innerHTML = visibleHtml + hiddenHtml;
+}
+
+function getVisibleAdjacentIndex(order, hidden, currentIndex, direction) {
+  let i = currentIndex + direction;
+  while (i >= 0 && i < order.length) {
+    if (!hidden.includes(order[i])) return i;
+    i += direction;
+  }
+  return -1;
 }
 
 window.moveSidebarItem = function(key, direction) {
   const order = getSidebarOrder();
+  const hidden = getHiddenSidebarItems();
   const index = order.indexOf(key);
-  const targetIndex = index + direction;
-  if (index === -1 || targetIndex < 0 || targetIndex >= order.length) return;
+  if (index === -1) return;
+  const targetIndex = getVisibleAdjacentIndex(order, hidden, index, direction);
+  if (targetIndex === -1) return;
   [order[index], order[targetIndex]] = [order[targetIndex], order[index]];
   saveSidebarOrder(order);
   renderSidebarNav();
@@ -3638,6 +3739,7 @@ window.showAppSection = function(section) {
   const isGame = section === 'game';
   const isGamePlay = section === 'gamePlay';
   const isAiChat = section === 'aiChat';
+  const isEtc = section === 'etc';
   const isBookmarks = section === 'bookmarks';
   const isProfile = section === 'profile';
   const isAdmin = section === 'admin';
@@ -3649,6 +3751,7 @@ window.showAppSection = function(section) {
   document.getElementById('gameView').classList.toggle('hidden', !isGame);
   document.getElementById('gamePlayView').classList.toggle('hidden', !isGamePlay);
   document.getElementById('aiChatView').classList.toggle('hidden', !isAiChat);
+  document.getElementById('etcView').classList.toggle('hidden', !isEtc);
   document.getElementById('bookmarksView').classList.toggle('hidden', !isBookmarks);
   document.getElementById('profileView').classList.toggle('hidden', !isProfile);
   document.getElementById('adminView').classList.toggle('hidden', !isAdmin);
@@ -3658,7 +3761,7 @@ window.showAppSection = function(section) {
   document.getElementById('notificationsNavBtn').classList.toggle('active', isNotifications);
   document.getElementById('rankingNavBtn').classList.toggle('active', isRanking);
   document.getElementById('gameNavBtn').classList.toggle('active', isGame || isGamePlay);
-  document.getElementById('aiChatNavBtn').classList.toggle('active', isAiChat);
+  document.getElementById('etcNavBtn').classList.toggle('active', isAiChat || isEtc);
   document.getElementById('bookmarksNavBtn').classList.toggle('active', isBookmarks);
   document.getElementById('profileNavBtn').classList.toggle('active', isProfile && profileViewUser === currentUser);
   document.getElementById('adminNavBtn').classList.toggle('active', isAdmin);
