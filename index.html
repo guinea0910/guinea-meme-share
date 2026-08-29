@@ -1200,6 +1200,42 @@ const accountFirebaseConfig = {
 const accountApp = initializeApp(accountFirebaseConfig, 'guineaAccount');
 const accountDb = getFirestore(accountApp);
 
+// --- ⚫⚪ 오목(OMOK) 웹사이트 연동 (읽기 전용) ---
+// 오목 승수·ROS 레이팅은 이 앱에서 더 이상 자체적으로 관리하지 않고,
+// 별도로 운영 중인 OMOK 웹사이트(guinea0910.github.io/omok)의 Firebase 프로젝트에서 그대로 가져와 표시합니다.
+// 아이디는 위 "기니 계정"으로 통합돼 있어서, 이 앱의 닉네임과 OMOK 사이트의 유저 문서 ID가 같은 값이에요.
+const omokFirebaseConfig = {
+  apiKey: "AIzaSyCtDUl6rTmuhYTo0Po4sf0x3dV6ELn3cNQ",
+  authDomain: "omok-9f8e5.firebaseapp.com",
+  projectId: "omok-9f8e5",
+  storageBucket: "omok-9f8e5.firebasestorage.app",
+  messagingSenderId: "590002360494",
+  appId: "1:590002360494:web:46fd8ea0ec14ec10d71d3f"
+};
+const omokApp = initializeApp(omokFirebaseConfig, 'omokExternal');
+const omokDb = getFirestore(omokApp);
+
+let omokExternalUsers = null;       // { [닉네임]: { rating, wins, losses, draws } } 캐시
+let omokExternalUsersPromise = null;
+
+// OMOK 사이트의 users 컬렉션 전체를 한 번 불러와 캐시해 둡니다. (짧은 시간 내 중복 호출 시 캐시 재사용)
+function fetchOmokExternalUsers(forceRefresh = false) {
+  if (forceRefresh) { omokExternalUsers = null; omokExternalUsersPromise = null; }
+  if (omokExternalUsers) return Promise.resolve(omokExternalUsers);
+  if (omokExternalUsersPromise) return omokExternalUsersPromise;
+  omokExternalUsersPromise = getDocs(collection(omokDb, 'users')).then(snap => {
+    const map = {};
+    snap.forEach(docSnap => { map[docSnap.id] = docSnap.data(); });
+    omokExternalUsers = map;
+    return map;
+  }).catch(error => {
+    console.error('OMOK 사이트 데이터 조회 실패:', error);
+    omokExternalUsersPromise = null;
+    return {};
+  });
+  return omokExternalUsersPromise;
+}
+
 // ⚠️ Gemini API 키 (수학 게시판 AI 답변 기능용)
 // 이 코드는 클라이언트에서 직접 호출되므로 키가 브라우저 소스에 노출됩니다.
 // 발급: https://aistudio.google.com/apikey 에서 무료로 발급 가능
@@ -3632,7 +3668,6 @@ window.showAppSection = function(section) {
   if (section !== 'gamePlay' && typeof stopCookieClicker === 'function') stopCookieClicker();
   if (section !== 'gamePlay' && typeof stopRhythm === 'function') stopRhythm();
   if (section !== 'gamePlay' && typeof stopCardGacha === 'function') stopCardGacha();
-  if (section !== 'gamePlay' && typeof stopOmok === 'function') stopOmok();
   if (section !== 'gamePlay' && typeof stopSnake === 'function') stopSnake();
   if (section !== 'gamePlay' && typeof stopPong === 'function') stopPong();
   if (section !== 'gamePlay' && typeof stopReaction === 'function') stopReaction();
@@ -3836,8 +3871,12 @@ async function loadGameRatingRanking() {
   container.innerHTML = '불러오는 중...';
   try {
     if (!allUsers.length) { await fetchUsersAndRanking(); }
+    const omokUsers = await fetchOmokExternalUsers();
     const rows = allUsers.map(user => {
-      const ratings = (userProfiles[user] && userProfiles[user].pvpRating) || {};
+      const ratings = { ...((userProfiles[user] && userProfiles[user].pvpRating) || {}) };
+      // 오목 레이팅(ROS)은 이 앱이 아니라 OMOK 웹사이트 데이터를 그대로 사용합니다.
+      if (omokUsers[user] && omokUsers[user].rating != null) ratings.omok = omokUsers[user].rating;
+      else delete ratings.omok;
       const hasPlayed = Object.keys(PVP_GAME_CONFIG).some(gt => ratings[gt] != null);
       return { user, rating: getAverageGameRating(ratings), hasPlayed };
     });
@@ -4003,7 +4042,13 @@ async function loadProfileView(username) {
 
     const ratingRow = document.getElementById('profilePvpRatingRow');
     if (ratingRow) {
-      const ratings = userData.pvpRating || {};
+      const ratings = { ...(userData.pvpRating || {}) };
+      // 오목 레이팅(ROS)은 이 앱이 아니라 OMOK 웹사이트 데이터를 그대로 사용합니다.
+      try {
+        const omokUsers = await fetchOmokExternalUsers();
+        if (omokUsers[username] && omokUsers[username].rating != null) ratings.omok = omokUsers[username].rating;
+        else delete ratings.omok;
+      } catch (error) { console.error(error); }
       const entries = Object.keys(PVP_GAME_CONFIG).filter(gt => ratings[gt] != null);
       if (entries.length) {
         ratingRow.classList.remove('hidden');
@@ -5980,7 +6025,6 @@ window.setGameTab = function(tab) {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
-  stopOmok();
   stopSnake();
   stopPong();
   stopReaction();
@@ -6129,7 +6173,6 @@ const GAME_OPEN_FUNC_NAMES = {
   cookie: 'openCookieClickerGame',
   rhythm: 'openRhythmGame',
   cardgacha: 'openCardGachaGame',
-  omok: 'openOmokGame',
   snake: 'openSnakeGame',
   pong: 'openPongGame',
   reaction: 'openReactionGame',
@@ -6137,7 +6180,6 @@ const GAME_OPEN_FUNC_NAMES = {
   chess: 'openChessGame',
   watermelon: 'openWatermelonGame',
   tttPvp: 'openTttPvpLobby',
-  omokPvp: 'openOmokPvpLobby',
   tetrisPvp: 'openTetrisPvpLobby',
   pongPvp: 'openPongPvpLobby',
   chessPvp: 'openChessPvpLobby'
@@ -6151,7 +6193,6 @@ function stopAllGames() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
-  stopOmok();
   stopSnake();
   stopPong();
   stopReaction();
@@ -6247,7 +6288,6 @@ window.openRouletteGame = async function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
-  stopOmok();
   stopSnake();
   stopPong();
   stopReaction();
@@ -6303,7 +6343,6 @@ window.openClickChallenge = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
-  stopOmok();
   stopSnake();
   stopPong();
   stopReaction();
@@ -6448,7 +6487,6 @@ window.openTicTacToeGame = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
-  stopOmok();
   stopSnake();
   stopPong();
   stopReaction();
@@ -6579,7 +6617,6 @@ window.openMinesweeperGame = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
-  stopOmok();
   stopSnake();
   stopPong();
   stopReaction();
@@ -6944,7 +6981,6 @@ window.openTetrisGame = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
-  stopOmok();
   stopSnake();
   stopPong();
   stopReaction();
@@ -7285,7 +7321,6 @@ window.openGame2048 = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
-  stopOmok();
   stopSnake();
   stopPong();
   stopReaction();
@@ -7341,7 +7376,6 @@ window.start2048 = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
-  stopOmok();
   stopSnake();
   stopPong();
   stopReaction();
@@ -7574,7 +7608,6 @@ window.openCookieClickerGame = async function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
-  stopOmok();
   stopSnake();
   stopPong();
   stopReaction();
@@ -7776,7 +7809,6 @@ window.openRhythmGame = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
-  stopOmok();
   stopSnake();
   stopPong();
   stopReaction();
@@ -7982,7 +8014,6 @@ window.openCardGachaGame = async function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
-  stopOmok();
   stopSnake();
   stopPong();
   stopReaction();
@@ -8053,193 +8084,6 @@ window.drawCardGacha = async function() {
     if (drawBtn) drawBtn.disabled = false;
   }
 };
-
-// --- ⚫⚪ 오목 ---
-const OMOK_SIZE = 13;
-const OMOK_WIN = 5;
-const OMOK_DIRS = [[0,1],[1,0],[1,1],[1,-1]];
-let omokState = null;
-
-function stopOmok() { omokState = null; }
-
-function omokIndex(r, c) { return r * OMOK_SIZE + c; }
-function omokInBounds(r, c) { return r >= 0 && r < OMOK_SIZE && c >= 0 && c < OMOK_SIZE; }
-
-function omokCheckWin(board, idx, player) {
-  const r0 = Math.floor(idx / OMOK_SIZE), c0 = idx % OMOK_SIZE;
-  for (const [dr, dc] of OMOK_DIRS) {
-    let count = 1;
-    let r = r0 + dr, c = c0 + dc;
-    while (omokInBounds(r, c) && board[omokIndex(r, c)] === player) { count++; r += dr; c += dc; }
-    r = r0 - dr; c = c0 - dc;
-    while (omokInBounds(r, c) && board[omokIndex(r, c)] === player) { count++; r -= dr; c -= dc; }
-    if (count >= OMOK_WIN) return true;
-  }
-  return false;
-}
-
-function omokLineScore(board, r0, c0, dr, dc, player) {
-  let count = 1, openEnds = 0;
-  let r = r0 + dr, c = c0 + dc;
-  while (omokInBounds(r, c) && board[omokIndex(r, c)] === player) { count++; r += dr; c += dc; }
-  if (omokInBounds(r, c) && board[omokIndex(r, c)] === null) openEnds++;
-  r = r0 - dr; c = c0 - dc;
-  while (omokInBounds(r, c) && board[omokIndex(r, c)] === player) { count++; r -= dr; c -= dc; }
-  if (omokInBounds(r, c) && board[omokIndex(r, c)] === null) openEnds++;
-  if (count >= 5) return 100000;
-  if (count === 4) return openEnds >= 1 ? 10000 : 1000;
-  if (count === 3) return openEnds === 2 ? 2000 : (openEnds === 1 ? 300 : 0);
-  if (count === 2) return openEnds === 2 ? 100 : (openEnds === 1 ? 20 : 0);
-  return openEnds === 2 ? 5 : 1;
-}
-
-function omokScoreCell(board, idx, player) {
-  const r0 = Math.floor(idx / OMOK_SIZE), c0 = idx % OMOK_SIZE;
-  board[idx] = player;
-  let total = 0;
-  for (const [dr, dc] of OMOK_DIRS) total += omokLineScore(board, r0, c0, dr, dc, player);
-  board[idx] = null;
-  return total;
-}
-
-function pickOmokMove(board) {
-  const empties = [];
-  for (let i = 0; i < board.length; i++) if (board[i] === null) empties.push(i);
-  if (empties.length === board.length) return omokIndex(Math.floor(OMOK_SIZE / 2), Math.floor(OMOK_SIZE / 2));
-
-  // 1) 즉시 승리는 항상 챙긴다
-  for (const idx of empties) {
-    board[idx] = 'O';
-    const win = omokCheckWin(board, idx, 'O');
-    board[idx] = null;
-    if (win) return idx;
-  }
-  // 2) 플레이어 승리 저지 (쉬운 난이도: 가끔 못 막고 놓친다)
-  if (Math.random() < 0.6) {
-    for (const idx of empties) {
-      board[idx] = 'X';
-      const win = omokCheckWin(board, idx, 'X');
-      board[idx] = null;
-      if (win) return idx;
-    }
-  }
-  // 3) 기존 돌 바로 주변으로 후보 축소 (탐색 범위를 좁혀 더 단순하게 둠)
-  const near = new Set();
-  for (let i = 0; i < board.length; i++) {
-    if (board[i] === null) continue;
-    const r = Math.floor(i / OMOK_SIZE), c = i % OMOK_SIZE;
-    for (let dr = -1; dr <= 1; dr++) {
-      for (let dc = -1; dc <= 1; dc++) {
-        const nr = r + dr, nc = c + dc;
-        if (omokInBounds(nr, nc)) {
-          const ni = omokIndex(nr, nc);
-          if (board[ni] === null) near.add(ni);
-        }
-      }
-    }
-  }
-  const candidates = near.size ? Array.from(near) : empties;
-  const center = Math.floor(OMOK_SIZE / 2);
-  let best = [], bestScore = -Infinity;
-  for (const idx of candidates) {
-    const offense = omokScoreCell(board, idx, 'O');
-    const defense = omokScoreCell(board, idx, 'X');
-    const r = Math.floor(idx / OMOK_SIZE), c = idx % OMOK_SIZE;
-    const centerBonus = -(Math.abs(r - center) + Math.abs(c - center)) * 0.5;
-    // 난이도 하향: 공격/수비 판단력을 크게 낮춤
-    let score = offense * 0.7 + defense * 0.45 + centerBonus;
-    // 난이도 하향: 최선의 수 대신 손해보는 수를 자주 둠
-    if (Math.random() < 0.4) score *= 0.35;
-    if (score > bestScore) { bestScore = score; best = [idx]; }
-    else if (score === bestScore) best.push(idx);
-  }
-  return best[Math.floor(Math.random() * best.length)];
-}
-
-window.openOmokGame = function() {
-  stopTetris();
-  stop2048();
-  stopTtt();
-  stopMinesweeper();
-  stopCookieClicker();
-  stopRhythm();
-  stopCardGacha();
-  stopOmok();
-  stopSnake();
-  stopPong();
-  stopReaction();
-  stopMemory();
-  const area = document.getElementById('gamePlayArea');
-  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
-    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">나는 ⚫, 컴퓨터는 ⚪! 5개를 먼저 이으면 승리. 쉬운 난이도로 조정됐어요. 이기면 40P, 비기면 15P, 지면 0P</div>
-    <div id="omokGameOverBanner" class="hidden" style="font-size:18px; font-weight:bold; padding:10px; border-radius:8px; margin-bottom:10px;"></div>
-    <div style="width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;">
-      <div id="omokBoard" style="display:grid; grid-template-columns:repeat(${OMOK_SIZE}, 26px); grid-auto-rows:26px; gap:1px; width:max-content; margin:0 auto; background:var(--border-color); padding:2px; border-radius:6px;"></div>
-    </div>
-    <button onclick="startOmok()" id="omokStartBtn" style="width:100%; margin-top:12px;">새 게임 시작</button>
-    <div id="omokResult" style="margin-top:10px;"></div>
-  </div>`;
-  startOmok();
-};
-
-window.startOmok = function() {
-  omokState = { board: Array(OMOK_SIZE * OMOK_SIZE).fill(null), running: true };
-  document.getElementById('omokGameOverBanner').classList.add('hidden');
-  document.getElementById('omokResult').innerHTML = '';
-  document.getElementById('omokStartBtn').textContent = '새 게임 시작';
-  drawOmokBoard();
-};
-
-window.omokPlaceMark = async function(index) {
-  if (!omokState || !omokState.running) return;
-  if (omokState.board[index] !== null) return;
-  omokState.board[index] = 'X';
-  drawOmokBoard();
-  if (omokCheckWin(omokState.board, index, 'X')) { await finishOmok('X'); return; }
-  if (omokState.board.every(cell => cell !== null)) { await finishOmok('draw'); return; }
-  const computerIdx = pickOmokMove(omokState.board);
-  omokState.board[computerIdx] = 'O';
-  drawOmokBoard();
-  if (omokCheckWin(omokState.board, computerIdx, 'O')) { await finishOmok('O'); return; }
-  if (omokState.board.every(cell => cell !== null)) { await finishOmok('draw'); return; }
-};
-
-async function finishOmok(winner) {
-  omokState.running = false;
-  const banner = document.getElementById('omokGameOverBanner');
-  let outcome, points, bannerText, bannerStyle;
-  if (winner === 'X') {
-    outcome = '승리'; points = 40;
-    bannerText = '🎉 승리! 게임 종료'; bannerStyle = 'background:rgba(3,199,90,0.18); color:var(--cafe-green);';
-  } else if (winner === 'draw') {
-    outcome = '무승부'; points = 15;
-    bannerText = '🤝 무승부! 게임 종료'; bannerStyle = 'background:var(--input-bg); color:var(--text-sub);';
-  } else {
-    outcome = '패배'; points = 0;
-    bannerText = '💀 게임 오버! (패배)'; bannerStyle = 'background:rgba(248,113,113,0.18); color:#f87171;';
-  }
-  banner.textContent = bannerText;
-  banner.style.cssText += bannerStyle;
-  banner.classList.remove('hidden');
-  await awardGamePoints('omok', '오목', points, `오목 ${outcome}! (${points}P)`);
-  if (winner === 'X') {
-    try {
-      await updateDoc(doc(db, 'users', currentUser), { omokWins: increment(1) });
-    } catch (error) {
-      console.error(error);
-    }
-  }
-  const resultText = `오목에서 ${outcome}했어요! (${points}P 획득)`;
-  document.getElementById('omokResult').innerHTML = `<div style="font-size:13px; margin-bottom:6px;">+${points}P 획득</div>${renderGameResultActions(resultText)}`;
-}
-
-function drawOmokBoard() {
-  const boardEl = document.getElementById('omokBoard');
-  if (!boardEl || !omokState) return;
-  boardEl.innerHTML = omokState.board.map((cell, idx) => `
-    <div onclick="omokPlaceMark(${idx})" style="width:26px; height:26px; background:var(--card-bg); display:flex; align-items:center; justify-content:center; font-size:18px; cursor:${cell || !omokState.running ? 'default' : 'pointer'};">${cell === 'X' ? '⚫' : (cell === 'O' ? '⚪' : '')}</div>
-  `).join('');
-}
 
 // ===== ⚡ 실시간 대결 (틱택토 / 오목 PvP) =====
 // Firestore 컬렉션: gamePvpQueue(대기열), gamePvpMatches(진행 중인 대국), gamePvpChallenges(도전장)
@@ -8319,7 +8163,7 @@ function stopPvpSession() {
 
 function pvpResetLocalGameStates() {
   stopTetris(); stop2048(); stopTtt(); stopMinesweeper(); stopCookieClicker(); stopRhythm();
-  stopCardGacha(); stopOmok(); stopSnake(); stopPong(); stopReaction(); stopMemory();
+  stopCardGacha(); stopSnake(); stopPong(); stopReaction(); stopMemory();
   stopChess(); stopWatermelon();
 }
 
@@ -8419,16 +8263,6 @@ window.openTttPvpLobby = function() {
   }
   pvpResetLocalGameStates();
   pvpOpenLobby('ttt');
-};
-
-window.openOmokPvpLobby = function() {
-  if (pvpPendingEntry && pvpPendingEntry.gameType === 'omok') {
-    const entry = pvpPendingEntry; pvpPendingEntry = null;
-    pvpEnterMatch(entry.matchId, 'omok');
-    return;
-  }
-  pvpResetLocalGameStates();
-  pvpOpenLobby('omok');
 };
 
 window.openTetrisPvpLobby = function() {
@@ -9199,14 +9033,14 @@ function pvpRenderSpectate(matchId, data) {
   </div>`;
 }
 
-// --- ⚫⚪ 오목 리더보드 (이긴 횟수 기준) ---
+// --- ⚫⚪ 오목 리더보드 (이긴 횟수 기준, OMOK 웹사이트 데이터 사용) ---
 async function renderOmokRankTab() {
   const container = document.getElementById('gameOmokRankTab');
   container.innerHTML = '불러오는 중...';
   try {
-    const querySnapshot = await getDocs(collection(db, 'users'));
-    const ranked = querySnapshot.docs
-      .map(docSnap => ({ user: docSnap.id, wins: docSnap.data().omokWins || 0 }))
+    const omokUsers = await fetchOmokExternalUsers();
+    const ranked = Object.keys(omokUsers)
+      .map(user => ({ user, wins: omokUsers[user].wins || 0 }))
       .filter(entry => entry.wins > 0)
       .sort((a, b) => b.wins - a.wins)
       .slice(0, 30);
@@ -9713,7 +9547,6 @@ window.openSnakeGame = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
-  stopOmok();
   stopSnake();
   stopPong();
   stopReaction();
@@ -9937,7 +9770,6 @@ window.openPongGame = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
-  stopOmok();
   stopSnake();
   stopPong();
   stopReaction();
@@ -10195,7 +10027,6 @@ window.openReactionGame = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
-  stopOmok();
   stopSnake();
   stopPong();
   stopReaction();
@@ -10346,7 +10177,6 @@ window.openMemoryGame = function() {
   stopCookieClicker();
   stopRhythm();
   stopCardGacha();
-  stopOmok();
   stopSnake();
   stopPong();
   stopReaction();
