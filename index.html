@@ -886,6 +886,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button id="lbSubChessBtn" class="page-btn" onclick="setLeaderboardSubTab('chess')" style="padding:5px 10px; font-size:11px;">♟️ 체스</button>
 <button id="lbSubWatermelonBtn" class="page-btn" onclick="setLeaderboardSubTab('watermelon')" style="padding:5px 10px; font-size:11px;">🍉 수박게임</button>
 <button id="lbSubDinoBtn" class="page-btn" onclick="setLeaderboardSubTab('dino')" style="padding:5px 10px; font-size:11px;">🦖 공룡 게임</button>
+<button id="lbSubWordchainBtn" class="page-btn" onclick="setLeaderboardSubTab('wordchain')" style="padding:5px 10px; font-size:11px;">🔤 끝말잇기</button>
 </div>
 <div id="gameRankTab"></div>
 <div id="gameOmokRankTab" class="hidden"></div>
@@ -902,6 +903,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="gameChessRankTab" class="hidden"></div>
 <div id="gameWatermelonRankTab" class="hidden"></div>
 <div id="gameDinoRankTab" class="hidden"></div>
+<div id="gameWordchainRankTab" class="hidden"></div>
 </div>
 </div>
 </section>
@@ -1325,7 +1327,8 @@ const PVP_GAME_CONFIG = {
   omok: { size: 13, winLen: 5, label: '오목', type: 'board', winPoints: 40, drawPoints: 15 },
   tetris: { label: '테트리스', type: 'race', winPoints: 30, drawPoints: 12 },
   pong: { label: '핑퐁', type: 'race', winPoints: 25, drawPoints: 10 },
-  chess: { label: '체스', type: 'chess', winPoints: 45, drawPoints: 18 }
+  chess: { label: '체스', type: 'chess', winPoints: 45, drawPoints: 18 },
+  wordchain: { label: '끝말잇기', type: 'wordchain', winPoints: 30, drawPoints: 12 }
 };
 // 네 가지 대결 게임(틱택토·오목·테트리스·핑퐁) 레이팅의 평균을 하나의 "게임 레이팅"으로 계산합니다.
 // 아직 플레이하지 않은 게임은 기본 레이팅(1000)으로 계산에 포함됩니다.
@@ -3786,6 +3789,7 @@ window.showAppSection = function(section) {
   if (section !== 'gamePlay' && typeof stopMemory === 'function') stopMemory();
   if (section !== 'gamePlay' && typeof stopChess === 'function') stopChess();
   if (section !== 'gamePlay' && typeof stopWatermelon === 'function') stopWatermelon();
+  if (section !== 'gamePlay' && typeof stopWordchain === 'function') stopWordchain();
   if (section !== 'gamePlay' && typeof stopBluemarble === 'function') stopBluemarble();
   if (section !== 'gamePlay' && typeof stopPvpSession === 'function') stopPvpSession();
   const isCafe = section === 'cafe';
@@ -6142,6 +6146,7 @@ window.setGameTab = function(tab) {
   stopMemory();
   stopChess();
   stopWatermelon();
+  stopWordchain();
   if (typeof stopBluemarble === 'function') stopBluemarble();
   if (typeof stopPvpSession === 'function') stopPvpSession();
   document.getElementById('gameTabHubBtn').classList.toggle('active', tab === 'hub');
@@ -6175,6 +6180,7 @@ window.setLeaderboardSubTab = function(tab) {
   document.getElementById('lbSubChessBtn').classList.toggle('active', tab === 'chess');
   document.getElementById('lbSubWatermelonBtn').classList.toggle('active', tab === 'watermelon');
   document.getElementById('lbSubDinoBtn').classList.toggle('active', tab === 'dino');
+  document.getElementById('lbSubWordchainBtn').classList.toggle('active', tab === 'wordchain');
   document.getElementById('gameRankTab').classList.toggle('hidden', tab !== 'total');
   document.getElementById('gameOmokRankTab').classList.toggle('hidden', tab !== 'omok');
   document.getElementById('gameCpsRankTab').classList.toggle('hidden', tab !== 'cps');
@@ -6190,6 +6196,7 @@ window.setLeaderboardSubTab = function(tab) {
   document.getElementById('gameChessRankTab').classList.toggle('hidden', tab !== 'chess');
   document.getElementById('gameWatermelonRankTab').classList.toggle('hidden', tab !== 'watermelon');
   document.getElementById('gameDinoRankTab').classList.toggle('hidden', tab !== 'dino');
+  document.getElementById('gameWordchainRankTab').classList.toggle('hidden', tab !== 'wordchain');
   if (tab === 'total') renderGameRankTab();
   else if (tab === 'omok') renderOmokRankTab();
   else if (tab === 'cps') renderCpsRankTab();
@@ -6204,6 +6211,7 @@ window.setLeaderboardSubTab = function(tab) {
   else if (tab === 'memory') renderMemoryRankTab();
   else if (tab === 'chess') renderChessRankTab();
   else if (tab === 'dino') renderDinoRankTab();
+  else if (tab === 'wordchain') renderWordchainRankTab();
   else renderWatermelonRankTab();
 };
 
@@ -6258,7 +6266,8 @@ function getGameDefs() {
     { key: 'chess', title: '♟️ 체스', desc: '컴퓨터와 체스 한 판! 실시간 대결도 가능해요', action: "openGameDetail('chess', '♟️ 체스')", btnText: '한 판 하기', pvpAction: "openGameDetail('chessPvp', '♟️ 체스 - 실시간 대결')" },
     { key: 'watermelon', title: '🍉 수박게임', desc: '같은 과일을 합쳐서 수박까지 만들어보세요!', action: "openGameDetail('watermelon', '🍉 수박게임')", btnText: '플레이하기' },
     { key: 'dino', title: '🦖 공룡 게임', desc: '스페이스바나 화면 탭으로 점프! 장애물을 피해 오래 버틸수록 포인트 UP', action: "openGameDetail('dino', '🦖 공룡 게임')", btnText: '플레이하기' },
-    { key: 'bluemarble', title: '🎲 부루마블', desc: '2~4명이 실시간으로 즐기는 부루마블! 방을 만들거나 코드로 입장해서 대결해보세요', action: "openGameDetail('bluemarble', '🎲 부루마블')", btnText: '플레이하기' }
+    { key: 'bluemarble', title: '🎲 부루마블', desc: '2~4명이 실시간으로 즐기는 부루마블! 방을 만들거나 코드로 입장해서 대결해보세요', action: "openGameDetail('bluemarble', '🎲 부루마블')", btnText: '플레이하기' },
+    { key: 'wordchain', title: '🔤 끝말잇기', desc: '컴퓨터와 끝말잇기 대결! 두음법칙(리→이 등)도 인정돼요', action: "openGameDetail('wordchain', '🔤 끝말잇기')", btnText: '한 판 하기', pvpAction: "openGameDetail('wordchainPvp', '🔤 끝말잇기 - 실시간 대결')" }
   ];
 }
 
@@ -6455,10 +6464,12 @@ const GAME_OPEN_FUNC_NAMES = {
   watermelon: 'openWatermelonGame',
   dino: 'openDinoGame',
   bluemarble: 'openBluemarbleGame',
+  wordchain: 'openWordchainGame',
   tttPvp: 'openTttPvpLobby',
   tetrisPvp: 'openTetrisPvpLobby',
   pongPvp: 'openPongPvpLobby',
-  chessPvp: 'openChessPvpLobby'
+  chessPvp: 'openChessPvpLobby',
+  wordchainPvp: 'openWordchainPvpLobby'
 };
 
 function stopAllGames() {
@@ -6477,6 +6488,7 @@ function stopAllGames() {
   stopMemory();
   stopChess();
   stopWatermelon();
+  stopWordchain();
   if (typeof stopBluemarble === 'function') stopBluemarble();
   if (typeof stopPvpSession === 'function') stopPvpSession();
 }
@@ -8423,6 +8435,201 @@ window.drawCardGacha = async function() {
 // stopOmok은 다른 게임 전환 로직 여러 곳에서 호출되므로 안전을 위해 빈 함수로 유지합니다.
 function stopOmok() {}
 
+// --- 🔤 끝말잇기 (한글 두음법칙 + 내장 단어 사전) ---
+// 완성형 한글 음절을 초성/중성/종성으로 분해·조합해 "어두 ㄹ→ㄴ/ㅇ", "어두 ㄴ(야/여/요/유/이)→ㅇ" 두음법칙을 판정합니다.
+function wordchainDecompose(ch) {
+  const code = (ch || '').charCodeAt(0) - 0xAC00;
+  if (code < 0 || code > 11171) return null;
+  return { cho: Math.floor(code / 588), jung: Math.floor((code % 588) / 28), jong: code % 28 };
+}
+function wordchainCompose(cho, jung, jong) {
+  return String.fromCharCode(0xAC00 + (cho * 21 + jung) * 28 + jong);
+}
+function wordchainCanFollow(prevWord, nextFirstChar) {
+  const lastChar = prevWord[prevWord.length - 1];
+  if (lastChar === nextFirstChar) return true;
+  const d = wordchainDecompose(lastChar);
+  if (!d) return false;
+  const YOTIZED = new Set([2, 3, 6, 7, 12, 17, 20]); // ㅑㅒㅕㅖㅛㅠㅣ
+  const candidates = [];
+  if (d.cho === 5) { // ㄹ → ㄴ / ㅇ
+    candidates.push(wordchainCompose(2, d.jung, d.jong));
+    candidates.push(wordchainCompose(11, d.jung, d.jong));
+  } else if (d.cho === 2 && YOTIZED.has(d.jung)) { // ㄴ(야/여/요/유/이) → ㅇ
+    candidates.push(wordchainCompose(11, d.jung, d.jong));
+  }
+  return candidates.includes(nextFirstChar);
+}
+
+// 내장 단어 사전 (일상 명사 위주). 실제 국어사전 전체 검증은 지원하지 않아요.
+const WORDCHAIN_DICTIONARY = Array.from(new Set([
+  '사과','과일','일요일','일기','기차','차표','표범','범인','인생','생일',
+  '일본','기린','린스','스키','키위','위험','험담','담배','배구','구름',
+  '구두','두부','부채','채소','소금','금요일','나무','무지개','개나리','나비',
+  '비누','누나','나이','이모','모자','자동차','신발','발가락','가방','방석',
+  '석유','유리','이야기','기억','억지','지도','도서관','관광','광고','고양이',
+  '이불','불꽃','꽃병','병원','원숭이','이발소','소나무','개구리','리본','본드',
+  '드라마','마술','술래잡기','기타','타조','조개','개미','미술','술집','집게',
+  '게임','임금','금붕어','어항','항구','구슬','슬픔','기쁨','사탕','탕수육',
+  '육지','지구','구경','경찰','찰흙','흙탕물','물고기','물통','통조림','화분',
+  '분필','필통','통역','역사','사슴','바다','다리','리듬','리더','더위',
+  '위인','인형','형제','제비','비행기','기와','와인','인사','사자','자석',
+  '석탑','탑승','승리','승객','객실','실내화','화장실','실수','수박','박수',
+  '수건','건물','물감','감자','자두','두더지','지갑','갑옷','옷장','장미',
+  '미로','로켓','로봇','마당','당근','근육','육교','교실','실험','실크',
+  '크림','다람쥐','쥐포','포도','도토리','리모컨','소방차','차량','양파','파도',
+  '도장','장난감','감기','기념일','일기장','장갑','갑판','판매','매미','미소',
+  '소풍','풍선','선물','물병','병아리','더듬이','이슬','즐거움','움직임','임무',
+  '무궁화','화산','산책','책상','상자','자유','유치원','스승','승부','부모',
+  '모래','다리미','미역','역할','할머니','트럭','럭비','비밀','밀가루','루비',
+  '비둘기','기록','사진','진주','스타','타이어','어린이'
+]));
+
+let wordchainState = null;
+
+function stopWordchain() {
+  wordchainState = null;
+}
+
+window.openWordchainGame = function() {
+  const startWord = WORDCHAIN_DICTIONARY[Math.floor(Math.random() * WORDCHAIN_DICTIONARY.length)];
+  wordchainState = { running: true, history: [{ word: startWord, by: 'system' }], used: new Set([startWord]), turn: 'player' };
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">컴퓨터와 끝말잇기! 두음법칙(리→이 등)을 인정해요. 오래 이어갈수록 포인트 UP</div>
+    <div id="wordchainGameOverBanner" class="hidden" style="font-size:18px; font-weight:bold; padding:10px; border-radius:8px; margin-bottom:10px;"></div>
+    <div id="wordchainHistory" style="max-height:180px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px; padding:8px; margin-bottom:10px; font-size:13px; text-align:left;"></div>
+    <div id="wordchainStatus" style="font-size:13px; font-weight:bold; margin-bottom:8px;"></div>
+    <div style="display:flex; gap:6px;">
+      <input id="wordchainInput" type="text" maxlength="10" placeholder="단어 입력..." style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault(); wordchainSubmit();}">
+      <button onclick="wordchainSubmit()" style="width:auto; padding:0 16px;">입력</button>
+    </div>
+    <div id="wordchainError" style="font-size:12px; color:#f87171; min-height:16px; margin-top:6px;"></div>
+    <button class="danger-btn" onclick="wordchainGiveUp()" id="wordchainGiveUpBtn" style="width:100%; margin-top:10px;">🏳️ 모르겠어요 (포기)</button>
+    <div id="wordchainResult" style="margin-top:10px;"></div>
+  </div>`;
+  renderWordchainState();
+  const input = document.getElementById('wordchainInput');
+  if (input) input.focus();
+};
+
+function renderWordchainState() {
+  if (!wordchainState) return;
+  const historyEl = document.getElementById('wordchainHistory');
+  const statusEl = document.getElementById('wordchainStatus');
+  if (historyEl) {
+    historyEl.innerHTML = wordchainState.history.map(item => {
+      const who = item.by === 'player' ? '🙂 나' : (item.by === 'ai' ? '🤖 컴퓨터' : '🔤 시작 단어');
+      return `<div style="padding:3px 0;"><b>${escapeHtml(item.word)}</b> <span style="color:var(--text-sub); font-size:11px;">(${who})</span></div>`;
+    }).join('');
+    historyEl.scrollTop = historyEl.scrollHeight;
+  }
+  if (statusEl) statusEl.textContent = wordchainState.running ? (wordchainState.turn === 'player' ? '✅ 내 차례예요!' : '🤖 컴퓨터가 생각 중...') : '';
+  const input = document.getElementById('wordchainInput');
+  if (input) input.disabled = !wordchainState.running || wordchainState.turn !== 'player';
+}
+
+window.wordchainSubmit = async function() {
+  if (!wordchainState || !wordchainState.running || wordchainState.turn !== 'player') return;
+  const input = document.getElementById('wordchainInput');
+  const errorEl = document.getElementById('wordchainError');
+  const word = (input ? input.value : '').trim();
+  if (errorEl) errorEl.textContent = '';
+  if (!/^[가-힣]{2,}$/.test(word)) { if (errorEl) errorEl.textContent = '한글 2글자 이상의 단어를 입력해주세요.'; return; }
+  const lastWord = wordchainState.history[wordchainState.history.length - 1].word;
+  if (!wordchainCanFollow(lastWord, word[0])) { if (errorEl) errorEl.textContent = `'${lastWord}'의 마지막 글자로 시작하는 단어가 아니에요.`; return; }
+  if (wordchainState.used.has(word)) { if (errorEl) errorEl.textContent = '이미 사용한 단어예요.'; return; }
+  if (!WORDCHAIN_DICTIONARY.includes(word)) { if (errorEl) errorEl.textContent = '내장 사전에 없는 단어예요. 다른 단어를 입력해보세요.'; return; }
+  input.value = '';
+  wordchainState.history.push({ word, by: 'player' });
+  wordchainState.used.add(word);
+  wordchainState.turn = 'ai';
+  renderWordchainState();
+  setTimeout(wordchainAiMove, 700);
+};
+
+function wordchainAiMove() {
+  if (!wordchainState || !wordchainState.running || wordchainState.turn !== 'ai') return;
+  const lastWord = wordchainState.history[wordchainState.history.length - 1].word;
+  const candidates = WORDCHAIN_DICTIONARY.filter(w => !wordchainState.used.has(w) && wordchainCanFollow(lastWord, w[0]));
+  if (!candidates.length) { finishWordchain('player'); return; }
+  const pick = candidates[Math.floor(Math.random() * candidates.length)];
+  wordchainState.history.push({ word: pick, by: 'ai' });
+  wordchainState.used.add(pick);
+  wordchainState.turn = 'player';
+  renderWordchainState();
+  const input = document.getElementById('wordchainInput');
+  if (input) input.focus();
+}
+
+window.wordchainGiveUp = function() {
+  if (!wordchainState || !wordchainState.running) return;
+  finishWordchain('ai');
+};
+
+async function updateBestWordchain(score) {
+  try {
+    const userRef = doc(db, 'users', currentUser);
+    const snap = await getDoc(userRef);
+    const currentBest = snap.exists() ? (snap.data().bestWordchainScore || 0) : 0;
+    if (score > currentBest) {
+      await updateDoc(userRef, { bestWordchainScore: score, bestWordchainAt: Date.now() });
+    }
+  } catch (error) { console.error(error); }
+}
+
+async function finishWordchain(winner) {
+  if (!wordchainState) return;
+  wordchainState.running = false;
+  const playerWordCount = wordchainState.history.filter(item => item.by === 'player').length;
+  const banner = document.getElementById('wordchainGameOverBanner');
+  let outcome, points, bannerText, bannerStyle;
+  if (winner === 'player') {
+    outcome = '승리'; points = Math.min(15 + playerWordCount * 5, 60);
+    bannerText = '🎉 승리! 컴퓨터가 더 이상 단어를 찾지 못했어요'; bannerStyle = 'background:rgba(3,199,90,0.18); color:var(--cafe-green);';
+  } else {
+    outcome = '패배'; points = Math.min(playerWordCount * 3, 30);
+    bannerText = '💀 포기했어요'; bannerStyle = 'background:rgba(248,113,113,0.18); color:#f87171;';
+  }
+  if (banner) { banner.textContent = bannerText; banner.style.cssText += bannerStyle; banner.classList.remove('hidden'); }
+  renderWordchainState();
+  const giveUpBtn = document.getElementById('wordchainGiveUpBtn');
+  if (giveUpBtn) giveUpBtn.classList.add('hidden');
+  await awardGamePoints('wordchain', '끝말잇기', points, `끝말잇기 ${outcome}! 단어 ${playerWordCount}개 이어감 (${points}P)`);
+  await updateBestWordchain(playerWordCount);
+  const resultText = `끝말잇기에서 ${outcome}했어요! 단어 ${playerWordCount}개를 이었어요 (${points}P 획득)`;
+  const resultEl = document.getElementById('wordchainResult');
+  if (resultEl) resultEl.innerHTML = `<div style="font-size:13px; margin-bottom:6px;">+${points}P 획득</div>${renderGameResultActions(resultText)}`;
+}
+
+async function renderWordchainRankTab() {
+  const container = document.getElementById('gameWordchainRankTab');
+  container.innerHTML = '불러오는 중...';
+  try {
+    const querySnapshot = await getDocs(collection(db, 'users'));
+    const ranked = querySnapshot.docs
+      .map(docSnap => ({ user: docSnap.id, score: docSnap.data().bestWordchainScore || 0 }))
+      .filter(entry => entry.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 30);
+    if (!ranked.length) {
+      container.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">아직 기록이 없어요. 첫 기록의 주인공이 되어보세요!</div>`;
+      return;
+    }
+    container.innerHTML = ranked.map((entry, idx) => `
+      <div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-color);">
+        <span style="width:24px; font-weight:bold; color:${idx < 3 ? 'var(--cafe-green)' : 'var(--text-sub)'};">${idx + 1}</span>
+        ${getAvatarHtml(entry.user, 26)}
+        <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
+        <span style="font-weight:bold; color:var(--cafe-green);">${entry.score}단어</span>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = `<div class="error-box">리더보드를 불러오지 못했습니다.</div>`;
+  }
+}
+
 // ===== ⚡ 실시간 대결 (틱택토 PvP) =====
 // Firestore 컬렉션: gamePvpQueue(대기열), gamePvpMatches(진행 중인 대국), gamePvpChallenges(도전장)
 
@@ -8492,6 +8699,7 @@ function stopPvpSession() {
   if (pvpState.unsubChat) { pvpState.unsubChat(); }
   if (pvpState.unsubList) { pvpState.unsubList(); }
   if (pvpState.countdownTimer) { clearTimeout(pvpState.countdownTimer); }
+  if (pvpState.wordchainTickTimer) { clearInterval(pvpState.wordchainTickTimer); }
   if (pvpState.mode === 'queue' && pvpState.queueDocId) {
     deleteDoc(doc(db, 'gamePvpQueue', pvpState.queueDocId)).catch(() => {});
   }
@@ -8503,7 +8711,7 @@ function stopPvpSession() {
 function pvpResetLocalGameStates() {
   stopTetris(); stop2048(); stopTtt(); stopMinesweeper(); stopCookieClicker(); stopRhythm();
   stopCardGacha(); stopOmok(); stopSnake(); stopDino(); stopPong(); stopReaction(); stopMemory();
-  stopChess(); stopWatermelon();
+  stopChess(); stopWatermelon(); stopWordchain();
 }
 
 async function pvpCreateMatch(gameType, playerFirst, playerSecond) {
@@ -8534,6 +8742,22 @@ async function pvpCreateMatch(gameType, playerFirst, playerSecond) {
       colors: { [playerFirst]: 'w', [playerSecond]: 'b' },
       fen: new Chess().fen(),
       turn: playerFirst,
+      status: 'active',
+      winner: null,
+      pointsAwarded: {},
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    });
+  }
+  if (cfg.type === 'wordchain') {
+    const startWord = WORDCHAIN_DICTIONARY[Math.floor(Math.random() * WORDCHAIN_DICTIONARY.length)];
+    return await addDoc(collection(db, 'gamePvpMatches'), {
+      gameType,
+      matchType: 'wordchain',
+      players: [playerFirst, playerSecond],
+      words: [{ word: startWord, by: 'system' }],
+      turn: playerFirst,
+      turnDeadline: Date.now() + 20000,
       status: 'active',
       winner: null,
       pointsAwarded: {},
@@ -8634,6 +8858,16 @@ window.openChessPvpLobby = function() {
   pvpOpenLobby('chess');
 };
 
+window.openWordchainPvpLobby = function() {
+  if (pvpPendingEntry && pvpPendingEntry.gameType === 'wordchain') {
+    const entry = pvpPendingEntry; pvpPendingEntry = null;
+    pvpEnterMatch(entry.matchId, 'wordchain');
+    return;
+  }
+  pvpResetLocalGameStates();
+  pvpOpenLobby('wordchain');
+};
+
 window.pvpJoinQueue = async function(gameType) {
   if (!currentUser) { alert('로그인 후 이용할 수 있습니다.'); return; }
   try {
@@ -8727,12 +8961,13 @@ async function pvpEnterMatch(matchId, gameType) {
   if (pvpState && pvpState.unsubMatch) pvpState.unsubMatch();
   if (pvpState && pvpState.unsubChat) pvpState.unsubChat();
   if (pvpState && pvpState.countdownTimer) clearTimeout(pvpState.countdownTimer);
+  if (pvpState && pvpState.wordchainTickTimer) clearInterval(pvpState.wordchainTickTimer);
   pvpRaceHook = null;
   currentGamePlayKey = gameType + 'Pvp';
   currentGamePlayLabel = (PVP_GAME_CONFIG[gameType]?.label || '게임') + ' - 실시간 대결';
   const titleEl = document.getElementById('gamePlayDetailTitle');
   if (titleEl) titleEl.textContent = currentGamePlayLabel;
-  pvpState = { mode: 'match', gameType, matchId, submitting: false, unsubMatch: null, unsubChat: null, lastData: null, gameLaunched: false, countdownTimer: null, chatMessages: [] };
+  pvpState = { mode: 'match', gameType, matchId, submitting: false, unsubMatch: null, unsubChat: null, lastData: null, gameLaunched: false, countdownTimer: null, wordchainTickTimer: null, chatMessages: [] };
   pvpChessSelected = null;
   pvpSaveActiveMatchRef(matchId, gameType);
   const outerArea = document.getElementById('gamePlayArea');
@@ -8748,6 +8983,7 @@ async function pvpEnterMatch(matchId, gameType) {
     const data = { id: snap.id, ...snap.data() };
     if (data.matchType === 'race') pvpRenderRaceMatch(matchId, data);
     else if (data.matchType === 'chess') pvpRenderChessMatch(matchId, data);
+    else if (data.matchType === 'wordchain') pvpRenderWordchainMatch(matchId, data);
     else pvpRenderMatch(matchId, data);
   }, error => console.error(error));
 }
@@ -9029,6 +9265,117 @@ window.pvpChessSquareClick = async function(square) {
     pvpRenderChessMatch(pvpState.matchId, data);
   }
 };
+
+// --- 🔤 끝말잇기 실시간 대결 ---
+function pvpRenderWordchainMatch(matchId, data) {
+  if (!pvpState || pvpState.mode !== 'match' || pvpState.matchId !== matchId) return;
+  pvpState.lastData = data;
+  if (pvpState.wordchainTickTimer) { clearInterval(pvpState.wordchainTickTimer); pvpState.wordchainTickTimer = null; }
+  const area = document.getElementById('pvpGameArea');
+  if (!area) return;
+  const opponent = data.players.find(user => user !== currentUser) || '상대';
+  const isMyTurn = data.status === 'active' && data.turn === currentUser;
+  let statusLine;
+  if (data.status === 'finished') {
+    pvpClearActiveMatchRef();
+    if (data.winner === 'draw') statusLine = '🤝 무승부로 종료됐어요.';
+    else if (data.winner === currentUser) statusLine = '🎉 승리했어요!';
+    else statusLine = '💀 패배했어요.';
+  } else {
+    statusLine = isMyTurn ? '✅ 내 차례예요!' : `⏳ ${escapeHtml(opponent)}님의 차례를 기다리는 중...`;
+  }
+  const historyHtml = (data.words || []).map(item => {
+    const who = item.by === 'system' ? '🔤 시작 단어' : (item.by === currentUser ? '🙂 나' : `🙋 ${escapeHtml(item.by)}`);
+    return `<div style="padding:3px 0;"><b>${escapeHtml(item.word)}</b> <span style="color:var(--text-sub); font-size:11px;">(${who})</span></div>`;
+  }).join('');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px; font-size:13px; color:var(--text-sub);">
+      <span>${escapeHtml(currentUser)}</span><span>VS</span><span>${escapeHtml(opponent)}</span>
+    </div>
+    <div style="font-size:14px; font-weight:bold; margin-bottom:6px;">${statusLine}</div>
+    ${data.status === 'active' ? `<div id="pvpWordchainTimer" style="font-size:12px; color:var(--text-sub); margin-bottom:8px;"></div>` : ''}
+    <div id="pvpWordchainHistory" style="max-height:180px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px; padding:8px; margin-bottom:10px; font-size:13px; text-align:left;">${historyHtml}</div>
+    ${data.status === 'active' ? `
+      <div style="display:flex; gap:6px;">
+        <input id="pvpWordchainInput" type="text" maxlength="10" placeholder="단어 입력..." ${isMyTurn ? '' : 'disabled'} style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault(); pvpSubmitWordchainWord('${matchId}');}">
+        <button onclick="pvpSubmitWordchainWord('${matchId}')" ${isMyTurn ? '' : 'disabled'} style="width:auto; padding:0 16px;">입력</button>
+      </div>
+      <div id="pvpWordchainError" style="font-size:12px; color:#f87171; min-height:16px; margin-top:6px;"></div>
+    ` : ''}
+    <div id="pvpResult" style="margin-top:10px;"></div>
+    <button class="danger-btn" onclick="pvpLeaveMatch()" style="width:100%; margin-top:12px;">${data.status === 'finished' ? '나가기' : '기권하고 나가기'}</button>
+  </div>`;
+  const historyEl = document.getElementById('pvpWordchainHistory');
+  if (historyEl) historyEl.scrollTop = historyEl.scrollHeight;
+  const inputEl = document.getElementById('pvpWordchainInput');
+  if (inputEl && isMyTurn) inputEl.focus();
+  if (data.status === 'active') {
+    const tick = () => {
+      const timerEl = document.getElementById('pvpWordchainTimer');
+      if (!timerEl || !pvpState || pvpState.matchId !== matchId) {
+        if (pvpState && pvpState.wordchainTickTimer) clearInterval(pvpState.wordchainTickTimer);
+        return;
+      }
+      const remainMs = (data.turnDeadline || 0) - Date.now();
+      const remainSec = Math.max(0, Math.ceil(remainMs / 1000));
+      timerEl.textContent = `⏱ 남은 시간: ${remainSec}초`;
+      if (remainMs <= 0 && isMyTurn && !pvpState.submitting) {
+        clearInterval(pvpState.wordchainTickTimer);
+        pvpState.wordchainTickTimer = null;
+        pvpWordchainTimeout(matchId);
+      }
+    };
+    tick();
+    pvpState.wordchainTickTimer = setInterval(tick, 1000);
+  }
+  if (data.status === 'finished') pvpMaybeAwardPoints(data, matchId);
+}
+
+window.pvpSubmitWordchainWord = async function(matchId) {
+  if (!pvpState || pvpState.mode !== 'match' || pvpState.submitting) return;
+  const data = pvpState.lastData;
+  if (!data || data.status !== 'active' || data.turn !== currentUser) return;
+  const input = document.getElementById('pvpWordchainInput');
+  const errorEl = document.getElementById('pvpWordchainError');
+  const word = (input ? input.value : '').trim();
+  if (errorEl) errorEl.textContent = '';
+  if (!/^[가-힣]{2,}$/.test(word)) { if (errorEl) errorEl.textContent = '한글 2글자 이상의 단어를 입력해주세요.'; return; }
+  const lastWordItem = data.words[data.words.length - 1];
+  if (!wordchainCanFollow(lastWordItem.word, word[0])) { if (errorEl) errorEl.textContent = `'${lastWordItem.word}'의 마지막 글자로 시작하는 단어가 아니에요.`; return; }
+  const usedWords = data.words.map(item => item.word);
+  if (usedWords.includes(word)) { if (errorEl) errorEl.textContent = '이미 사용한 단어예요.'; return; }
+  if (!WORDCHAIN_DICTIONARY.includes(word)) { if (errorEl) errorEl.textContent = '내장 사전에 없는 단어예요. 다른 단어를 입력해보세요.'; return; }
+  pvpState.submitting = true;
+  try {
+    const opponent = data.players.find(user => user !== currentUser);
+    const newWords = [...data.words, { word, by: currentUser }];
+    await updateDoc(doc(db, 'gamePvpMatches', matchId), {
+      words: newWords,
+      turn: opponent,
+      turnDeadline: Date.now() + 20000,
+      updatedAt: Date.now()
+    });
+  } catch (error) {
+    console.error(error);
+  } finally {
+    if (pvpState) pvpState.submitting = false;
+  }
+};
+
+async function pvpWordchainTimeout(matchId) {
+  if (!pvpState || pvpState.mode !== 'match' || pvpState.matchId !== matchId || pvpState.submitting) return;
+  const data = pvpState.lastData;
+  if (!data || data.status !== 'active' || data.turn !== currentUser) return;
+  pvpState.submitting = true;
+  try {
+    const opponent = data.players.find(user => user !== currentUser);
+    await updateDoc(doc(db, 'gamePvpMatches', matchId), { status: 'finished', winner: opponent, updatedAt: Date.now() });
+  } catch (error) {
+    console.error(error);
+  } finally {
+    if (pvpState) pvpState.submitting = false;
+  }
+}
 
 function pvpRenderRaceMatch(matchId, data) {
   if (!pvpState || pvpState.mode !== 'match' || pvpState.matchId !== matchId) return;
@@ -9353,6 +9700,20 @@ function pvpRenderSpectate(matchId, data) {
       if (data.boards[p1]) drawTetrisBoard(unflattenTetrisBoard(data.boards[p1]), null, 'pvpSpectateBoard1', 14);
       if (data.boards[p2]) drawTetrisBoard(unflattenTetrisBoard(data.boards[p2]), null, 'pvpSpectateBoard2', 14);
     }
+    return;
+  }
+
+  if (data.matchType === 'wordchain') {
+    let wcStatusLine;
+    if (data.status === 'finished') wcStatusLine = data.winner === 'draw' ? '🤝 무승부로 종료됐어요.' : `🎉 ${escapeHtml(data.winner || '')}님 승리!`;
+    else wcStatusLine = `⏳ ${escapeHtml(data.turn || '')}님의 차례`;
+    const wcHistoryHtml = (data.words || []).map(item => `<div style="padding:3px 0;"><b>${escapeHtml(item.word)}</b></div>`).join('');
+    area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+      <div style="font-size:12px; color:var(--text-sub); margin-bottom:6px;">👀 관전 중 · <b>${escapeHtml(p1)}</b> VS <b>${escapeHtml(p2)}</b></div>
+      <div style="font-size:14px; font-weight:bold; margin-bottom:10px;">${wcStatusLine}</div>
+      <div style="max-height:220px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px; padding:8px; font-size:13px; text-align:left;">${wcHistoryHtml}</div>
+      <button class="danger-btn" onclick="pvpLeaveMatch()" style="width:100%; margin-top:12px;">관전 종료</button>
+    </div>`;
     return;
   }
 
