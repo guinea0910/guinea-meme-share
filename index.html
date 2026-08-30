@@ -869,6 +869,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button id="lbSubMemoryBtn" class="page-btn" onclick="setLeaderboardSubTab('memory')" style="padding:5px 10px; font-size:11px;">🧠 메모리</button>
 <button id="lbSubChessBtn" class="page-btn" onclick="setLeaderboardSubTab('chess')" style="padding:5px 10px; font-size:11px;">♟️ 체스</button>
 <button id="lbSubWatermelonBtn" class="page-btn" onclick="setLeaderboardSubTab('watermelon')" style="padding:5px 10px; font-size:11px;">🍉 수박게임</button>
+<button id="lbSubDinoBtn" class="page-btn" onclick="setLeaderboardSubTab('dino')" style="padding:5px 10px; font-size:11px;">🦖 공룡 게임</button>
 </div>
 <div id="gameRankTab"></div>
 <div id="gameOmokRankTab" class="hidden"></div>
@@ -884,6 +885,7 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div id="gameMemoryRankTab" class="hidden"></div>
 <div id="gameChessRankTab" class="hidden"></div>
 <div id="gameWatermelonRankTab" class="hidden"></div>
+<div id="gameDinoRankTab" class="hidden"></div>
 </div>
 </div>
 </section>
@@ -3756,6 +3758,7 @@ window.showAppSection = function(section) {
   if (section !== 'gamePlay' && typeof stopCardGacha === 'function') stopCardGacha();
   if (section !== 'gamePlay' && typeof stopOmok === 'function') stopOmok();
   if (section !== 'gamePlay' && typeof stopSnake === 'function') stopSnake();
+  if (section !== 'gamePlay' && typeof stopDino === 'function') stopDino();
   if (section !== 'gamePlay' && typeof stopPong === 'function') stopPong();
   if (section !== 'gamePlay' && typeof stopReaction === 'function') stopReaction();
   if (section !== 'gamePlay' && typeof stopMemory === 'function') stopMemory();
@@ -6110,6 +6113,7 @@ window.setGameTab = function(tab) {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
@@ -6147,6 +6151,7 @@ window.setLeaderboardSubTab = function(tab) {
   document.getElementById('lbSubMemoryBtn').classList.toggle('active', tab === 'memory');
   document.getElementById('lbSubChessBtn').classList.toggle('active', tab === 'chess');
   document.getElementById('lbSubWatermelonBtn').classList.toggle('active', tab === 'watermelon');
+  document.getElementById('lbSubDinoBtn').classList.toggle('active', tab === 'dino');
   document.getElementById('gameRankTab').classList.toggle('hidden', tab !== 'total');
   document.getElementById('gameOmokRankTab').classList.toggle('hidden', tab !== 'omok');
   document.getElementById('gameCpsRankTab').classList.toggle('hidden', tab !== 'cps');
@@ -6161,6 +6166,7 @@ window.setLeaderboardSubTab = function(tab) {
   document.getElementById('gameMemoryRankTab').classList.toggle('hidden', tab !== 'memory');
   document.getElementById('gameChessRankTab').classList.toggle('hidden', tab !== 'chess');
   document.getElementById('gameWatermelonRankTab').classList.toggle('hidden', tab !== 'watermelon');
+  document.getElementById('gameDinoRankTab').classList.toggle('hidden', tab !== 'dino');
   if (tab === 'total') renderGameRankTab();
   else if (tab === 'omok') renderOmokRankTab();
   else if (tab === 'cps') renderCpsRankTab();
@@ -6174,6 +6180,7 @@ window.setLeaderboardSubTab = function(tab) {
   else if (tab === 'reaction') renderReactionRankTab();
   else if (tab === 'memory') renderMemoryRankTab();
   else if (tab === 'chess') renderChessRankTab();
+  else if (tab === 'dino') renderDinoRankTab();
   else renderWatermelonRankTab();
 };
 
@@ -6231,6 +6238,7 @@ function renderGameHub() {
     { key: 'memory', title: '🧠 메모리 게임', desc: '카드를 뒤집어 짝을 맞춰보세요! 초급·중급·고급 난이도 지원', action: "openGameDetail('memory', '🧠 메모리 게임')", btnText: '플레이하기' },
     { key: 'chess', title: '♟️ 체스', desc: '컴퓨터와 체스 한 판! 실시간 대결도 가능해요', action: "openGameDetail('chess', '♟️ 체스')", btnText: '한 판 하기', pvpAction: "openGameDetail('chessPvp', '♟️ 체스 - 실시간 대결')" },
     { key: 'watermelon', title: '🍉 수박게임', desc: '같은 과일을 합쳐서 수박까지 만들어보세요!', action: "openGameDetail('watermelon', '🍉 수박게임')", btnText: '플레이하기' },
+    { key: 'dino', title: '🦖 공룡 게임', desc: '스페이스바나 화면 탭으로 점프! 장애물을 피해 오래 버틸수록 포인트 UP', action: "openGameDetail('dino', '🦖 공룡 게임')", btnText: '플레이하기' },
     { key: 'bluemarble', title: '🎲 부루마블', desc: '2~4명이 실시간으로 즐기는 부루마블! 방을 만들거나 코드로 입장해서 대결해보세요', action: "openGameDetail('bluemarble', '🎲 부루마블')", btnText: '플레이하기' }
   ];
   const pinnedKeys = getPinnedGames();
@@ -6266,6 +6274,7 @@ const GAME_OPEN_FUNC_NAMES = {
   memory: 'openMemoryGame',
   chess: 'openChessGame',
   watermelon: 'openWatermelonGame',
+  dino: 'openDinoGame',
   bluemarble: 'openBluemarbleGame',
   tttPvp: 'openTttPvpLobby',
   omokPvp: 'openOmokPvpLobby',
@@ -6284,6 +6293,7 @@ function stopAllGames() {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
@@ -6381,6 +6391,7 @@ window.openRouletteGame = async function() {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
@@ -6437,6 +6448,7 @@ window.openClickChallenge = function() {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
@@ -6582,6 +6594,7 @@ window.openTicTacToeGame = function() {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
@@ -6713,6 +6726,7 @@ window.openMinesweeperGame = function() {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
@@ -7078,6 +7092,7 @@ window.openTetrisGame = function() {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
@@ -7419,6 +7434,7 @@ window.openGame2048 = function() {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
@@ -7475,6 +7491,7 @@ window.start2048 = function() {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
@@ -7708,6 +7725,7 @@ window.openCookieClickerGame = async function() {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
@@ -7910,6 +7928,7 @@ window.openRhythmGame = function() {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
@@ -8116,6 +8135,7 @@ window.openCardGachaGame = async function() {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
@@ -8298,6 +8318,7 @@ window.openOmokGame = function() {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
@@ -8451,7 +8472,7 @@ function stopPvpSession() {
 
 function pvpResetLocalGameStates() {
   stopTetris(); stop2048(); stopTtt(); stopMinesweeper(); stopCookieClicker(); stopRhythm();
-  stopCardGacha(); stopOmok(); stopSnake(); stopPong(); stopReaction(); stopMemory();
+  stopCardGacha(); stopOmok(); stopSnake(); stopDino(); stopPong(); stopReaction(); stopMemory();
   stopChess(); stopWatermelon();
 }
 
@@ -9829,6 +9850,219 @@ async function renderWatermelonRankTab() {
   }
 }
 
+// --- 🦖 공룡 게임 (오프라인 공룡 게임 스타일의 자체 구현 · 장애물 점프 러너) ---
+const DINO_WIDTH = 480;
+const DINO_HEIGHT = 150;
+const DINO_GROUND_Y = 120; // 캐릭터/장애물이 딛는 바닥 기준선
+const DINO_SIZE = 28;
+let dinoState = null;
+
+function stopDino() {
+  if (dinoState) {
+    if (dinoState.rafId) cancelAnimationFrame(dinoState.rafId);
+    if (dinoState.keyHandler) document.removeEventListener('keydown', dinoState.keyHandler);
+    const canvas = document.getElementById('dinoCanvas');
+    if (canvas && dinoState.canvasHandler) canvas.removeEventListener('pointerdown', dinoState.canvasHandler);
+    dinoState = null;
+  }
+}
+
+window.openDinoGame = function() {
+  stopTetris(); stop2048(); stopTtt(); stopMinesweeper(); stopCookieClicker(); stopRhythm();
+  stopCardGacha(); stopOmok(); stopSnake(); stopDino(); stopPong(); stopReaction(); stopMemory();
+  stopChess(); stopWatermelon();
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:8px;">스페이스바나 화면 탭으로 점프해서 장애물을 피하세요! 오래 버틸수록 포인트 UP</div>
+    <div style="display:flex; justify-content:center; gap:14px; font-size:13px; margin-bottom:8px;">
+      <span>점수: <b id="dinoScore">0</b></span>
+      <span>최고 기록: <b id="dinoBest">-</b></span>
+    </div>
+    <div id="dinoGameOverBanner" class="hidden" style="font-size:18px; font-weight:bold; padding:10px; border-radius:8px; margin-bottom:10px; background:rgba(248,113,113,0.18); color:#f87171;">💀 게임 오버!</div>
+    <canvas id="dinoCanvas" width="${DINO_WIDTH}" height="${DINO_HEIGHT}" style="background:var(--input-bg); border:1px solid var(--border-color); border-radius:8px; touch-action:none; max-width:100%;"></canvas>
+    <div style="font-size:11px; color:var(--text-sub); margin-top:8px;">PC에서는 스페이스바(또는 ↑)로도 점프할 수 있어요 · 캔버스를 탭해도 점프해요</div>
+    <button onclick="startDino()" id="dinoStartBtn" style="width:100%; margin-top:12px;">시작하기</button>
+    <div id="dinoResult" style="margin-top:10px;"></div>
+  </div>`;
+  loadDinoBest();
+  drawDinoFrame({ y: 0, obstacles: [] });
+};
+
+async function loadDinoBest() {
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser));
+    const best = snap.exists() ? (snap.data().bestDinoScore || 0) : 0;
+    const el = document.getElementById('dinoBest');
+    if (el) el.textContent = best > 0 ? `${best}` : '-';
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+window.startDino = function() {
+  stopDino();
+  dinoState = {
+    y: 0, vy: 0, jumping: false,
+    obstacles: [],
+    speed: 4.2,
+    frame: 0,
+    nextSpawnIn: 60,
+    score: 0,
+    running: true,
+    rafId: null,
+    keyHandler: null,
+    canvasHandler: null
+  };
+  const startBtn = document.getElementById('dinoStartBtn');
+  if (startBtn) startBtn.textContent = '재시작';
+  document.getElementById('dinoResult').innerHTML = '';
+  document.getElementById('dinoGameOverBanner').classList.add('hidden');
+  document.getElementById('dinoScore').textContent = '0';
+  dinoState.keyHandler = event => {
+    if (!dinoState || !dinoState.running) return;
+    if (event.code === 'Space' || event.key === ' ' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      dinoJump();
+    }
+  };
+  document.addEventListener('keydown', dinoState.keyHandler);
+  const canvas = document.getElementById('dinoCanvas');
+  if (canvas) {
+    dinoState.canvasHandler = event => { event.preventDefault(); dinoJump(); };
+    canvas.addEventListener('pointerdown', dinoState.canvasHandler);
+  }
+  dinoAnimFrame();
+};
+
+function dinoJump() {
+  if (!dinoState || !dinoState.running || dinoState.jumping) return;
+  dinoState.jumping = true;
+  dinoState.vy = -13;
+}
+
+function dinoAnimFrame() {
+  if (!dinoState || !dinoState.running) return;
+  const state = dinoState;
+  state.frame++;
+  if (state.jumping) {
+    state.vy += 0.9;
+    state.y += state.vy;
+    if (state.y >= 0) { state.y = 0; state.vy = 0; state.jumping = false; }
+  }
+  state.obstacles.forEach(o => { o.x -= state.speed; });
+  state.obstacles = state.obstacles.filter(o => o.x + o.w > 0);
+  state.nextSpawnIn--;
+  if (state.nextSpawnIn <= 0) {
+    const h = 20 + Math.random() * 22;
+    const w = 12 + Math.random() * 12;
+    state.obstacles.push({ x: DINO_WIDTH, w, h });
+    state.nextSpawnIn = Math.max(45, 95 - Math.floor(state.speed * 6) + Math.floor(Math.random() * 30));
+  }
+  state.score = Math.floor(state.frame / 6);
+  document.getElementById('dinoScore').textContent = String(state.score);
+  state.speed = Math.min(4.2 + state.frame / 400, 10);
+  const dinoLeft = 40, dinoRight = 40 + DINO_SIZE;
+  const dinoTop = DINO_GROUND_Y - DINO_SIZE + state.y, dinoBottom = DINO_GROUND_Y + state.y;
+  for (const o of state.obstacles) {
+    const obsLeft = o.x, obsRight = o.x + o.w;
+    const obsTop = DINO_GROUND_Y - o.h, obsBottom = DINO_GROUND_Y;
+    if (dinoRight > obsLeft && dinoLeft < obsRight && dinoBottom > obsTop && dinoTop < obsBottom) {
+      finishDinoGame();
+      return;
+    }
+  }
+  drawDinoFrame(state);
+  state.rafId = requestAnimationFrame(dinoAnimFrame);
+}
+
+function drawDinoFrame(state) {
+  const canvas = document.getElementById('dinoCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, DINO_WIDTH, DINO_HEIGHT);
+  ctx.strokeStyle = 'rgba(148,163,184,0.4)';
+  ctx.beginPath();
+  ctx.moveTo(0, DINO_GROUND_Y + 1);
+  ctx.lineTo(DINO_WIDTH, DINO_GROUND_Y + 1);
+  ctx.stroke();
+  ctx.fillStyle = '#4ade80';
+  ctx.fillRect(40, DINO_GROUND_Y - DINO_SIZE + (state.y || 0), DINO_SIZE, DINO_SIZE);
+  ctx.fillStyle = '#f87171';
+  (state.obstacles || []).forEach(o => {
+    ctx.fillRect(o.x, DINO_GROUND_Y - o.h, o.w, o.h);
+  });
+}
+
+async function finishDinoGame() {
+  if (!dinoState || !dinoState.running) return;
+  dinoState.running = false;
+  if (dinoState.rafId) cancelAnimationFrame(dinoState.rafId);
+  if (dinoState.keyHandler) document.removeEventListener('keydown', dinoState.keyHandler);
+  const canvas = document.getElementById('dinoCanvas');
+  if (canvas && dinoState.canvasHandler) canvas.removeEventListener('pointerdown', dinoState.canvasHandler);
+  const banner = document.getElementById('dinoGameOverBanner');
+  if (banner) banner.classList.remove('hidden');
+  const score = dinoState.score;
+  const points = score * 3;
+  await awardGamePoints('dino', '공룡 게임', points, `공룡 게임에서 ${score}점을 기록해서 ${points}P 획득!`);
+  const isNewBest = await updateBestDino(score);
+  const resultText = `공룡 게임에서 ${score}점을 기록했어요! (${points}P 획득)`;
+  const resultBox = document.getElementById('dinoResult');
+  if (resultBox) {
+    resultBox.innerHTML = `
+      <div style="font-size:14px; margin-bottom:4px;">점수 <b>${score}</b> → <b>${points}P</b> 획득!</div>
+      ${isNewBest ? `<div style="font-size:12px; color:var(--cafe-green); margin-bottom:6px;">🎉 개인 최고 기록 갱신!</div>` : ''}
+      ${renderGameResultActions(resultText)}
+    `;
+  }
+  loadDinoBest();
+}
+
+async function updateBestDino(score) {
+  try {
+    const userRef = doc(db, 'users', currentUser);
+    const snap = await getDoc(userRef);
+    const currentBest = snap.exists() ? (snap.data().bestDinoScore || 0) : 0;
+    if (score > currentBest) {
+      await updateDoc(userRef, { bestDinoScore: score, bestDinoAt: Date.now() });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}
+
+// --- 🦖 공룡 게임 리더보드 ---
+async function renderDinoRankTab() {
+  const container = document.getElementById('gameDinoRankTab');
+  container.innerHTML = '불러오는 중...';
+  try {
+    const querySnapshot = await getDocs(collection(db, 'users'));
+    const ranked = querySnapshot.docs
+      .map(docSnap => ({ user: docSnap.id, score: docSnap.data().bestDinoScore || 0 }))
+      .filter(entry => entry.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 30);
+    if (!ranked.length) {
+      container.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">아직 기록이 없어요. 첫 기록의 주인공이 되어보세요!</div>`;
+      return;
+    }
+    container.innerHTML = ranked.map((entry, idx) => `
+      <div style="display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border-color);">
+        <span style="width:24px; font-weight:bold; color:${idx < 3 ? 'var(--cafe-green)' : 'var(--text-sub)'};">${idx + 1}</span>
+        ${getAvatarHtml(entry.user, 26)}
+        <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
+        <span style="font-weight:bold; color:var(--cafe-green);">${entry.score}점</span>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = `<div class="error-box">리더보드를 불러오지 못했습니다.</div>`;
+  }
+}
+
 // --- 🎲 부루마블 ---
 const BLUEMARBLE_URL = 'https://guinea0910.github.io/bluemarble';
 let bluemarbleState = null;
@@ -9877,6 +10111,7 @@ window.openSnakeGame = function() {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
@@ -10101,6 +10336,7 @@ window.openPongGame = function() {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
@@ -10359,6 +10595,7 @@ window.openReactionGame = function() {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
@@ -10510,6 +10747,7 @@ window.openMemoryGame = function() {
   stopCardGacha();
   stopOmok();
   stopSnake();
+  stopDino();
   stopPong();
   stopReaction();
   stopMemory();
