@@ -1230,13 +1230,18 @@ const omokSiteFirebaseConfig = {
 const omokSiteApp = initializeApp(omokSiteFirebaseConfig, 'omokSite');
 const omokSiteDb = getFirestore(omokSiteApp);
 
-// OMOK 웹사이트에 등록된 내 ROS를 가져옵니다. OMOK에 가입한 적이 없으면 기본값(1000, 신규 취급)을 반환합니다.
-async function getOmokRos(username) {
+// OMOK 웹사이트에 등록된 내 ROS 및 실제 대결 여부를 가져옵니다.
+// registered: OMOK 회원가입 여부, rating: ROS 값(미가입이면 null), played: 실시간 대결을 1판이라도 했는지
+async function getOmokRosInfo(username) {
   try {
     const snap = await getDoc(doc(omokSiteDb, 'users', username));
-    if (snap.exists() && typeof snap.data().rating === 'number') return snap.data().rating;
+    if (snap.exists()) {
+      const d = snap.data();
+      const total = (d.wins || 0) + (d.losses || 0) + (d.draws || 0);
+      return { registered: true, rating: typeof d.rating === 'number' ? d.rating : 1000, played: total > 0 };
+    }
   } catch (error) { console.error('OMOK ROS 조회 실패:', error); }
-  return null; // OMOK 미가입 등 값을 알 수 없는 경우
+  return { registered: false, rating: null, played: false };
 }
 
 // ⚠️ Gemini API 키 (수학 게시판 AI 답변 기능용)
@@ -1300,9 +1305,13 @@ const PVP_GAME_CONFIG = {
 };
 // 네 가지 대결 게임(틱택토·오목·테트리스·핑퐁) 레이팅의 평균을 하나의 "게임 레이팅"으로 계산합니다.
 // 아직 플레이하지 않은 게임은 기본 레이팅(1000)으로 계산에 포함됩니다.
-function getAverageGameRating(ratings) {
+// omokRosOverride가 주어지면(OMOK 웹사이트의 실제 ROS) 오목 항목에는 이 값을 사용합니다.
+function getAverageGameRating(ratings, omokRosOverride) {
   const keys = Object.keys(PVP_GAME_CONFIG);
-  const total = keys.reduce((sum, gt) => sum + (ratings && ratings[gt] != null ? ratings[gt] : 1000), 0);
+  const total = keys.reduce((sum, gt) => {
+    if (gt === 'omok' && omokRosOverride != null) return sum + omokRosOverride;
+    return sum + (ratings && ratings[gt] != null ? ratings[gt] : 1000);
+  }, 0);
   return Math.round(total / keys.length);
 }
 let mentionNotifications = [];
@@ -3952,10 +3961,12 @@ async function loadGameRatingRanking() {
   container.innerHTML = '불러오는 중...';
   try {
     if (!allUsers.length) { await fetchUsersAndRanking(); }
-    const rows = allUsers.map(user => {
+    const omokInfoList = await Promise.all(allUsers.map(user => getOmokRosInfo(user)));
+    const rows = allUsers.map((user, i) => {
       const ratings = (userProfiles[user] && userProfiles[user].pvpRating) || {};
-      const hasPlayed = Object.keys(PVP_GAME_CONFIG).some(gt => ratings[gt] != null);
-      return { user, rating: getAverageGameRating(ratings), hasPlayed };
+      const omokInfo = omokInfoList[i];
+      const hasPlayed = omokInfo.played || Object.keys(PVP_GAME_CONFIG).some(gt => gt !== 'omok' && ratings[gt] != null);
+      return { user, rating: getAverageGameRating(ratings, omokInfo.registered ? omokInfo.rating : null), hasPlayed };
     });
     const played = rows.filter(r => r.hasPlayed).sort((a, b) => b.rating - a.rating);
     const notPlayed = rows.filter(r => !r.hasPlayed).sort((a, b) => a.user.localeCompare(b.user));
@@ -4120,10 +4131,11 @@ async function loadProfileView(username) {
     const ratingRow = document.getElementById('profilePvpRatingRow');
     if (ratingRow) {
       const ratings = userData.pvpRating || {};
-      const entries = Object.keys(PVP_GAME_CONFIG).filter(gt => ratings[gt] != null);
+      const omokInfo = await getOmokRosInfo(username);
+      const entries = Object.keys(PVP_GAME_CONFIG).filter(gt => gt === 'omok' ? omokInfo.played : ratings[gt] != null);
       if (entries.length) {
         ratingRow.classList.remove('hidden');
-        ratingRow.innerHTML = `<span>게임 레이팅 <b style="color:var(--text-main);">${getAverageGameRating(ratings)}</b></span>`;
+        ratingRow.innerHTML = `<span>게임 레이팅 <b style="color:var(--text-main);">${getAverageGameRating(ratings, omokInfo.registered ? omokInfo.rating : null)}</b></span>`;
       } else {
         ratingRow.classList.add('hidden');
         ratingRow.innerHTML = '';
@@ -9166,10 +9178,10 @@ async function renderPvpRecordTab() {
   if (!currentUser) { area.innerHTML = '<div class="box" style="margin:0; text-align:center;">로그인 후 이용할 수 있습니다.</div>'; return; }
   area.innerHTML = '<div class="box" style="margin:0; text-align:center; padding:20px 0; color:var(--text-sub);">불러오는 중...</div>';
   try {
-    const [userSnap, historySnap, omokRos] = await Promise.all([
+    const [userSnap, historySnap, omokInfo] = await Promise.all([
       getDoc(doc(db, 'users', currentUser)),
       getDocs(query(collection(db, 'gamePvpHistory'), where('user', '==', currentUser))),
-      getOmokRos(currentUser)
+      getOmokRosInfo(currentUser)
     ]);
     const userData = userSnap.exists() ? userSnap.data() : {};
     const stats = userData.pvpStats || {};
@@ -9186,7 +9198,7 @@ async function renderPvpRecordTab() {
       const s = stats[gt] || { wins: 0, losses: 0, draws: 0 };
       // 오목은 이 앱 자체 레이팅 대신 OMOK 웹사이트의 실제 ROS를 그대로 보여줍니다.
       const ratingLabel = gt === 'omok'
-        ? (omokRos != null ? `ROS <b>${omokRos}</b>` : `ROS <span style="color:var(--text-sub);">OMOK 미가입</span>`)
+        ? (omokInfo.registered ? `ROS <b>${omokInfo.rating}</b>` : `ROS <span style="color:var(--text-sub);">OMOK 미가입</span>`)
         : `레이팅 <b>${ratings[gt] != null ? ratings[gt] : 1000}</b>`;
       return `<div style="display:flex; justify-content:space-between; align-items:center; padding:9px 10px; border-bottom:1px solid var(--border-color); font-size:13px;">
         <span>${escapeHtml(PVP_GAME_CONFIG[gt].label)}</span>
