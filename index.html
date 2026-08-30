@@ -9335,19 +9335,21 @@ function pvpRenderSpectate(matchId, data) {
   </div>`;
 }
 
-// --- ⚫⚪ 오목 리더보드 (이긴 횟수 기준) ---
+// --- ⚫⚪ 오목 리더보드 (OMOK 웹사이트 ROS 기준) ---
 async function renderOmokRankTab() {
   const container = document.getElementById('gameOmokRankTab');
   container.innerHTML = '불러오는 중...';
   try {
     const querySnapshot = await getDocs(collection(db, 'users'));
-    const ranked = querySnapshot.docs
-      .map(docSnap => ({ user: docSnap.id, wins: docSnap.data().omokWins || 0 }))
-      .filter(entry => entry.wins > 0)
-      .sort((a, b) => b.wins - a.wins)
+    const users = querySnapshot.docs.map(docSnap => docSnap.id);
+    const omokInfoList = await Promise.all(users.map(user => getOmokRosInfo(user)));
+    const ranked = users
+      .map((user, i) => ({ user, rating: omokInfoList[i].rating, played: omokInfoList[i].played }))
+      .filter(entry => entry.played)
+      .sort((a, b) => b.rating - a.rating)
       .slice(0, 30);
     if (!ranked.length) {
-      container.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">아직 오목에서 승리한 회원이 없어요. 첫 승리의 주인공이 되어보세요!</div>`;
+      container.innerHTML = `<div style="color:var(--text-sub); padding:20px 0; text-align:center;">아직 OMOK에서 실시간 대결을 치른 회원이 없어요. 첫 대결의 주인공이 되어보세요!</div>`;
       return;
     }
     container.innerHTML = ranked.map((entry, idx) => `
@@ -9355,7 +9357,7 @@ async function renderOmokRankTab() {
         <span style="width:24px; font-weight:bold; color:${idx < 3 ? 'var(--cafe-green)' : 'var(--text-sub)'};">${idx + 1}</span>
         ${getAvatarHtml(entry.user, 26)}
         <span style="flex:1; cursor:pointer;" onclick="openProfile('${escapeHtml(entry.user)}')">${escapeHtml(entry.user)}</span>
-        <span style="font-weight:bold; color:var(--cafe-green);">${entry.wins}승</span>
+        <span style="font-weight:bold; color:var(--cafe-green);">ROS ${entry.rating}</span>
       </div>
     `).join('');
   } catch (error) {
