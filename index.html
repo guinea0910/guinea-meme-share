@@ -172,6 +172,19 @@ body {
 .game-card { position: relative; }
 .game-pin-btn { position: absolute; top: 6px; right: 6px; background: transparent; border: 0; padding: 4px; font-size: 14px; opacity: .35; cursor: pointer; line-height: 1; z-index: 2; }
 .game-pin-btn.pinned { opacity: 1; }
+.app-icon-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 6px; }
+.app-icon-section-label { grid-column: 1 / -1; font-size: 12px; font-weight: 700; color: var(--text-sub); margin: 4px 0 -6px; }
+.app-icon-tile { display: flex; flex-direction: column; align-items: center; gap: 5px; background: transparent; border: 0; padding: 0; cursor: pointer; color: var(--text-main); }
+.app-icon-box { width: 54px; height: 54px; border-radius: 15px; background: var(--card-bg); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 25px; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.app-icon-label { font-size: 11px; text-align: center; max-width: 68px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-icon-folder-box { display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); gap: 2px; padding: 6px; }
+.app-icon-folder-box span { font-size: 13px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.game-folder-row { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid var(--border-color); }
+.game-folder-row:last-child { border-bottom: 0; }
+.game-folder-row-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.game-folder-row-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.game-folder-row-actions button { width: auto; padding: 5px 8px; font-size: 11px; }
+.game-detail-icon-box { width: 72px; height: 72px; border-radius: 20px; background: var(--card-bg); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 34px; margin: 0 auto 10px; box-shadow: 0 2px 6px rgba(0,0,0,.15); }
 .chat-date-divider { align-self: center; margin: 4px 0 10px; padding: 6px 14px; border-radius: 14px; background: var(--card-bg); color: var(--text-sub); font-size: 12px; font-weight: 700; border: 1px solid var(--border-color); }
 .chat-back-btn { display: none; font-size: 16px; }
 .chat-view:not(.list-mode) .chat-back-btn { display: inline-flex; align-items: center; justify-content: center; }
@@ -850,6 +863,9 @@ button:hover { background-color: var(--cafe-green-hover); }
 <button id="gameTabPvpSpectateBtn" class="page-btn" onclick="setGameTab('pvpSpectate')" style="padding:6px 12px; font-size:12px;">👀 대결 구경하기</button>
 <button id="gameTabLeaderboardBtn" class="page-btn" onclick="setGameTab('leaderboard')" style="padding:6px 12px; font-size:12px;">🏆 리더보드</button>
 </div>
+<div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+<button onclick="openGameFolderModal()" style="width:auto; padding:6px 10px; font-size:12px;">📁 폴더 관리</button>
+</div>
 <div id="gameHubTab"></div>
 <div id="gamePvpRecordTab" class="hidden"></div>
 <div id="gamePvpSpectateTab" class="hidden"></div>
@@ -1140,6 +1156,12 @@ button:hover { background-color: var(--cafe-green-hover); }
 <div class="chat-modal-actions">
 <button class="danger-btn" onclick="closeTeamDDDInvite()">닫기</button>
 </div>
+</div>
+</div>
+<div id="gameFolderModal" class="chat-modal hidden" role="dialog" aria-modal="true" aria-labelledby="gameFolderModalTitle" onclick="if (event.target === this) closeGameFolderModal();">
+<div class="chat-modal-card">
+<h3 id="gameFolderModalTitle">📁 게임 폴더</h3>
+<div id="gameFolderModalBody"></div>
 </div>
 </div>
 <div id="chatPollModal" class="chat-modal hidden" role="dialog" aria-modal="true" aria-labelledby="chatPollModalTitle">
@@ -6003,6 +6025,7 @@ window.openChat = function() {
 let gameActiveTab = 'hub';
 let currentGamePlayKey = null;
 let currentGamePlayLabel = '';
+let gamePlayIsLanding = false; // true면 게임을 바로 실행하지 않고 아이콘/이름/소개/플레이 버튼이 있는 소개 화면을 먼저 보여준다
 let clickChallengeState = null;
 
 async function loadGameView() {
@@ -6207,21 +6230,17 @@ window.togglePinGame = function(gameKey) {
   renderGameHub();
 };
 
-function buildGameCard(game, isPinned) {
-  return `<div class="box game-card" style="margin:0; padding:12px;">
-        <button class="game-pin-btn ${isPinned ? 'pinned' : ''}" onclick="togglePinGame('${game.key}')" title="${isPinned ? '고정 해제' : '맨 위에 고정'}">📌</button>
-        <div style="font-size:14px; font-weight:bold; margin-bottom:6px; padding-right:20px;">${game.title}</div>
-        <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">${game.desc}</div>
-        <button onclick="${game.action}" ${game.disabled ? 'disabled' : ''} style="width:100%; ${game.disabled ? 'background:var(--border-color); color:var(--text-sub); cursor:not-allowed;' : ''}">${game.btnText}</button>
-        ${game.pvpAction ? `<button onclick="${game.pvpAction}" style="width:100%; margin-top:6px; background:var(--input-bg); color:var(--cafe-green); border:1px solid var(--cafe-green);">⚡ 실시간 대결</button>` : ''}
-      </div>`;
+// 게임별 아이콘(이모지)/이름을 분리 ("🎰 럭키 룰렛" → { icon: "🎰", name: "럭키 룰렛" })
+function splitGameTitle(title) {
+  const idx = (title || '').indexOf(' ');
+  if (idx === -1) return { icon: title || '', name: '' };
+  return { icon: title.slice(0, idx), name: title.slice(idx + 1) };
 }
 
-function renderGameHub() {
-  const container = document.getElementById('gameHubTab');
+function getGameDefs() {
   const rouletteKey = `cafe_roulette_${currentUser}`;
   const roulettePlayedToday = localStorage.getItem(rouletteKey) === getTodayDateKey();
-  const games = [
+  return [
     { key: 'roulette', title: '🎰 럭키 룰렛', desc: '하루 한 번, 랜덤 포인트에 도전해 보세요', action: "openGameDetail('roulette', '🎰 럭키 룰렛')", btnText: roulettePlayedToday ? '오늘 완료' : '돌리러 가기', disabled: roulettePlayedToday },
     { key: 'cps', title: '⚡ CPS 챌린지', desc: '원하는 시간 동안 초당 클릭 수(CPS) 겨루기', action: "openGameDetail('cps', '⚡ CPS 챌린지')", btnText: '도전하기' },
     { key: 'ttt', title: '⭕❌ 틱택토', desc: '컴퓨터와 한 판! 이기면 포인트 획득', action: "openGameDetail('ttt', '⭕❌ 틱택토')", btnText: '한 판 하기', pvpAction: "openGameDetail('tttPvp', '⭕❌ 틱택토 - 실시간 대결')" },
@@ -6241,21 +6260,182 @@ function renderGameHub() {
     { key: 'dino', title: '🦖 공룡 게임', desc: '스페이스바나 화면 탭으로 점프! 장애물을 피해 오래 버틸수록 포인트 UP', action: "openGameDetail('dino', '🦖 공룡 게임')", btnText: '플레이하기' },
     { key: 'bluemarble', title: '🎲 부루마블', desc: '2~4명이 실시간으로 즐기는 부루마블! 방을 만들거나 코드로 입장해서 대결해보세요', action: "openGameDetail('bluemarble', '🎲 부루마블')", btnText: '플레이하기' }
   ];
-  const pinnedKeys = getPinnedGames();
-  const pinnedGames = pinnedKeys.map(key => games.find(g => g.key === key)).filter(Boolean);
-  const normalGames = games.filter(g => !pinnedKeys.includes(g.key));
-  const pinnedHtml = pinnedGames.length
-    ? `<div class="list-label" style="grid-column:1/-1; font-size:12px; color:var(--text-sub); margin-bottom:-2px;">📌 고정된 게임</div>` + pinnedGames.map(g => buildGameCard(g, true)).join('')
-    : '';
-  const normalHtml = normalGames.length && pinnedGames.length
-    ? `<div class="list-label" style="grid-column:1/-1; font-size:12px; color:var(--text-sub); margin-bottom:-2px;">전체 게임</div>` + normalGames.map(g => buildGameCard(g, false)).join('')
-    : normalGames.map(g => buildGameCard(g, false)).join('');
-  container.innerHTML = `
-    <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;">
-      ${pinnedHtml}${normalHtml}
-    </div>
-  `;
 }
+
+function buildGameIconTile(game) {
+  if (!game) return '';
+  const { icon, name } = splitGameTitle(game.title);
+  return `<button class="app-icon-tile" onclick="openGameLanding('${game.key}')" title="${escapeHtml(name)}">
+        <div class="app-icon-box">${icon}</div>
+        <div class="app-icon-label">${escapeHtml(name)}</div>
+      </button>`;
+}
+
+function buildFolderIconTile(folder, gameMap) {
+  const memberIcons = folder.gameKeys.map(k => gameMap[k]).filter(Boolean).slice(0, 4).map(g => splitGameTitle(g.title).icon);
+  while (memberIcons.length < 4) memberIcons.push('');
+  return `<button class="app-icon-tile" onclick="openGameFolderView('${folder.id}')" title="${escapeHtml(folder.name)}">
+        <div class="app-icon-box app-icon-folder-box">${memberIcons.map(ic => `<span>${ic}</span>`).join('')}</div>
+        <div class="app-icon-label">${escapeHtml(folder.name)}</div>
+      </button>`;
+}
+
+function renderGameHub() {
+  const container = document.getElementById('gameHubTab');
+  const games = getGameDefs();
+  const gameMap = {};
+  games.forEach(g => { gameMap[g.key] = g; });
+  const folders = getGameFolders();
+  const groupedKeys = new Set();
+  folders.forEach(f => f.gameKeys.forEach(k => groupedKeys.add(k)));
+  const pinnedKeys = getPinnedGames().filter(k => gameMap[k] && !groupedKeys.has(k));
+  const pinnedSet = new Set(pinnedKeys);
+  const normalGames = games.filter(g => !groupedKeys.has(g.key) && !pinnedSet.has(g.key));
+  const hasSections = pinnedKeys.length > 0 || folders.length > 0;
+  const pinnedHtml = pinnedKeys.length
+    ? `<div class="app-icon-section-label">📌 고정된 게임</div>` + pinnedKeys.map(k => buildGameIconTile(gameMap[k])).join('')
+    : '';
+  const folderHtml = folders.length
+    ? `<div class="app-icon-section-label">📁 폴더</div>` + folders.map(f => buildFolderIconTile(f, gameMap)).join('')
+    : '';
+  const normalHtml = normalGames.length
+    ? (hasSections ? `<div class="app-icon-section-label">전체 게임</div>` : '') + normalGames.map(g => buildGameIconTile(g)).join('')
+    : '';
+  container.innerHTML = `<div class="app-icon-grid">${pinnedHtml}${folderHtml}${normalHtml}</div>`;
+}
+
+// ===== 📁 게임 폴더 관리 =====
+function getGameFoldersKey() {
+  return `cafe_game_folders_${currentUser || 'guest'}`;
+}
+
+function getGameFolders() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(getGameFoldersKey()) || '[]');
+    return Array.isArray(saved) ? saved : [];
+  } catch (error) { return []; }
+}
+
+function saveGameFolders(list) {
+  localStorage.setItem(getGameFoldersKey(), JSON.stringify(list));
+}
+
+let gameFolderModalMode = 'list'; // 'list' | 'view' | 'edit'
+let gameFolderModalTargetId = null;
+
+window.openGameFolderModal = function() {
+  if (!currentUser) { alert('로그인 후 이용할 수 있습니다.'); return; }
+  gameFolderModalMode = 'list';
+  gameFolderModalTargetId = null;
+  document.getElementById('gameFolderModal').classList.remove('hidden');
+  renderGameFolderModal();
+};
+
+window.closeGameFolderModal = function() {
+  document.getElementById('gameFolderModal').classList.add('hidden');
+};
+
+function renderGameFolderModal() {
+  const body = document.getElementById('gameFolderModalBody');
+  const games = getGameDefs();
+  const gameMap = {};
+  games.forEach(g => { gameMap[g.key] = g; });
+  const folders = getGameFolders();
+
+  if (gameFolderModalMode === 'list') {
+    const rows = folders.map(f => `
+      <div class="game-folder-row">
+        <span style="font-size:20px;">📁</span>
+        <div class="game-folder-row-name">${escapeHtml(f.name)} <span style="color:var(--text-sub); font-weight:400;">(${f.gameKeys.length}개)</span></div>
+        <div class="game-folder-row-actions">
+          <button onclick="openGameFolderView('${f.id}')">열기</button>
+          <button onclick="startEditGameFolder('${f.id}')">✏️</button>
+          <button class="danger-btn" onclick="deleteGameFolder('${f.id}')">🗑</button>
+        </div>
+      </div>`).join('') || `<div style="padding:16px 4px; color:var(--text-sub); font-size:13px;">아직 만든 폴더가 없어요. 게임 아이콘을 폴더로 묶어보세요!</div>`;
+    body.innerHTML = `
+      <div style="margin-bottom:10px;">${rows}</div>
+      <div class="chat-modal-actions">
+        <button onclick="startEditGameFolder(null)">+ 새 폴더 만들기</button>
+        <button class="danger-btn" onclick="closeGameFolderModal()">닫기</button>
+      </div>
+    `;
+  } else if (gameFolderModalMode === 'view') {
+    const folder = folders.find(f => f.id === gameFolderModalTargetId);
+    if (!folder) { gameFolderModalMode = 'list'; renderGameFolderModal(); return; }
+    const memberGames = folder.gameKeys.map(k => gameMap[k]).filter(Boolean);
+    const iconsHtml = memberGames.length
+      ? `<div class="app-icon-grid">${memberGames.map(g => `<button class="app-icon-tile" onclick="closeGameFolderModal(); openGameLanding('${g.key}')"><div class="app-icon-box">${splitGameTitle(g.title).icon}</div><div class="app-icon-label">${escapeHtml(splitGameTitle(g.title).name)}</div></button>`).join('')}</div>`
+      : `<div style="padding:16px 4px; color:var(--text-sub); font-size:13px;">폴더에 게임이 없어요.</div>`;
+    body.innerHTML = `
+      <div style="font-size:15px; font-weight:bold; margin-bottom:12px;">📁 ${escapeHtml(folder.name)}</div>
+      ${iconsHtml}
+      <div class="chat-modal-actions" style="margin-top:16px;">
+        <button onclick="gameFolderModalMode='list'; renderGameFolderModal();">← 목록</button>
+        <button onclick="startEditGameFolder('${folder.id}')">✏️ 편집</button>
+        <button class="danger-btn" onclick="closeGameFolderModal()">닫기</button>
+      </div>
+    `;
+  } else if (gameFolderModalMode === 'edit') {
+    const folder = folders.find(f => f.id === gameFolderModalTargetId);
+    const isNew = !folder;
+    const checkedKeys = new Set(folder ? folder.gameKeys : []);
+    const gamesHtml = games.map(g => {
+      const { icon, name } = splitGameTitle(g.title);
+      return `<label class="member-choice"><input type="checkbox" class="game-folder-check" value="${g.key}" ${checkedKeys.has(g.key) ? 'checked' : ''}><span>${icon} ${escapeHtml(name)}</span></label>`;
+    }).join('');
+    body.innerHTML = `
+      <input id="gameFolderNameInput" type="text" placeholder="폴더 이름 (예: 보드게임)" value="${escapeHtml(folder ? folder.name : '')}" style="width:100%; box-sizing:border-box; margin-bottom:10px;">
+      <div style="font-size:12px; color:var(--text-sub); margin-bottom:6px;">폴더에 넣을 게임을 선택하세요</div>
+      <div class="member-picker">${gamesHtml}</div>
+      <div class="chat-modal-actions" style="margin-top:12px;">
+        <button onclick="saveGameFolder(${isNew ? 'null' : `'${folder.id}'`})">저장</button>
+        <button class="danger-btn" onclick="${isNew ? "gameFolderModalMode='list';" : `gameFolderModalMode='view'; gameFolderModalTargetId='${folder.id}';`} renderGameFolderModal();">취소</button>
+      </div>
+    `;
+  }
+}
+
+window.startEditGameFolder = function(folderId) {
+  gameFolderModalMode = 'edit';
+  gameFolderModalTargetId = folderId;
+  renderGameFolderModal();
+};
+
+window.saveGameFolder = function(folderId) {
+  const nameInput = document.getElementById('gameFolderNameInput');
+  const name = (nameInput ? nameInput.value : '').trim();
+  if (!name) { alert('폴더 이름을 입력해주세요.'); return; }
+  const gameKeys = Array.from(document.querySelectorAll('.game-folder-check:checked')).map(el => el.value);
+  if (!gameKeys.length) { alert('폴더에 넣을 게임을 1개 이상 선택해주세요.'); return; }
+  const folders = getGameFolders();
+  if (folderId) {
+    const folder = folders.find(f => f.id === folderId);
+    if (folder) { folder.name = name; folder.gameKeys = gameKeys; }
+  } else {
+    folders.push({ id: 'f' + Date.now(), name, gameKeys });
+  }
+  saveGameFolders(folders);
+  gameFolderModalMode = 'list';
+  gameFolderModalTargetId = null;
+  renderGameFolderModal();
+  renderGameHub();
+};
+
+window.deleteGameFolder = function(folderId) {
+  if (!confirm('이 폴더를 삭제할까요? (게임 자체는 삭제되지 않아요)')) return;
+  const folders = getGameFolders().filter(f => f.id !== folderId);
+  saveGameFolders(folders);
+  renderGameFolderModal();
+  renderGameHub();
+};
+
+window.openGameFolderView = function(folderId) {
+  gameFolderModalMode = 'view';
+  gameFolderModalTargetId = folderId;
+  document.getElementById('gameFolderModal').classList.remove('hidden');
+  renderGameFolderModal();
+};
 
 const GAME_OPEN_FUNC_NAMES = {
   roulette: 'openRouletteGame',
@@ -6301,21 +6481,56 @@ function stopAllGames() {
   if (typeof stopPvpSession === 'function') stopPvpSession();
 }
 
-// 게임 목록 화면 하단이 아닌, 게시글 상세보기처럼 별도의 전용 화면(탭)으로 게임을 연다
+// 앱 아이콘을 탭했을 때: 게임을 바로 실행하지 않고, 아이콘/이름/소개글/플레이 버튼이 있는 소개 화면을 별도 탭으로 보여준다
+window.openGameLanding = function(gameKey) {
+  if (!currentUser) { alert('로그인 후 이용할 수 있습니다.'); return; }
+  const game = getGameDefs().find(g => g.key === gameKey);
+  if (!game) return;
+  currentGamePlayKey = gameKey;
+  currentGamePlayLabel = game.title;
+  gamePlayIsLanding = true;
+  showAppSection('gamePlay');
+};
+
+function renderGameLandingScreen(gameKey) {
+  const game = getGameDefs().find(g => g.key === gameKey);
+  const area = document.getElementById('gamePlayArea');
+  if (!game) { area.innerHTML = ''; return; }
+  const { icon, name } = splitGameTitle(game.title);
+  document.getElementById('gamePlayDetailTitle').textContent = name || game.title;
+  const inFolder = getGameFolders().some(f => f.gameKeys.includes(gameKey));
+  const pinned = getPinnedGames().includes(gameKey);
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div class="game-detail-icon-box">${icon}</div>
+    <div style="font-size:17px; font-weight:bold; margin-bottom:6px;">${escapeHtml(name || game.title)}</div>
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:18px;">${escapeHtml(game.desc)}</div>
+    <button onclick="${game.action}" ${game.disabled ? 'disabled' : ''} style="width:100%; ${game.disabled ? 'background:var(--border-color); color:var(--text-sub); cursor:not-allowed;' : ''}">${game.btnText}</button>
+    ${game.pvpAction ? `<button onclick="${game.pvpAction}" style="width:100%; margin-top:8px; background:var(--input-bg); color:var(--cafe-green); border:1px solid var(--cafe-green);">⚡ 실시간 대결</button>` : ''}
+    ${!inFolder ? `<button onclick="togglePinGame('${gameKey}'); renderGameLandingScreen('${gameKey}');" style="width:100%; margin-top:14px; font-size:12px; background:transparent; border:1px solid var(--border-color); color:var(--text-sub);">${pinned ? '📌 고정 해제' : '📌 목록에 고정'}</button>` : ''}
+  </div>`;
+}
+
+// 게임 목록 화면 하단이 아닌, 게시글 상세보기처럼 별도의 전용 화면(탭)으로 게임을 곧바로 연다 (도전장 수락, 관전 등에서 사용)
 window.openGameDetail = function(gameKey, gameLabel) {
   if (!currentUser) { alert('로그인 후 이용할 수 있습니다.'); return; }
   currentGamePlayKey = gameKey;
   currentGamePlayLabel = gameLabel || '';
+  gamePlayIsLanding = false;
   showAppSection('gamePlay');
 };
 
 window.closeGameDetail = function() {
   stopAllGames();
   currentGamePlayKey = null;
+  gamePlayIsLanding = false;
   showAppSection('game');
 };
 
 function loadGamePlayDetail() {
+  if (gamePlayIsLanding) {
+    renderGameLandingScreen(currentGamePlayKey);
+    return;
+  }
   document.getElementById('gamePlayDetailTitle').textContent = currentGamePlayLabel || '게임';
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = '';
@@ -8262,6 +8477,7 @@ async function pvpTryAutoRejoin() {
     }
     currentGamePlayKey = ref.gameType + 'Pvp';
     currentGamePlayLabel = (PVP_GAME_CONFIG[ref.gameType]?.label || '게임') + ' - 실시간 대결';
+    gamePlayIsLanding = false;
     showAppSection('gamePlay');
     await pvpEnterMatch(ref.matchId, ref.gameType);
   } catch (error) {
@@ -9080,6 +9296,7 @@ window.pvpSpectateMatch = async function(matchId, gameType) {
   if (pvpState && pvpState.unsubList) pvpState.unsubList();
   currentGamePlayKey = 'pvpSpectate';
   currentGamePlayLabel = (PVP_GAME_CONFIG[gameType]?.label || '게임') + ' - 관전';
+  gamePlayIsLanding = false;
   showAppSection('gamePlay');
   const titleEl = document.getElementById('gamePlayDetailTitle');
   if (titleEl) titleEl.textContent = currentGamePlayLabel;
