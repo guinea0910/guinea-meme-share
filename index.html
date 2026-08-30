@@ -10003,7 +10003,7 @@ async function finishDinoGame() {
   const banner = document.getElementById('dinoGameOverBanner');
   if (banner) banner.classList.remove('hidden');
   const score = dinoState.score;
-  const points = score * 3;
+  const points = score * 1;
   await awardGamePoints('dino', '공룡 게임', points, `공룡 게임에서 ${score}점을 기록해서 ${points}P 획득!`);
   const isNewBest = await updateBestDino(score);
   const resultText = `공룡 게임에서 ${score}점을 기록했어요! (${points}P 획득)`;
