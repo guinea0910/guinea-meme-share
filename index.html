@@ -3781,6 +3781,7 @@ window.showAppSection = function(section) {
   if (section !== 'gamePlay' && typeof stopCookieClicker === 'function') stopCookieClicker();
   if (section !== 'gamePlay' && typeof stopRhythm === 'function') stopRhythm();
   if (section !== 'gamePlay' && typeof stopCardGacha === 'function') stopCardGacha();
+  if (section !== 'gamePlay' && typeof stopSwordUpgrade === 'function') stopSwordUpgrade();
   if (section !== 'gamePlay' && typeof stopOmok === 'function') stopOmok();
   if (section !== 'gamePlay' && typeof stopSnake === 'function') stopSnake();
   if (section !== 'gamePlay' && typeof stopDino === 'function') stopDino();
@@ -6137,7 +6138,7 @@ window.setGameTab = function(tab) {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha();
+  stopCardGacha(); stopSwordUpgrade();
   stopOmok();
   stopSnake();
   stopDino();
@@ -6258,6 +6259,7 @@ function getGameDefs() {
     { key: 'cookie', title: '🍪 쿠키 클리커', desc: '쿠키를 굽고 생산 시설을 늘려서 누적 기록에 도전!', action: "openGameDetail('cookie', '🍪 쿠키 클리커')", btnText: '플레이하기' },
     { key: 'rhythm', title: '🕹️ 얼불춤', desc: '박자에 맞춰 탭! 한 번 실수하면 끝, 원터치 리듬게임', action: "openGameDetail('rhythm', '🕹️ 얼불춤')", btnText: '플레이하기' },
     { key: 'cardgacha', title: '🃏 카드깡', desc: '1P로 카드 한 장 뽑기! 0.5P·1P가 가장 잘 나오고, 높거나 낮을수록 희귀해요', action: "openGameDetail('cardgacha', '🃏 카드깡')", btnText: '카드 뽑으러 가기' },
+    { key: 'swordupgrade', title: '⚔️ 검 강화하기', desc: '포인트를 걸고 검을 강화! +15 전설의 검까지, 높은 단계는 실패하면 하락·파괴 위험도 있어요', action: "openGameDetail('swordupgrade', '⚔️ 검 강화하기')", btnText: '대장간 가기' },
     { key: 'omok', title: '⚫⚪ 오목', desc: '독립 OMOK 웹사이트에서 오목을 즐겨보세요!', action: "window.open('https://guinea0910.github.io/omok', '_blank')", btnText: '플레이하기' },
     { key: 'snake', title: '🐍 스네이크', desc: '방향키로 먹이를 먹고 몸을 키우세요! 길수록 포인트 UP', action: "openGameDetail('snake', '🐍 스네이크')", btnText: '플레이하기' },
     { key: 'pong', title: '🏓 핑퐁', desc: '컴퓨터를 상대로 공을 튕겨내며 랠리를 이어가 보세요', action: "openGameDetail('pong', '🏓 핑퐁')", btnText: '플레이하기', pvpAction: "openGameDetail('pongPvp', '🏓 핑퐁 - 실시간 대결')" },
@@ -6456,6 +6458,7 @@ const GAME_OPEN_FUNC_NAMES = {
   cookie: 'openCookieClickerGame',
   rhythm: 'openRhythmGame',
   cardgacha: 'openCardGachaGame',
+  swordupgrade: 'openSwordUpgradeGame',
   snake: 'openSnakeGame',
   pong: 'openPongGame',
   reaction: 'openReactionGame',
@@ -6479,7 +6482,7 @@ function stopAllGames() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha();
+  stopCardGacha(); stopSwordUpgrade();
   stopOmok();
   stopSnake();
   stopDino();
@@ -6613,7 +6616,7 @@ window.openRouletteGame = async function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha();
+  stopCardGacha(); stopSwordUpgrade();
   stopOmok();
   stopSnake();
   stopDino();
@@ -6670,7 +6673,7 @@ window.openClickChallenge = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha();
+  stopCardGacha(); stopSwordUpgrade();
   stopOmok();
   stopSnake();
   stopDino();
@@ -6816,7 +6819,7 @@ window.openTicTacToeGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha();
+  stopCardGacha(); stopSwordUpgrade();
   stopOmok();
   stopSnake();
   stopDino();
@@ -6948,7 +6951,7 @@ window.openMinesweeperGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha();
+  stopCardGacha(); stopSwordUpgrade();
   stopOmok();
   stopSnake();
   stopDino();
@@ -7314,7 +7317,7 @@ window.openTetrisGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha();
+  stopCardGacha(); stopSwordUpgrade();
   stopOmok();
   stopSnake();
   stopDino();
@@ -7656,7 +7659,7 @@ window.openGame2048 = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha();
+  stopCardGacha(); stopSwordUpgrade();
   stopOmok();
   stopSnake();
   stopDino();
@@ -7713,7 +7716,7 @@ window.start2048 = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha();
+  stopCardGacha(); stopSwordUpgrade();
   stopOmok();
   stopSnake();
   stopDino();
@@ -7947,7 +7950,7 @@ window.openCookieClickerGame = async function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha();
+  stopCardGacha(); stopSwordUpgrade();
   stopOmok();
   stopSnake();
   stopDino();
@@ -8150,7 +8153,7 @@ window.openRhythmGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha();
+  stopCardGacha(); stopSwordUpgrade();
   stopOmok();
   stopSnake();
   stopDino();
@@ -8357,7 +8360,7 @@ window.openCardGachaGame = async function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha();
+  stopCardGacha(); stopSwordUpgrade();
   stopOmok();
   stopSnake();
   stopDino();
@@ -8428,6 +8431,170 @@ window.drawCardGacha = async function() {
   } finally {
     if (cardGachaState) cardGachaState.drawing = false;
     if (drawBtn) drawBtn.disabled = false;
+  }
+};
+
+// --- ⚔️ 검 강화하기 ---
+// +1 ~ +15까지 강화. 단계가 오를수록 성공 확률이 낮아지고, +7부터는 실패 시 단계 하락, +10부터는 검이 파괴(0으로 초기화)될 위험이 있어요.
+let swordUpgradeState = null;
+const SWORD_UPGRADE_LEVELS = [
+  { level: 1, cost: 5, rate: 95, downgrade: 0, destroy: 0, sell: 8 },
+  { level: 2, cost: 8, rate: 90, downgrade: 0, destroy: 0, sell: 15 },
+  { level: 3, cost: 12, rate: 85, downgrade: 0, destroy: 0, sell: 25 },
+  { level: 4, cost: 18, rate: 80, downgrade: 10, destroy: 0, sell: 40 },
+  { level: 5, cost: 25, rate: 70, downgrade: 15, destroy: 0, sell: 60 },
+  { level: 6, cost: 35, rate: 60, downgrade: 20, destroy: 0, sell: 90 },
+  { level: 7, cost: 50, rate: 50, downgrade: 20, destroy: 10, sell: 140 },
+  { level: 8, cost: 70, rate: 42, downgrade: 15, destroy: 20, sell: 210 },
+  { level: 9, cost: 95, rate: 35, downgrade: 10, destroy: 30, sell: 320 },
+  { level: 10, cost: 130, rate: 28, downgrade: 0, destroy: 45, sell: 480 },
+  { level: 11, cost: 175, rate: 22, downgrade: 0, destroy: 55, sell: 720 },
+  { level: 12, cost: 230, rate: 17, downgrade: 0, destroy: 65, sell: 1100 },
+  { level: 13, cost: 300, rate: 13, downgrade: 0, destroy: 72, sell: 1700 },
+  { level: 14, cost: 400, rate: 10, downgrade: 0, destroy: 80, sell: 2600 },
+  { level: 15, cost: 550, rate: 7, downgrade: 0, destroy: 85, sell: 4000 }
+];
+function swordUpgradeSellValue(level) {
+  return level <= 0 ? 0 : SWORD_UPGRADE_LEVELS[level - 1].sell;
+}
+function swordUpgradeName(level) {
+  if (level >= 15) return '👑 전설의 검';
+  if (level >= 10) return '🔥 영웅의 검';
+  if (level >= 7) return '💎 희귀한 검';
+  if (level >= 4) return '⚔️ 강화된 검';
+  return '🗡️ 낡은 검';
+}
+function stopSwordUpgrade() {
+  swordUpgradeState = null;
+}
+
+window.openSwordUpgradeGame = async function() {
+  stopTetris(); stop2048(); stopTtt(); stopMinesweeper(); stopCookieClicker(); stopRhythm();
+  stopCardGacha(); stopOmok(); stopSnake(); stopDino(); stopPong(); stopReaction(); stopMemory();
+  if (typeof stopChess === 'function') stopChess();
+  if (typeof stopWatermelon === 'function') stopWatermelon();
+  if (typeof stopWordchain === 'function') stopWordchain();
+  swordUpgradeState = { level: 0, busy: false, totalSpent: 0 };
+  renderSwordUpgradeGame();
+  await refreshSwordUpgradePointsDisplay();
+};
+
+function renderSwordUpgradeGame() {
+  const area = document.getElementById('gamePlayArea');
+  if (!area || !swordUpgradeState) return;
+  const level = swordUpgradeState.level;
+  const isMax = level >= 15;
+  const next = isMax ? null : SWORD_UPGRADE_LEVELS[level];
+  const sellValue = swordUpgradeSellValue(level);
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">포인트를 걸고 검을 강화하세요! 낮은 단계는 안전하지만, +7부터는 실패하면 단계가 떨어질 수 있고 +10부터는 검이 아예 파괴(0으로 초기화)될 수 있어요.</div>
+    <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">보유 포인트: <b id="swordUpgradePointsDisplay" style="color:var(--cafe-green);">-</b></div>
+    <div id="swordUpgradeIcon" style="font-size:56px; margin-bottom:6px;">${level === 0 ? '🗡️' : swordUpgradeName(level).split(' ')[0]}</div>
+    <div style="font-size:18px; font-weight:bold; margin-bottom:4px;">${level === 0 ? '강화 전 (+0)' : `${swordUpgradeName(level).split(' ').slice(1).join(' ')} +${level}`}</div>
+    <div style="font-size:12px; color:var(--text-sub); margin-bottom:14px;">지금 판매하면 <b style="color:var(--cafe-green);">${sellValue}P</b></div>
+    ${isMax ? `
+      <div style="font-size:14px; font-weight:bold; color:var(--cafe-green); margin-bottom:10px;">🎉 최고 단계 +15 전설의 검을 완성했어요!</div>
+      <button onclick="sellSwordUpgrade()" style="width:100%;">👑 전설의 검 판매하기 (${sellValue}P)</button>
+    ` : `
+      <button id="swordUpgradeAttemptBtn" onclick="attemptSwordUpgrade()" style="width:100%; margin-bottom:8px;">🔨 +${next.level} 강화 시도 (${next.cost}P, 성공률 ${next.rate}%)</button>
+      <div style="font-size:11px; color:var(--text-sub); margin-bottom:10px;">
+        ${next.destroy > 0 ? `실패 시 ${next.downgrade > 0 ? `단계 하락 ${next.downgrade}% · ` : ''}검 파괴 ${next.destroy}%` : (next.downgrade > 0 ? `실패 시 단계 하락 ${next.downgrade}%` : '실패해도 단계는 유지돼요 (비용만 소모)')}
+      </div>
+      ${level > 0 ? `<button onclick="sellSwordUpgrade()" style="width:100%; background: var(--border-color); color: var(--text-main);">💰 지금 판매하기 (${sellValue}P)</button>` : ''}
+    `}
+    <div id="swordUpgradeResult" style="margin-top:10px;"></div>
+  </div>`;
+}
+
+async function refreshSwordUpgradePointsDisplay() {
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser));
+    const points = snap.exists() ? (snap.data().gamePoints || 0) : 0;
+    const el = document.getElementById('swordUpgradePointsDisplay');
+    if (el) el.textContent = `${points}P`;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+window.attemptSwordUpgrade = async function() {
+  if (!currentUser || !swordUpgradeState || swordUpgradeState.busy) return;
+  const level = swordUpgradeState.level;
+  if (level >= 15) return;
+  const step = SWORD_UPGRADE_LEVELS[level];
+  const btn = document.getElementById('swordUpgradeAttemptBtn');
+  const resultEl = document.getElementById('swordUpgradeResult');
+  try {
+    const userRef = doc(db, 'users', currentUser);
+    const snap = await getDoc(userRef);
+    const points = snap.exists() ? (snap.data().gamePoints || 0) : 0;
+    if (points < step.cost) {
+      alert(`포인트가 부족해요. (필요: ${step.cost}P / 보유: ${points}P)`);
+      return;
+    }
+    swordUpgradeState.busy = true;
+    if (btn) btn.disabled = true;
+    await updateDoc(userRef, { gamePoints: increment(-step.cost) });
+    swordUpgradeState.totalSpent += step.cost;
+    const roll = Math.random() * 100;
+    let outcomeText, outcomeColor;
+    if (roll < step.rate) {
+      swordUpgradeState.level = level + 1;
+      outcomeText = `✅ 강화 성공! +${level} → +${swordUpgradeState.level}`;
+      outcomeColor = 'var(--cafe-green)';
+    } else if (roll < step.rate + step.destroy) {
+      swordUpgradeState.level = 0;
+      outcomeText = `💥 검이 파괴됐어요! +${level} → +0`;
+      outcomeColor = '#f87171';
+    } else if (roll < step.rate + step.destroy + step.downgrade) {
+      swordUpgradeState.level = Math.max(0, level - 1);
+      outcomeText = `⬇️ 강화 실패, 단계가 떨어졌어요. +${level} → +${swordUpgradeState.level}`;
+      outcomeColor = '#f87171';
+    } else {
+      outcomeText = `❌ 강화 실패했지만 단계는 유지돼요. (+${level})`;
+      outcomeColor = 'var(--text-sub)';
+    }
+    await addDoc(collection(db, 'gameScores'), {
+      user: currentUser,
+      game: 'swordupgrade',
+      points: -step.cost,
+      detail: `검 강화하기: +${level}에서 +${step.level} 시도 (${step.cost}P 소모) → ${outcomeText.replace(/^[^\s]+\s/, '')}`,
+      createdAt: Date.now()
+    });
+    await refreshMyGamePointsBadge();
+    renderSwordUpgradeGame();
+    const newResultEl = document.getElementById('swordUpgradeResult');
+    if (newResultEl) newResultEl.innerHTML = `<div style="font-size:14px; font-weight:bold; color:${outcomeColor};">${outcomeText}</div>`;
+  } catch (error) {
+    console.error(error);
+    alert('강화 시도에 실패했습니다.');
+  } finally {
+    if (swordUpgradeState) swordUpgradeState.busy = false;
+  }
+};
+
+window.sellSwordUpgrade = async function() {
+  if (!currentUser || !swordUpgradeState || swordUpgradeState.busy) return;
+  const level = swordUpgradeState.level;
+  const sellValue = swordUpgradeSellValue(level);
+  swordUpgradeState.busy = true;
+  try {
+    const net = sellValue - swordUpgradeState.totalSpent;
+    const resultText = `검 강화하기에서 +${level} ${swordUpgradeName(level)}${level>0 ? '' : ''}을(를) ${sellValue}P에 판매했어요! (총 투자 ${swordUpgradeState.totalSpent}P, 순변화 ${net >= 0 ? '+' : ''}${net}P)`;
+    await awardGamePoints('swordupgrade', '검 강화하기', sellValue, `검 강화하기: +${level} 검 판매 → ${sellValue}P 획득 (총 투자 ${swordUpgradeState.totalSpent}P)`);
+    const resultEl = document.getElementById('swordUpgradeResult');
+    if (resultEl) resultEl.innerHTML = `
+      <div style="font-size:16px; font-weight:bold; margin-bottom:4px; color:${net >= 0 ? 'var(--cafe-green)' : '#f87171'};">${sellValue}P에 판매 완료!</div>
+      <div style="font-size:12px; color:var(--text-sub); margin-bottom:6px;">총 투자 ${swordUpgradeState.totalSpent}P · 순변화 ${net >= 0 ? '+' : ''}${net}P</div>
+      ${renderGameResultActions(resultText)}
+    `;
+    swordUpgradeState.level = 0;
+    swordUpgradeState.totalSpent = 0;
+  } catch (error) {
+    console.error(error);
+    alert('판매에 실패했습니다.');
+  } finally {
+    if (swordUpgradeState) swordUpgradeState.busy = false;
   }
 };
 
@@ -9341,7 +9508,7 @@ function stopPvpSession() {
 
 function pvpResetLocalGameStates() {
   stopTetris(); stop2048(); stopTtt(); stopMinesweeper(); stopCookieClicker(); stopRhythm();
-  stopCardGacha(); stopOmok(); stopSnake(); stopDino(); stopPong(); stopReaction(); stopMemory();
+  stopCardGacha(); stopSwordUpgrade(); stopOmok(); stopSnake(); stopDino(); stopPong(); stopReaction(); stopMemory();
   stopChess(); stopWatermelon(); stopWordchain();
 }
 
@@ -10882,7 +11049,7 @@ function stopDino() {
 
 window.openDinoGame = function() {
   stopTetris(); stop2048(); stopTtt(); stopMinesweeper(); stopCookieClicker(); stopRhythm();
-  stopCardGacha(); stopOmok(); stopSnake(); stopDino(); stopPong(); stopReaction(); stopMemory();
+  stopCardGacha(); stopSwordUpgrade(); stopOmok(); stopSnake(); stopDino(); stopPong(); stopReaction(); stopMemory();
   stopChess(); stopWatermelon();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
@@ -11121,7 +11288,7 @@ window.openSnakeGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha();
+  stopCardGacha(); stopSwordUpgrade();
   stopOmok();
   stopSnake();
   stopDino();
@@ -11346,7 +11513,7 @@ window.openPongGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha();
+  stopCardGacha(); stopSwordUpgrade();
   stopOmok();
   stopSnake();
   stopDino();
@@ -11605,7 +11772,7 @@ window.openReactionGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha();
+  stopCardGacha(); stopSwordUpgrade();
   stopOmok();
   stopSnake();
   stopDino();
@@ -11757,7 +11924,7 @@ window.openMemoryGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha();
+  stopCardGacha(); stopSwordUpgrade();
   stopOmok();
   stopSnake();
   stopDino();
