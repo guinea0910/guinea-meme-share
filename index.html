@@ -1328,7 +1328,8 @@ const PVP_GAME_CONFIG = {
   tetris: { label: '테트리스', type: 'race', winPoints: 30, drawPoints: 12 },
   pong: { label: '핑퐁', type: 'race', winPoints: 25, drawPoints: 10 },
   chess: { label: '체스', type: 'chess', winPoints: 45, drawPoints: 18 },
-  wordchain: { label: '끝말잇기', type: 'wordchain', winPoints: 30, drawPoints: 12 }
+  wordchain: { label: '끝말잇기', type: 'wordchain', winPoints: 30, drawPoints: 12 },
+  dots: { label: '점과 선 잇기', type: 'dots', winPoints: 35, drawPoints: 15 }
 };
 // 네 가지 대결 게임(틱택토·오목·테트리스·핑퐁) 레이팅의 평균을 하나의 "게임 레이팅"으로 계산합니다.
 // 아직 플레이하지 않은 게임은 기본 레이팅(1000)으로 계산에 포함됩니다.
@@ -3782,6 +3783,7 @@ window.showAppSection = function(section) {
   if (section !== 'gamePlay' && typeof stopRhythm === 'function') stopRhythm();
   if (section !== 'gamePlay' && typeof stopCardGacha === 'function') stopCardGacha();
   if (section !== 'gamePlay' && typeof stopSwordUpgrade === 'function') stopSwordUpgrade();
+  if (section !== 'gamePlay' && typeof stopDots === 'function') stopDots();
   if (section !== 'gamePlay' && typeof stopOmok === 'function') stopOmok();
   if (section !== 'gamePlay' && typeof stopSnake === 'function') stopSnake();
   if (section !== 'gamePlay' && typeof stopDino === 'function') stopDino();
@@ -6138,7 +6140,7 @@ window.setGameTab = function(tab) {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha(); stopSwordUpgrade();
+  stopCardGacha(); stopSwordUpgrade(); stopDots();
   stopOmok();
   stopSnake();
   stopDino();
@@ -6269,7 +6271,8 @@ function getGameDefs() {
     { key: 'watermelon', title: '🍉 수박게임', desc: '같은 과일을 합쳐서 수박까지 만들어보세요!', action: "openGameDetail('watermelon', '🍉 수박게임')", btnText: '플레이하기' },
     { key: 'dino', title: '🦖 공룡 게임', desc: '스페이스바나 화면 탭으로 점프! 장애물을 피해 오래 버틸수록 포인트 UP', action: "openGameDetail('dino', '🦖 공룡 게임')", btnText: '플레이하기' },
     { key: 'bluemarble', title: '🎲 부루마블', desc: '2~4명이 실시간으로 즐기는 부루마블! 방을 만들거나 코드로 입장해서 대결해보세요', action: "openGameDetail('bluemarble', '🎲 부루마블')", btnText: '플레이하기' },
-    { key: 'wordchain', title: '🔤 끝말잇기', desc: '컴퓨터와 끝말잇기 대결! 두음법칙(리→이 등)도 인정돼요', action: "openGameDetail('wordchain', '🔤 끝말잇기')", btnText: '한 판 하기', pvpAction: "openGameDetail('wordchainPvp', '🔤 끝말잇기 - 실시간 대결')" }
+    { key: 'wordchain', title: '🔤 끝말잇기', desc: '컴퓨터와 끝말잇기 대결! 두음법칙(리→이 등)도 인정돼요', action: "openGameDetail('wordchain', '🔤 끝말잇기')", btnText: '한 판 하기', pvpAction: "openGameDetail('wordchainPvp', '🔤 끝말잇기 - 실시간 대결')" },
+    { key: 'dots', title: '🔵 점과 선 잇기', desc: '점을 이어 선을 긋고, 네 변을 완성하면 내 박스! 박스를 완성하면 한 번 더 둘 수 있어요', action: "openGameDetail('dots', '🔵 점과 선 잇기')", btnText: '한 판 하기', pvpAction: "openGameDetail('dotsPvp', '🔵 점과 선 잇기 - 실시간 대결')" }
   ];
 }
 
@@ -6468,11 +6471,13 @@ const GAME_OPEN_FUNC_NAMES = {
   dino: 'openDinoGame',
   bluemarble: 'openBluemarbleGame',
   wordchain: 'openWordchainGame',
+  dots: 'openDotsGame',
   tttPvp: 'openTttPvpLobby',
   tetrisPvp: 'openTetrisPvpLobby',
   pongPvp: 'openPongPvpLobby',
   chessPvp: 'openChessPvpLobby',
-  wordchainPvp: 'openWordchainPvpLobby'
+  wordchainPvp: 'openWordchainPvpLobby',
+  dotsPvp: 'openDotsPvpLobby'
 };
 
 function stopAllGames() {
@@ -6482,7 +6487,7 @@ function stopAllGames() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha(); stopSwordUpgrade();
+  stopCardGacha(); stopSwordUpgrade(); stopDots();
   stopOmok();
   stopSnake();
   stopDino();
@@ -6616,7 +6621,7 @@ window.openRouletteGame = async function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha(); stopSwordUpgrade();
+  stopCardGacha(); stopSwordUpgrade(); stopDots();
   stopOmok();
   stopSnake();
   stopDino();
@@ -6673,7 +6678,7 @@ window.openClickChallenge = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha(); stopSwordUpgrade();
+  stopCardGacha(); stopSwordUpgrade(); stopDots();
   stopOmok();
   stopSnake();
   stopDino();
@@ -6819,7 +6824,7 @@ window.openTicTacToeGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha(); stopSwordUpgrade();
+  stopCardGacha(); stopSwordUpgrade(); stopDots();
   stopOmok();
   stopSnake();
   stopDino();
@@ -6951,7 +6956,7 @@ window.openMinesweeperGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha(); stopSwordUpgrade();
+  stopCardGacha(); stopSwordUpgrade(); stopDots();
   stopOmok();
   stopSnake();
   stopDino();
@@ -7317,7 +7322,7 @@ window.openTetrisGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha(); stopSwordUpgrade();
+  stopCardGacha(); stopSwordUpgrade(); stopDots();
   stopOmok();
   stopSnake();
   stopDino();
@@ -7659,7 +7664,7 @@ window.openGame2048 = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha(); stopSwordUpgrade();
+  stopCardGacha(); stopSwordUpgrade(); stopDots();
   stopOmok();
   stopSnake();
   stopDino();
@@ -7716,7 +7721,7 @@ window.start2048 = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha(); stopSwordUpgrade();
+  stopCardGacha(); stopSwordUpgrade(); stopDots();
   stopOmok();
   stopSnake();
   stopDino();
@@ -7950,7 +7955,7 @@ window.openCookieClickerGame = async function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha(); stopSwordUpgrade();
+  stopCardGacha(); stopSwordUpgrade(); stopDots();
   stopOmok();
   stopSnake();
   stopDino();
@@ -8153,7 +8158,7 @@ window.openRhythmGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha(); stopSwordUpgrade();
+  stopCardGacha(); stopSwordUpgrade(); stopDots();
   stopOmok();
   stopSnake();
   stopDino();
@@ -8360,7 +8365,7 @@ window.openCardGachaGame = async function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha(); stopSwordUpgrade();
+  stopCardGacha(); stopSwordUpgrade(); stopDots();
   stopOmok();
   stopSnake();
   stopDino();
@@ -9428,6 +9433,233 @@ async function renderWordchainRankTab() {
   }
 }
 
+// --- 🔵 점과 선 잇기 (Dots and Boxes) ---
+// 점 5x5 격자 = 박스 4x4. hEdges: 가로선(위/아래 변), vEdges: 세로선(좌/우 변). 박스의 네 변이 모두 채워지면 그 박스를 완성한 사람이 차지하고, 한 번 더 차례를 가져가요.
+const DOTS_ROWS = 5;
+const DOTS_COLS = 5;
+const DOTS_BOX_ROWS = DOTS_ROWS - 1;
+const DOTS_BOX_COLS = DOTS_COLS - 1;
+
+function dotsBoxSides(hEdges, vEdges, r, c) {
+  return [
+    hEdges[r * DOTS_BOX_COLS + c],           // 위
+    hEdges[(r + 1) * DOTS_BOX_COLS + c],      // 아래
+    vEdges[r * DOTS_COLS + c],                // 왼쪽
+    vEdges[r * DOTS_COLS + (c + 1)]           // 오른쪽
+  ];
+}
+function dotsBoxFilledCount(hEdges, vEdges, r, c) {
+  return dotsBoxSides(hEdges, vEdges, r, c).filter(Boolean).length;
+}
+function dotsBoxesForHEdge(r, c) {
+  const boxes = [];
+  if (r - 1 >= 0) boxes.push([r - 1, c]);
+  if (r < DOTS_BOX_ROWS) boxes.push([r, c]);
+  return boxes;
+}
+function dotsBoxesForVEdge(r, c) {
+  const boxes = [];
+  if (c - 1 >= 0) boxes.push([r, c - 1]);
+  if (c < DOTS_BOX_COLS) boxes.push([r, c]);
+  return boxes;
+}
+// 엣지를 놓고, 그로 인해 완성된 박스 수를 반환. hEdges/vEdges/boxes 배열을 직접 변경합니다.
+function dotsApplyEdge(hEdges, vEdges, boxes, type, r, c, owner) {
+  if (type === 'h') hEdges[r * DOTS_BOX_COLS + c] = owner;
+  else vEdges[r * DOTS_COLS + c] = owner;
+  const affected = type === 'h' ? dotsBoxesForHEdge(r, c) : dotsBoxesForVEdge(r, c);
+  let completed = 0;
+  for (const [br, bc] of affected) {
+    const idx = br * DOTS_BOX_COLS + bc;
+    if (boxes[idx] == null && dotsBoxFilledCount(hEdges, vEdges, br, bc) === 4) {
+      boxes[idx] = owner;
+      completed++;
+    }
+  }
+  return completed;
+}
+function dotsAllEdgeMoves(hEdges, vEdges) {
+  const moves = [];
+  for (let r = 0; r < DOTS_ROWS; r++) for (let c = 0; c < DOTS_BOX_COLS; c++) if (!hEdges[r * DOTS_BOX_COLS + c]) moves.push({ type: 'h', r, c });
+  for (let r = 0; r < DOTS_BOX_ROWS; r++) for (let c = 0; c < DOTS_COLS; c++) if (!vEdges[r * DOTS_COLS + c]) moves.push({ type: 'v', r, c });
+  return moves;
+}
+// 컴퓨터 수 선택: 1) 박스를 완성할 수 있으면 완성 2) 안전한 수(3변짜리 박스를 만들지 않는 수) 3) 그래도 없으면 피해가 가장 적은 수
+function dotsPickAiMove(hEdges, vEdges) {
+  const moves = dotsAllEdgeMoves(hEdges, vEdges);
+  if (!moves.length) return null;
+  function affectedOf(move) { return move.type === 'h' ? dotsBoxesForHEdge(move.r, move.c) : dotsBoxesForVEdge(move.r, move.c); }
+  function gainOf(move) {
+    let gain = 0;
+    for (const [br, bc] of affectedOf(move)) if (dotsBoxFilledCount(hEdges, vEdges, br, bc) === 3) gain++;
+    return gain;
+  }
+  function dangerOf(move) {
+    let danger = 0;
+    for (const [br, bc] of affectedOf(move)) if (dotsBoxFilledCount(hEdges, vEdges, br, bc) === 2) danger++;
+    return danger;
+  }
+  const withGain = moves.map(m => ({ ...m, gain: gainOf(m) }));
+  const bestGain = Math.max(...withGain.map(m => m.gain));
+  if (bestGain > 0) {
+    const top = withGain.filter(m => m.gain === bestGain);
+    return top[Math.floor(Math.random() * top.length)];
+  }
+  const safe = moves.filter(m => dangerOf(m) === 0);
+  if (safe.length) return safe[Math.floor(Math.random() * safe.length)];
+  const withDanger = moves.map(m => ({ ...m, danger: dangerOf(m) }));
+  const minDanger = Math.min(...withDanger.map(m => m.danger));
+  const least = withDanger.filter(m => m.danger === minDanger);
+  return least[Math.floor(Math.random() * least.length)];
+}
+function dotsOwnerColor(owner, myMark, oppMark) {
+  if (owner === myMark) return 'var(--cafe-green)';
+  if (owner === oppMark) return '#f87171';
+  return 'var(--border-color)';
+}
+// 격자를 CSS Grid로 렌더링 (점/가로선/세로선/박스 칸을 번갈아 배치)
+function dotsRenderGrid(hEdges, vEdges, boxes, opts) {
+  const dotSize = 10, edgeThick = 8, boxSize = 34;
+  const colTemplate = Array.from({ length: DOTS_COLS + DOTS_BOX_COLS }, (_, i) => i % 2 === 0 ? `${dotSize}px` : `${boxSize}px`).join(' ');
+  const rowTemplate = Array.from({ length: DOTS_ROWS + DOTS_BOX_ROWS }, (_, i) => i % 2 === 0 ? `${dotSize}px` : `${boxSize}px`).join(' ');
+  let cells = '';
+  for (let gr = 0; gr < DOTS_ROWS + DOTS_BOX_ROWS; gr++) {
+    for (let gc = 0; gc < DOTS_COLS + DOTS_BOX_COLS; gc++) {
+      const rowIsDot = gr % 2 === 0, colIsDot = gc % 2 === 0;
+      if (rowIsDot && colIsDot) {
+        cells += `<div style="width:${dotSize}px; height:${dotSize}px; border-radius:50%; background:var(--text-main);"></div>`;
+      } else if (rowIsDot && !colIsDot) {
+        const r = gr / 2, c = (gc - 1) / 2;
+        const owner = hEdges[r * DOTS_BOX_COLS + c];
+        const clickable = !owner && opts.canClick;
+        cells += `<div onclick="${clickable ? `${opts.onEdgeClick}('h',${r},${c})` : ''}" style="width:${boxSize}px; height:${edgeThick}px; border-radius:3px; background:${owner ? opts.colorFn(owner) : 'var(--input-bg)'}; cursor:${clickable ? 'pointer' : 'default'};"></div>`;
+      } else if (!rowIsDot && colIsDot) {
+        const r = (gr - 1) / 2, c = gc / 2;
+        const owner = vEdges[r * DOTS_COLS + c];
+        const clickable = !owner && opts.canClick;
+        cells += `<div onclick="${clickable ? `${opts.onEdgeClick}('v',${r},${c})` : ''}" style="width:${edgeThick}px; height:${boxSize}px; border-radius:3px; background:${owner ? opts.colorFn(owner) : 'var(--input-bg)'}; cursor:${clickable ? 'pointer' : 'default'};"></div>`;
+      } else {
+        const r = (gr - 1) / 2, c = (gc - 1) / 2;
+        const owner = boxes[r * DOTS_BOX_COLS + c];
+        cells += `<div style="width:${boxSize}px; height:${boxSize}px; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:bold; color:${owner ? opts.colorFn(owner) : 'transparent'};">${owner ? (opts.markFn ? opts.markFn(owner) : '●') : ''}</div>`;
+      }
+    }
+  }
+  return `<div style="width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;">
+    <div style="display:grid; grid-template-columns:${colTemplate}; grid-template-rows:${rowTemplate}; gap:1px; width:max-content; margin:0 auto; padding:4px;">${cells}</div>
+  </div>`;
+}
+
+let dotsState = null;
+function stopDots() { dotsState = null; }
+
+window.openDotsGame = function() {
+  stopTetris(); stop2048(); stopTtt(); stopMinesweeper(); stopCookieClicker(); stopRhythm();
+  stopCardGacha(); stopSwordUpgrade(); stopOmok(); stopSnake(); stopDino(); stopPong(); stopReaction(); stopMemory();
+  if (typeof stopChess === 'function') stopChess();
+  if (typeof stopWatermelon === 'function') stopWatermelon();
+  if (typeof stopWordchain === 'function') stopWordchain();
+  dotsState = {
+    hEdges: Array(DOTS_ROWS * DOTS_BOX_COLS).fill(null),
+    vEdges: Array(DOTS_BOX_ROWS * DOTS_COLS).fill(null),
+    boxes: Array(DOTS_BOX_ROWS * DOTS_BOX_COLS).fill(null),
+    scores: { player: 0, ai: 0 },
+    turn: 'player',
+    running: true,
+    busy: false
+  };
+  const area = document.getElementById('gamePlayArea');
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="font-size:13px; color:var(--text-sub); margin-bottom:10px;">점 사이에 선을 그어 박스의 네 변을 완성하면 내 박스! 박스를 완성하면 한 번 더 둘 수 있어요.</div>
+    <div id="dotsGameOverBanner" class="hidden" style="font-size:18px; font-weight:bold; padding:10px; border-radius:8px; margin-bottom:10px;"></div>
+    <div style="display:flex; justify-content:center; gap:16px; font-size:14px; font-weight:bold; margin-bottom:10px;">
+      <span style="color:var(--cafe-green);">🙂 나: <span id="dotsPlayerScore">0</span></span>
+      <span style="color:#f87171;">🤖 컴퓨터: <span id="dotsAiScore">0</span></span>
+    </div>
+    <div id="dotsStatus" style="font-size:13px; font-weight:bold; margin-bottom:8px;"></div>
+    <div id="dotsGrid"></div>
+    <div id="dotsResult" style="margin-top:10px;"></div>
+  </div>`;
+  renderDotsGame();
+};
+
+function renderDotsGame() {
+  if (!dotsState) return;
+  const gridEl = document.getElementById('dotsGrid');
+  const statusEl = document.getElementById('dotsStatus');
+  const psEl = document.getElementById('dotsPlayerScore');
+  const asEl = document.getElementById('dotsAiScore');
+  if (psEl) psEl.textContent = dotsState.scores.player;
+  if (asEl) asEl.textContent = dotsState.scores.ai;
+  if (statusEl) statusEl.textContent = !dotsState.running ? '' : (dotsState.turn === 'player' ? '✅ 내 차례예요!' : '🤖 컴퓨터가 생각 중...');
+  if (gridEl) {
+    gridEl.innerHTML = dotsRenderGrid(dotsState.hEdges, dotsState.vEdges, dotsState.boxes, {
+      canClick: dotsState.running && dotsState.turn === 'player' && !dotsState.busy,
+      onEdgeClick: 'dotsPlaceEdge',
+      colorFn: owner => dotsOwnerColor(owner, 'player', 'ai'),
+      markFn: owner => owner === 'player' ? '🙂' : '🤖'
+    });
+  }
+}
+
+window.dotsPlaceEdge = function(type, r, c) {
+  if (!dotsState || !dotsState.running || dotsState.turn !== 'player' || dotsState.busy) return;
+  const completed = dotsApplyEdge(dotsState.hEdges, dotsState.vEdges, dotsState.boxes, type, r, c, 'player');
+  if (completed > 0) dotsState.scores.player += completed;
+  renderDotsGame();
+  if (dotsState.boxes.every(b => b !== null)) { finishDots(); return; }
+  if (completed === 0) {
+    dotsState.turn = 'ai';
+    dotsState.busy = true;
+    renderDotsGame();
+    setTimeout(dotsAiTurn, 600);
+  }
+  // completed > 0 → 내 턴 유지, 바로 다시 둘 수 있음
+};
+
+function dotsAiTurn() {
+  if (!dotsState || !dotsState.running || dotsState.turn !== 'ai') return;
+  const move = dotsPickAiMove(dotsState.hEdges, dotsState.vEdges);
+  if (!move) { finishDots(); return; }
+  const completed = dotsApplyEdge(dotsState.hEdges, dotsState.vEdges, dotsState.boxes, move.type, move.r, move.c, 'ai');
+  if (completed > 0) dotsState.scores.ai += completed;
+  renderDotsGame();
+  if (dotsState.boxes.every(b => b !== null)) { finishDots(); return; }
+  if (completed > 0) {
+    setTimeout(dotsAiTurn, 600); // 컴퓨터도 박스를 완성하면 한 번 더
+  } else {
+    dotsState.turn = 'player';
+    dotsState.busy = false;
+    renderDotsGame();
+  }
+}
+
+async function finishDots() {
+  if (!dotsState) return;
+  dotsState.running = false;
+  dotsState.busy = false;
+  const { player, ai } = dotsState.scores;
+  const banner = document.getElementById('dotsGameOverBanner');
+  let outcome, points, bannerText, bannerStyle;
+  if (player > ai) {
+    outcome = '승리'; points = Math.min(20 + (player - ai) * 4, 70);
+    bannerText = `🎉 승리! ${player} : ${ai}`; bannerStyle = 'background:rgba(3,199,90,0.18); color:var(--cafe-green);';
+  } else if (player < ai) {
+    outcome = '패배'; points = 0;
+    bannerText = `💀 패배! ${player} : ${ai}`; bannerStyle = 'background:rgba(248,113,113,0.18); color:#f87171;';
+  } else {
+    outcome = '무승부'; points = 10;
+    bannerText = `🤝 무승부! ${player} : ${ai}`; bannerStyle = 'background:var(--input-bg); color:var(--text-sub);';
+  }
+  if (banner) { banner.textContent = bannerText; banner.style.cssText += bannerStyle; banner.classList.remove('hidden'); }
+  renderDotsGame();
+  await awardGamePoints('dots', '점과 선 잇기', points, `점과 선 잇기 ${outcome}! ${player}:${ai} (${points}P)`);
+  const resultText = `점과 선 잇기에서 ${outcome}했어요! ${player}:${ai} (${points}P 획득)`;
+  const resultEl = document.getElementById('dotsResult');
+  if (resultEl) resultEl.innerHTML = `<div style="font-size:13px; margin-bottom:6px;">+${points}P 획득</div>${renderGameResultActions(resultText)}`;
+}
+
+
 // ===== ⚡ 실시간 대결 (틱택토 PvP) =====
 // Firestore 컬렉션: gamePvpQueue(대기열), gamePvpMatches(진행 중인 대국), gamePvpChallenges(도전장)
 
@@ -9508,7 +9740,7 @@ function stopPvpSession() {
 
 function pvpResetLocalGameStates() {
   stopTetris(); stop2048(); stopTtt(); stopMinesweeper(); stopCookieClicker(); stopRhythm();
-  stopCardGacha(); stopSwordUpgrade(); stopOmok(); stopSnake(); stopDino(); stopPong(); stopReaction(); stopMemory();
+  stopCardGacha(); stopSwordUpgrade(); stopDots(); stopOmok(); stopSnake(); stopDino(); stopPong(); stopReaction(); stopMemory();
   stopChess(); stopWatermelon(); stopWordchain();
 }
 
@@ -9539,6 +9771,23 @@ async function pvpCreateMatch(gameType, playerFirst, playerSecond) {
       players: [playerFirst, playerSecond],
       colors: { [playerFirst]: 'w', [playerSecond]: 'b' },
       fen: new Chess().fen(),
+      turn: playerFirst,
+      status: 'active',
+      winner: null,
+      pointsAwarded: {},
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    });
+  }
+  if (cfg.type === 'dots') {
+    return await addDoc(collection(db, 'gamePvpMatches'), {
+      gameType,
+      matchType: 'dots',
+      players: [playerFirst, playerSecond],
+      hEdges: Array(DOTS_ROWS * DOTS_BOX_COLS).fill(null),
+      vEdges: Array(DOTS_BOX_ROWS * DOTS_COLS).fill(null),
+      boxes: Array(DOTS_BOX_ROWS * DOTS_BOX_COLS).fill(null),
+      scores: { [playerFirst]: 0, [playerSecond]: 0 },
       turn: playerFirst,
       status: 'active',
       winner: null,
@@ -9666,6 +9915,16 @@ window.openWordchainPvpLobby = function() {
   pvpOpenLobby('wordchain');
 };
 
+window.openDotsPvpLobby = function() {
+  if (pvpPendingEntry && pvpPendingEntry.gameType === 'dots') {
+    const entry = pvpPendingEntry; pvpPendingEntry = null;
+    pvpEnterMatch(entry.matchId, 'dots');
+    return;
+  }
+  pvpResetLocalGameStates();
+  pvpOpenLobby('dots');
+};
+
 window.pvpJoinQueue = async function(gameType) {
   if (!currentUser) { alert('로그인 후 이용할 수 있습니다.'); return; }
   try {
@@ -9782,6 +10041,7 @@ async function pvpEnterMatch(matchId, gameType) {
     if (data.matchType === 'race') pvpRenderRaceMatch(matchId, data);
     else if (data.matchType === 'chess') pvpRenderChessMatch(matchId, data);
     else if (data.matchType === 'wordchain') pvpRenderWordchainMatch(matchId, data);
+    else if (data.matchType === 'dots') pvpRenderDotsMatch(matchId, data);
     else pvpRenderMatch(matchId, data);
   }, error => console.error(error));
 }
@@ -10174,6 +10434,81 @@ async function pvpWordchainTimeout(matchId) {
     if (pvpState) pvpState.submitting = false;
   }
 }
+
+// --- 🔵 점과 선 잇기 실시간 대결 ---
+function pvpRenderDotsMatch(matchId, data) {
+  if (!pvpState || pvpState.mode !== 'match' || pvpState.matchId !== matchId) return;
+  pvpState.lastData = data;
+  const area = document.getElementById('pvpGameArea');
+  if (!area) return;
+  const opponent = data.players.find(user => user !== currentUser) || '상대';
+  const isMyTurn = data.status === 'active' && data.turn === currentUser;
+  const myScore = (data.scores && data.scores[currentUser]) || 0;
+  const oppScore = (data.scores && data.scores[opponent]) || 0;
+  let statusLine;
+  if (data.status === 'finished') {
+    pvpClearActiveMatchRef();
+    if (data.winner === 'draw') statusLine = '🤝 무승부로 종료됐어요.';
+    else if (data.winner === currentUser) statusLine = '🎉 승리했어요!';
+    else statusLine = '💀 패배했어요.';
+  } else {
+    statusLine = isMyTurn ? '✅ 내 차례예요!' : `⏳ ${escapeHtml(opponent)}님의 차례를 기다리는 중...`;
+  }
+  const canClick = data.status === 'active' && isMyTurn && !pvpState.submitting;
+  const gridHtml = dotsRenderGrid(data.hEdges, data.vEdges, data.boxes, {
+    canClick,
+    onEdgeClick: 'pvpPlaceDotsEdge',
+    colorFn: owner => dotsOwnerColor(owner, currentUser, opponent),
+    markFn: owner => owner === currentUser ? '🙂' : '🙋'
+  });
+  area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+    <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px; font-size:13px; color:var(--text-sub);">
+      <span>${escapeHtml(currentUser)}</span><span>VS</span><span>${escapeHtml(opponent)}</span>
+    </div>
+    <div style="display:flex; justify-content:center; gap:16px; font-size:14px; font-weight:bold; margin-bottom:8px;">
+      <span style="color:var(--cafe-green);">🙂 나: ${myScore}</span>
+      <span style="color:#f87171;">🙋 ${escapeHtml(opponent)}: ${oppScore}</span>
+    </div>
+    <div style="font-size:14px; font-weight:bold; margin-bottom:10px;">${statusLine}</div>
+    ${gridHtml}
+    <div id="pvpResult" style="margin-top:10px;"></div>
+    <button class="danger-btn" onclick="pvpLeaveMatch()" style="width:100%; margin-top:12px;">${data.status === 'finished' ? '나가기' : '기권하고 나가기'}</button>
+  </div>`;
+  if (data.status === 'finished') pvpMaybeAwardPoints(data, matchId);
+}
+
+window.pvpPlaceDotsEdge = async function(type, r, c) {
+  if (!pvpState || pvpState.mode !== 'match' || pvpState.submitting) return;
+  const data = pvpState.lastData;
+  if (!data || data.status !== 'active' || data.turn !== currentUser) return;
+  const existing = type === 'h' ? data.hEdges[r * DOTS_BOX_COLS + c] : data.vEdges[r * DOTS_COLS + c];
+  if (existing) return;
+  pvpState.submitting = true;
+  try {
+    const hEdges = [...data.hEdges];
+    const vEdges = [...data.vEdges];
+    const boxes = [...data.boxes];
+    const completed = dotsApplyEdge(hEdges, vEdges, boxes, type, r, c, currentUser);
+    const scores = { ...(data.scores || {}) };
+    if (completed > 0) scores[currentUser] = (scores[currentUser] || 0) + completed;
+    const opponent = data.players.find(user => user !== currentUser);
+    const updates = { hEdges, vEdges, boxes, scores, updatedAt: Date.now() };
+    if (boxes.every(b => b !== null)) {
+      updates.status = 'finished';
+      const myTotal = scores[currentUser] || 0;
+      const oppTotal = scores[opponent] || 0;
+      updates.winner = myTotal === oppTotal ? 'draw' : (myTotal > oppTotal ? currentUser : opponent);
+    } else if (completed === 0) {
+      updates.turn = opponent;
+    }
+    // completed > 0 이고 아직 끝나지 않았으면 턴 유지 (필드 생략 시 기존 turn 그대로 유지됨)
+    await updateDoc(doc(db, 'gamePvpMatches', pvpState.matchId), updates);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    if (pvpState) pvpState.submitting = false;
+  }
+};
 
 function pvpRenderRaceMatch(matchId, data) {
   if (!pvpState || pvpState.mode !== 'match' || pvpState.matchId !== matchId) return;
@@ -11049,7 +11384,7 @@ function stopDino() {
 
 window.openDinoGame = function() {
   stopTetris(); stop2048(); stopTtt(); stopMinesweeper(); stopCookieClicker(); stopRhythm();
-  stopCardGacha(); stopSwordUpgrade(); stopOmok(); stopSnake(); stopDino(); stopPong(); stopReaction(); stopMemory();
+  stopCardGacha(); stopSwordUpgrade(); stopDots(); stopOmok(); stopSnake(); stopDino(); stopPong(); stopReaction(); stopMemory();
   stopChess(); stopWatermelon();
   const area = document.getElementById('gamePlayArea');
   area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
@@ -11288,7 +11623,7 @@ window.openSnakeGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha(); stopSwordUpgrade();
+  stopCardGacha(); stopSwordUpgrade(); stopDots();
   stopOmok();
   stopSnake();
   stopDino();
@@ -11513,7 +11848,7 @@ window.openPongGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha(); stopSwordUpgrade();
+  stopCardGacha(); stopSwordUpgrade(); stopDots();
   stopOmok();
   stopSnake();
   stopDino();
@@ -11772,7 +12107,7 @@ window.openReactionGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha(); stopSwordUpgrade();
+  stopCardGacha(); stopSwordUpgrade(); stopDots();
   stopOmok();
   stopSnake();
   stopDino();
@@ -11924,7 +12259,7 @@ window.openMemoryGame = function() {
   stopMinesweeper();
   stopCookieClicker();
   stopRhythm();
-  stopCardGacha(); stopSwordUpgrade();
+  stopCardGacha(); stopSwordUpgrade(); stopDots();
   stopOmok();
   stopSnake();
   stopDino();
