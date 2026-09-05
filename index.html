@@ -10850,6 +10850,46 @@ function pvpRenderSpectate(matchId, data) {
     return;
   }
 
+  if (data.matchType === 'chess') {
+    let chessStatusLine;
+    if (data.status === 'finished') chessStatusLine = data.winner === 'draw' ? '🤝 무승부로 종료됐어요.' : `🎉 ${escapeHtml(data.winner || '')}님 승리!`;
+    else chessStatusLine = `⏳ ${escapeHtml(data.turn || '')}님의 차례`;
+    const chess = new Chess(data.fen);
+    area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+      <div style="font-size:12px; color:var(--text-sub); margin-bottom:6px;">👀 관전 중 · <b>${escapeHtml(p1)}</b> VS <b>${escapeHtml(p2)}</b></div>
+      <div style="font-size:14px; font-weight:bold; margin-bottom:10px;">${chessStatusLine}</div>
+      <div id="pvpSpectateChessBoard"></div>
+      <button class="danger-btn" onclick="pvpLeaveMatch()" style="width:100%; margin-top:12px;">관전 종료</button>
+    </div>`;
+    drawChessBoard('pvpSpectateChessBoard', chess, 'w', false, null, null);
+    return;
+  }
+
+  if (data.matchType === 'dots') {
+    let dotsStatusLine;
+    if (data.status === 'finished') dotsStatusLine = data.winner === 'draw' ? '🤝 무승부로 종료됐어요.' : `🎉 ${escapeHtml(data.winner || '')}님 승리!`;
+    else dotsStatusLine = `⏳ ${escapeHtml(data.turn || '')}님의 차례`;
+    const s1 = (data.scores && data.scores[p1]) || 0;
+    const s2 = (data.scores && data.scores[p2]) || 0;
+    const gridHtml = dotsRenderGrid(data.hEdges || [], data.vEdges || [], data.boxes || [], {
+      canClick: false,
+      onEdgeClick: '',
+      colorFn: owner => dotsOwnerColor(owner, p1, p2),
+      markFn: owner => owner === p1 ? '🙂' : '🙋'
+    });
+    area.innerHTML = `<div class="box" style="margin:0; text-align:center;">
+      <div style="font-size:12px; color:var(--text-sub); margin-bottom:6px;">👀 관전 중 · <b>${escapeHtml(p1)}</b> VS <b>${escapeHtml(p2)}</b></div>
+      <div style="display:flex; justify-content:center; gap:20px; font-size:14px; margin-bottom:8px;">
+        <span>${escapeHtml(p1)}: <b>${s1}</b></span>
+        <span>${escapeHtml(p2)}: <b>${s2}</b></span>
+      </div>
+      <div style="font-size:14px; font-weight:bold; margin-bottom:10px;">${dotsStatusLine}</div>
+      ${gridHtml}
+      <button class="danger-btn" onclick="pvpLeaveMatch()" style="width:100%; margin-top:12px;">관전 종료</button>
+    </div>`;
+    return;
+  }
+
   // 보드형 (틱택토/오목) 관전
   let statusLine;
   if (data.status === 'finished') statusLine = data.winner === 'draw' ? '🤝 무승부로 종료됐어요.' : `🎉 ${escapeHtml(data.winner || '')}님 승리!`;
